@@ -33,7 +33,7 @@ const typeIco = (t) => ({ transcript: 'mic', email: 'mail', doc: 'drive', chat: 
 async function api(method, url, body) {
   const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
   const data = await r.json().catch(() => ({}));
-  if (r.status === 401 && !url.startsWith('/auth')) { S.me = null; location.hash = 'login'; render(); throw new Error('Потрібно увійти'); }
+  if (r.status === 401 && !url.startsWith('/auth')) { S.me = null; S.assistant.clear(); location.hash = 'login'; render(); throw new Error('Потрібно увійти'); }
   if (!r.ok) throw new Error(data.error || (url.startsWith('/auth') ? `Request failed (${r.status}). Please try again.` : `Помилка ${r.status}`));
   return data;
 }
@@ -45,6 +45,7 @@ const S = {
   tmenu: false, tab: 'matrix', dir: 'all', person: '', proj: '', fst: 'open', grp: 'person', dash: 'all', itab: 'review',
   knt: 'all', kscope: 'all', kproj: '', klog: false, ptab: 'overview', vEdit: false,
   review: null, applied: null, drawer: null, modal: null, pendingJoin: null, busy: false,
+  assistant: new Map(),
 };
 const role = () => S.d?.role;
 const isAdmin = () => ['owner', 'admin'].includes(role());
@@ -162,6 +163,7 @@ function nav() {
   <button class="nv ${on('inbox') || on('review')}" data-a="go" data-h="inbox">${ico('inbox')}<span class="lbl">Інбокс</span>${ib ? `<span class="bd">${ib}</span>` : ''}</button>
   <button class="nv ${on('tasks')}" data-a="go" data-h="tasks">${ico('tasks')}<span class="lbl">Задачі</span></button>
   <button class="nv ${on('knowledge')}" data-a="go" data-h="knowledge">${ico('kn')}<span class="lbl">Знання</span></button>
+  <button class="nv ${on('assistant')}" data-a="go" data-h="assistant" aria-label="Асистент">${ico('spark')}<span class="lbl">Асистент</span></button>
   <div class="sect">${personal() ? 'Мій простір' : 'Team Space'}</div>
   <button class="nv ${on('vision')}" data-a="go" data-h="vision">${ico('vision')}<span class="lbl">${personal() ? 'Vision' : 'Team vision'}</span></button>
   ${projs.map((p) => `<button class="nv ${on('project-' + p.id)}" data-a="go" data-h="project-${p.id}"><span class="dot" style="--c:${p.color}"></span><span class="lbl">${esc(p.name)}</span></button>${S.d.hypotheses.filter((h) => h.project === p.id).map((h) => `<button class="nv sub ${r === 'hyp-' + h.id ? 'on' : ''}" data-a="go" data-h="hyp-${h.id}">${hcode(h.id)} · ${HST[h.status]}</button>`).join('')}`).join('')}
@@ -313,7 +315,11 @@ function knCard(k) {
   const canEdit = k.author === uid() || (isAdmin() && k.scope === 'team');
   return `<div class="kn ${k.supersededBy ? 'sup' : ''}"><div class="km"><span class="ty ${k.type}">${KT[k.type]}</span>${k.scope === 'private' ? `<span>${ico('lock', 12)} Тільки я</span>` : `<span>${ico('users', 12)} Команда</span>`}${tag(k.project)}${canEdit ? `<span style="margin-left:auto" class="inl"><button class="btn ghost sm" data-a="editKn" data-id="${k.id}">Редагувати</button><button class="btn ghost sm" data-a="delKn" data-id="${k.id}" title="Видалити">${ico('trash', 13)}</button></span>` : ''}</div><div class="ktx">${esc(k.text)}</div>${k.why ? `<div class="hint">Чому: ${esc(k.why)}</div>` : ''}${k.quote ? `<div class="ev">“${esc(k.quote)}”</div>` : ''}<div class="km" style="margin-top:6px">${av(k.author, 18)}<span>${esc(pn(k.author))} · ${fds(k.date)}</span><span>Джерело: ${esc(k.source || '—')}</span>${sup ? `<span>замінює «${esc(sup.text)}»</span>` : ''}${supBy ? `<span class="chip red">замінено ${fds(supBy.date)}</span>` : ''}</div></div>`;
 }
-function pKnowledge() {
+function pKnowledge(id) {
+  if (id) {
+    const item = S.d.knowledge.find((k) => k.id === id);
+    return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="knowledge">${ico('back', 14)} Знання</button></div></div>${item ? knCard(item) : '<div class="empty">Запис знань недоступний.</div>'}`;
+  }
   let ks = S.d.knowledge;
   if (S.kscope !== 'all') ks = ks.filter((k) => k.scope === S.kscope); if (S.kproj) ks = ks.filter((k) => k.project === S.kproj);
   const head = `<div class="hd"><div><h1>Знання</h1><div class="sub">Домовленості, рішення і факти — з посиланням на джерело. Командні знання зберігаються як Markdown у папці команди.</div></div><div class="act"><button class="btn pri" data-a="newKn">${ico('plus')}Додати</button></div></div>
@@ -321,6 +327,97 @@ function pKnowledge() {
   if (S.klog) { const d = ks.filter((k) => k.type === 'decision').sort((a, b) => (a.date < b.date ? 1 : -1)); return head + (d.length ? `<div class="tl">${d.map(knCard).join('')}</div>` : '<div class="empty">Рішень ще немає</div>'); }
   const list = ks.filter((k) => !k.supersededBy && (S.knt === 'all' || k.type === S.knt)).sort((a, b) => (a.date < b.date ? 1 : -1));
   return head + (list.map(knCard).join('') || '<div class="empty">Поки порожньо. Знання з’являються після розбору мітингів або вручну.</div>');
+}
+
+/* ---------- assistant ---------- */
+const assistantTopics = [
+  ['tasks', 'Що потребує уваги?', 'Які мої відкриті задачі потребують уваги?'],
+  ['kn', 'Ключові знання', 'Які актуальні знання й рішення є в цьому просторі?'],
+  ['vision', 'Прогрес цілей', 'Який поточний прогрес цілей проєктів?'],
+  ['spark', 'Гіпотези в роботі', 'Які гіпотези зараз тестуються та які в них метрики?'],
+];
+const assistantSourceNames = { task: 'Задача', knowledge: 'Знання', goal: 'Ціль', hypothesis: 'Гіпотеза' };
+const assistantPath = (tid, suffix = '') => `/api/teams/${encodeURIComponent(tid)}/assistant/chats${suffix}`;
+function assistantState() {
+  if (!S.assistant.has(S.tid)) {
+    const state = { chats: null, selected: null, chat: null, draft: '', pending: null, retry: null, error: '' };
+    S.assistant.set(S.tid, state);
+    void loadAssistantChats(S.tid, state);
+  }
+  return S.assistant.get(S.tid);
+}
+function renderAssistant(tid, state, scroll = false) {
+  if (S.tid !== tid || S.assistant.get(tid) !== state || R() !== 'assistant') return;
+  render();
+  const history = document.querySelector('.assistant-thread');
+  if (scroll && history) history.scrollTop = history.scrollHeight;
+}
+async function loadAssistantChats(tid, state) {
+  state.error = '';
+  try {
+    state.chats = await api('GET', assistantPath(tid));
+    if (state.chats.length && !state.selected) return openAssistantChat(tid, state, state.chats[0].id);
+  } catch (error) { state.error = error.message; }
+  renderAssistant(tid, state);
+}
+async function openAssistantChat(tid, state, id) {
+  state.selected = id; state.chat = null; state.draft = ''; state.error = '';
+  renderAssistant(tid, state);
+  try {
+    const chat = await api('GET', assistantPath(tid, '/' + encodeURIComponent(id)));
+    if (state.selected === id) state.chat = chat;
+  } catch (error) { if (state.selected === id) state.error = error.message; }
+  if (state.selected === id) renderAssistant(tid, state, true);
+}
+function pAssistant() {
+  const state = assistantState();
+  const pending = state.pending?.cid === state.selected ? state.pending : null;
+  const turns = state.chat?.turns || [];
+  const loading = !state.error && (!state.chats || (state.selected && !state.chat && !pending && state.chats.some((c) => c.id === state.selected)));
+  const sources = (items) => items.length ? `<div class="assistant-sources" aria-label="Джерела">${items.map((s) => `<button type="button" class="assistant-source" data-a="assistantSource" data-kind="${esc(s.kind)}" data-id="${esc(s.target)}" title="${esc(s.title)}">${esc(assistantSourceNames[s.kind] || 'Джерело')}<span>${esc(s.title)}</span>${ico('arrow', 13)}</button>`).join('')}</div>` : '';
+  return `<section class="assistant">
+    <header class="assistant-heading"><div><h1>Асистент</h1><p class="hint">${esc(S.d.team.name)}</p></div></header>
+    <div class="assistant-workspace">
+      <aside class="assistant-history" aria-label="Історія чатів">
+        <div class="assistant-history-head"><h2>Чати</h2><button type="button" class="btn sm" data-a="assistantNew">${ico('plus', 14)} Новий чат</button></div>
+        <div class="assistant-history-list" data-keep="assistant-history">${(state.chats || []).map((chat) => `<button type="button" class="assistant-chat${chat.id === state.selected ? ' selected' : ''}" data-a="assistantChat" data-id="${esc(chat.id)}" aria-pressed="${chat.id === state.selected}"><span>${esc(chat.title)}</span><time datetime="${esc(chat.updatedAt)}">${fdt(chat.updatedAt)}</time></button>`).join('') || (state.chats ? '<p class="hint">Тут з’являться твої чати.</p>' : '')}</div>
+      </aside>
+      <div class="assistant-main">
+        <div class="assistant-thread" data-keep="assistant-thread" role="log" aria-label="Повідомлення">
+          ${loading ? '<div class="assistant-loading" role="status"><span class="spin"></span> Завантажуємо чат…</div>' : ''}
+          ${!loading && !turns.length && !pending && !state.error ? `<div class="assistant-welcome"><span class="assistant-mark">${ico('spark', 26)}</span><h2>Що хочеш дізнатися про свій простір?</h2><p>Запитай про задачі, знання, цілі або гіпотези.</p><div class="assistant-prompts">${assistantTopics.map(([icon, title, question]) => `<button type="button" data-a="assistantPrompt" data-question="${esc(question)}">${ico(icon, 17)}${title}${ico('arrow', 15)}</button>`).join('')}</div></div>` : ''}
+          ${turns.map((turn) => `<article class="assistant-turn"><div class="assistant-question">${esc(turn.question)}</div><div class="assistant-answer"><span class="assistant-mark small" aria-hidden="true">${ico('spark', 17)}</span><div class="assistant-answer-body mdv">${md(turn.answer)}${sources(turn.sources || [])}</div></div></article>`).join('')}
+          ${pending ? `<article class="assistant-turn"><div class="assistant-question">${esc(pending.question)}</div><div class="assistant-loading" role="status"><span class="spin"></span> Готуємо відповідь…</div></article>` : ''}
+        </div>
+        <div class="assistant-compose">
+          ${state.error ? `<p class="err" role="alert">${esc(state.error)}${!state.chats ? ' <button type="button" class="lnk" data-a="assistantReload">Спробувати ще раз</button>' : ''}</p>` : ''}
+          ${!S.ai ? '<p class="hint" role="status">AI-асистент тимчасово недоступний.</p>' : ''}
+          <form id="assistant-form"><textarea class="in" id="assistant-question" name="question" aria-label="Запитання до асистента" maxlength="2000" rows="2" placeholder="Запитай про цей простір…" required${!S.ai ? ' disabled' : ''}>${esc(state.draft)}</textarea><button class="btn pri" type="submit"${!S.ai || state.pending || loading ? ' disabled' : ''}>${ico('arrow', 17)} Надіслати</button></form>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+async function sendAssistantQuestion() {
+  const state = assistantState(), tid = S.tid, question = state.draft.trim();
+  if (!question || state.pending || !S.ai) return;
+  const cid = state.selected || crypto.randomUUID();
+  const request = state.retry?.cid === cid && state.retry.question === question
+    ? state.retry : { cid, question, id: crypto.randomUUID() };
+  Object.assign(state, { pending: request, selected: cid, draft: '', error: '' });
+  renderAssistant(tid, state, true);
+  try {
+    const chat = await api('POST', assistantPath(tid, '/' + encodeURIComponent(cid) + '/messages'), { id: request.id, question });
+    state.chats = [{ id: chat.id, title: chat.title, updatedAt: chat.updatedAt }, ...(state.chats || []).filter((c) => c.id !== cid)];
+    if (state.selected === cid) state.chat = chat;
+    state.retry = null;
+  } catch (error) {
+    state.retry = request;
+    if (state.selected === cid) { state.error = error.message; state.draft = state.draft || question; }
+  } finally {
+    state.pending = null;
+    renderAssistant(tid, state, state.selected === cid);
+  }
 }
 
 /* ---------- vision ---------- */
@@ -524,8 +621,8 @@ function render() {
   else if (r.startsWith('join-')) c = pJoin();
   else if (r === 'onboarding' || !S.d) c = pOnboarding();
   else {
-    const pg = r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r === 'vision' ? pVision() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
-    c = `<div class="app"><aside class="side">${nav()}</aside><main class="main"><header class="top">${top()}</header><div class="page">${pg}</div></main></div>`;
+    const pg = r === 'assistant' ? pAssistant() : r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r.startsWith('knowledge-') ? pKnowledge(r.slice(10)) : r === 'vision' ? pVision() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
+    c = `<div class="app"><aside class="side">${nav()}</aside><main class="main"><header class="top">${top()}</header><div class="page${r === 'assistant' ? ' assistant-page' : ''}">${pg}</div></main></div>`;
   }
   document.documentElement.lang = isLogin ? 'en' : 'uk';
   document.title = isLogin ? 'TeamOS — Sign in' : 'TeamOS';
@@ -554,7 +651,7 @@ const A = {
   team: (el) => { S.tmenu = false; act(() => switchTeam(el.dataset.v)); },
   newTeam: () => { S.tmenu = false; S.modal = { k: 'team' }; render(); },
   ntmGo: () => act(async () => { const name = val('ntmN').trim(); if (!name) throw new Error('Вкажи назву'); const t = await api('POST', '/api/teams', { name }); S.modal = null; await reloadMe(); await switchTeam(t.id); go('dashboard'); }, 'Команду створено'),
-  logout: () => act(async () => { await api('POST', '/auth/logout'); S.me = null; S.d = null; location.hash = 'login'; render(); }),
+  logout: () => act(async () => { await api('POST', '/auth/logout'); S.me = null; S.d = null; S.assistant.clear(); location.hash = 'login'; render(); }),
   emailAgain: () => { S.loginSent = false; S.loginError = ''; render(); document.querySelector('#email-login input')?.focus(); },
   devLogin: () => act(async () => { await api('POST', '/auth/dev', { email: val('devEmail'), name: val('devName') }); await boot(); }),
   obMode: (el) => { S.obMode = el.dataset.v; render(); },
@@ -575,6 +672,30 @@ const A = {
   knt: (el) => { S.knt = el.dataset.v; S.klog = false; render(); },
   klog: () => { S.klog = !S.klog; render(); },
   ask: () => { S.modal = { k: 'ask', q: '' }; modal(); },
+  assistantNew: () => {
+    const state = assistantState();
+    Object.assign(state, { selected: null, chat: null, draft: '', error: '', retry: null });
+    S.drawer = null; render(); document.getElementById('assistant-question')?.focus();
+  },
+  assistantChat: (el) => { S.drawer = null; void openAssistantChat(S.tid, assistantState(), el.dataset.id); },
+  assistantReload: () => { void loadAssistantChats(S.tid, assistantState()); },
+  assistantPrompt: (el) => {
+    if (!S.ai) return;
+    assistantState().draft = el.dataset.question;
+    const field = document.getElementById('assistant-question');
+    field.value = el.dataset.question; field.focus();
+  },
+  assistantSource: (el) => {
+    const { kind, id } = el.dataset;
+    if (kind === 'task') {
+      if (!tasks().some((t) => t.id === id)) return toast('Задача недоступна.');
+      return A.open(el);
+    }
+    S.drawer = null;
+    if (kind === 'knowledge') return go('knowledge-' + id);
+    if (kind === 'goal') { S.ptab = 'overview'; return go('project-' + id); }
+    if (kind === 'hypothesis') go('hyp-' + id);
+  },
   closeM: () => { S.modal = null; modal(); },
   ovClose: (el, e) => { if (e.target === el) { S.modal = null; modal(); } },
   copyText: (el) => { navigator.clipboard?.writeText(el.dataset.v).then(() => toast('Скопійовано'), () => toast('Не вдалося скопіювати')); },
@@ -721,6 +842,11 @@ document.addEventListener('mouseover', (e) => {
   if (f && box && box.scrollHeight > box.clientHeight) { const r = f.offsetTop - box.offsetTop; if (r < box.scrollTop || r > box.scrollTop + box.clientHeight - 40) box.scrollTo({ top: r - 60, behavior: 'smooth' }); }
 });
 document.addEventListener('submit', async (e) => {
+  if (e.target.id === 'assistant-form') {
+    e.preventDefault();
+    assistantState().draft = new FormData(e.target).get('question') || '';
+    return sendAssistantQuestion();
+  }
   if (e.target.id !== 'email-login') return;
   e.preventDefault();
   if (S.loginBusy) return;
@@ -747,12 +873,20 @@ document.addEventListener('drop', (e) => {
   else if (t.status !== v) patchTask(t.id, { status: v }, `Статус: ${STL[v]}`);
 });
 document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'assistant-question' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    if (!e.target.form.querySelector('button').disabled) e.target.form.requestSubmit();
+    return;
+  }
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
   if (!S.d) return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); A.ask(); }
   else if (e.key === 'Escape') { if (S.modal) { S.modal = null; modal(); } else if (S.drawer) { S.drawer = null; render(); } }
   else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && R().startsWith('review-') && !S.modal) { e.preventDefault(); applyReview(); }
   else if (!typing && !S.modal && !e.metaKey && !e.ctrlKey && ['i', 'I', 'ш', 'Ш'].includes(e.key)) { e.preventDefault(); A.add(); }
+});
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'assistant-question') assistantState().draft = e.target.value;
 });
 window.addEventListener('hashchange', () => {
   S.tmenu = false;

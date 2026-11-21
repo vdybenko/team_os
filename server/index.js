@@ -8,6 +8,7 @@ import { mountAuthRoutes, sessionMiddleware, requireUser, magicLinkConfigured } 
 import { normalizeEmail } from './magic-link.js';
 import { analyze, aiConfigured, errorMessage, AI_PROVIDER, MODEL } from './ai.js';
 import { knowledgeEvidence } from './evidence.js';
+import { askAssistant } from './assistant.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -217,6 +218,51 @@ app.get('/api/teams/:tid/state', requireUser, route(async (req) => {
   };
 }));
 const countProps = (ps = []) => ps.reduce((a, p) => ((a[p.kind] = (a[p.kind] || 0) + 1), a), {});
+
+/* ---------- assistant chats ---------- */
+const assistantRequests = new Set();
+const chatRoute = '/api/teams/:tid/assistant/chats';
+app.use(chatRoute, (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+app.get(chatRoute, requireUser, route((req) => {
+  const { uid, tid } = ctx(req);
+  return store.listAssistantChats(uid, tid);
+}));
+app.get(chatRoute + '/:cid', requireUser, route((req) => {
+  const { uid, tid } = ctx(req);
+  return store.getAssistantChat(uid, tid, req.params.cid) || fail(404, 'Чат не знайдено');
+}));
+app.post(chatRoute + '/:cid/messages', requireUser, route(async (req) => {
+  const c = ctx(req);
+  const cid = store.assertId(req.params.cid, 'chat id');
+  const question = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+  if (!question || question.length > 2000) fail(400, 'Введи запитання до 2 000 символів.');
+  const id = store.assertId(req.body?.id, 'message id');
+  const chat = store.getAssistantChat(c.uid, c.tid, cid) || {
+    id: cid, title: question.length > 72 ? question.slice(0, 71) + '…' : question, turns: [],
+  };
+  const existing = chat.turns.find((turn) => turn.id === id);
+  if (existing) {
+    if (existing.question !== question) fail(409, 'Цей ідентифікатор повідомлення вже використано.');
+    return chat;
+  }
+  if (!aiConfigured()) fail(503, 'AI-асистент тимчасово недоступний.');
+  const lock = `${c.uid}/${c.tid}`;
+  if (assistantRequests.has(lock)) fail(409, 'Зачекай на відповідь на попереднє запитання.');
+  assistantRequests.add(lock);
+  try {
+    const [tasks, knowledge] = await Promise.all([visibleTasks(c), visibleKnowledge(c)]);
+    let reply;
+    try {
+      reply = await askAssistant({
+        question, turns: chat.turns, team: c.team.name, viewerId: c.uid, today: today(), tasks, knowledge,
+        projects: store.projects.list(c.tid), hypotheses: store.hypotheses.list(c.tid), nameOf,
+      });
+    } catch (error) { fail(502, errorMessage(error)); }
+    ctx(req);
+    chat.turns.push({ id, question, ...reply, createdAt: store.now() });
+    return store.saveAssistantChat(c.uid, c.tid, chat);
+  } finally { assistantRequests.delete(lock); }
+}));
 
 app.patch('/api/teams/:tid', requireUser, route((req) => {
   const c = ctx(req); if (!c.admin) fail(403, 'Лише Owner або Admin');

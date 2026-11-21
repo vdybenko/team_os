@@ -325,6 +325,24 @@ export function removeInboxItem(uid, tid, id) {
   rebuildUserTeamIndex(uid, tid);
 }
 
+/* ---------------- assistant conversations ---------------- */
+
+const assistantDir = (uid, tid) => path.join(P.userTeam(uid, tid), 'assistant');
+const assistantFile = (uid, tid, id) => path.join(assistantDir(uid, tid), `${assertId(id, 'chat id')}.json`);
+export function getAssistantChat(uid, tid, id) { return readJson(assistantFile(uid, tid, id)); }
+export function listAssistantChats(uid, tid) {
+  const dir = assistantDir(uid, tid);
+  return listFiles(dir, '.json').flatMap((file) => {
+    const chat = readJson(path.join(dir, file));
+    return chat ? [{ id: chat.id, title: chat.title, updatedAt: chat.updatedAt }] : [];
+  }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+export function saveAssistantChat(uid, tid, chat) {
+  chat.updatedAt = now();
+  writeJson(assistantFile(uid, tid, chat.id), chat);
+  return chat;
+}
+
 /* ---------------- index.md generation ---------------- */
 
 const STATUS = { open: 'Відкрито', progress: 'В роботі', waiting: 'Очікує', done: 'Готово', cancelled: 'Скасовано' };
