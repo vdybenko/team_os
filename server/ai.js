@@ -97,7 +97,7 @@ async function structuredAnswer(input, request) {
   const provider = { openai: invokeOpenAI, bedrock: IS_NOVA ? invokeNova : analyzeWithClaude };
   const result = await (provider[AI_PROVIDER] || analyzeWithClaude)(input, request);
   if (matchesSchema(result, request.schema)) return result;
-  throw new Error('Модель повернула результат, який не відповідає очікуваному формату.');
+  throw new Error('The model returned a result that doesn’t match the expected format.');
 }
 
 async function analyzeWithClaude(user, { instructions, schema, maxTokens }) {
@@ -115,7 +115,7 @@ async function analyzeWithClaude(user, { instructions, schema, maxTokens }) {
     const out = message.content?.filter((b) => b.type === 'text').map((b) => b.text).join('');
     return JSON.parse(out);
   } catch {
-    throw new Error('Модель повернула некоректний JSON.');
+    throw new Error('The model returned invalid JSON.');
   }
 }
 
@@ -152,33 +152,33 @@ async function invokeOpenAI(user, { instructions, schema, name, openAIMaxTokens 
       }),
     });
   } catch {
-    throw new Error('OpenAI недоступний або не відповів вчасно. Спробуй пізніше.');
+    throw new Error('OpenAI is unavailable or didn’t respond in time. Try again later.');
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    if (data?.error?.code === 'insufficient_quota') throw new Error('OpenAI: у проєкті вичерпано квоту або немає доступного балансу.');
-    if (response.status === 429) throw new Error('OpenAI: перевищено ліміт запитів. Спробуй пізніше.');
-    if ([401, 403, 404].includes(response.status)) throw new Error('OpenAI: перевір ключ і доступ до моделі.');
-    throw new Error(`OpenAI: помилка запиту (${response.status}).`);
+    if (data?.error?.code === 'insufficient_quota') throw new Error('OpenAI: the project’s quota is used up or there is no available balance.');
+    if (response.status === 429) throw new Error('OpenAI: request limit exceeded. Try again later.');
+    if ([401, 403, 404].includes(response.status)) throw new Error('OpenAI: check the key and access to the model.');
+    throw aiError('OpenAI: request failed ({status}).', { status: response.status });
   }
   const content = (data?.output || []).filter((item) => item.type === 'message').flatMap((item) => item.content || []);
   if (content.some((part) => part.type === 'refusal') || data?.incomplete_details?.reason === 'content_filter') {
-    throw new Error('Модель відмовилася аналізувати це джерело.');
+    throw new Error('The model refused to analyze this source.');
   }
   if (data?.incomplete_details?.reason === 'max_output_tokens') {
-    throw new Error('Аналіз обірвався. Розділи джерело на коротші частини.');
+    throw new Error('The analysis was cut off. Split the source into shorter parts.');
   }
-  if (data?.status !== 'completed') throw new Error('OpenAI не завершив аналіз. Спробуй ще раз.');
+  if (data?.status !== 'completed') throw new Error('OpenAI didn’t finish the analysis. Try again.');
   try {
     return JSON.parse(content.filter((part) => part.type === 'output_text').map((part) => part.text).join(''));
   } catch {
-    throw new Error('Модель повернула некоректний JSON.');
+    throw new Error('The model returned invalid JSON.');
   }
 }
 
 function checkStopReason(reason) {
-  if (['refusal', 'guardrail_intervened', 'content_filtered'].includes(reason)) throw new Error('Модель відмовилася аналізувати це джерело.');
-  if (reason === 'max_tokens') throw new Error('Аналіз обірвався. Розділи джерело на коротші частини.');
+  if (['refusal', 'guardrail_intervened', 'content_filtered'].includes(reason)) throw new Error('The model refused to analyze this source.');
+  if (reason === 'max_tokens') throw new Error('The analysis was cut off. Split the source into shorter parts.');
 }
 
 function matchesSchema(value, schema) {
@@ -205,7 +205,7 @@ async function invokeAnthropic(request) {
 }
 
 async function requestBedrock(operation, request) {
-  if (!/^[a-z]{2}(-[a-z]+)+-\d+$/.test(BEDROCK_REGION)) throw new Error('Некоректний AWS_REGION для Bedrock.');
+  if (!/^[a-z]{2}(-[a-z]+)+-\d+$/.test(BEDROCK_REGION)) throw new Error('Invalid AWS_REGION for Bedrock.');
   const url = `https://bedrock-runtime.${BEDROCK_REGION}.amazonaws.com/model/${encodeURIComponent(MODEL)}/${operation}`;
   let response;
   try {
@@ -217,21 +217,27 @@ async function requestBedrock(operation, request) {
       signal: AbortSignal.timeout(180_000),
     });
   } catch {
-    throw new Error('Bedrock недоступний або не відповів вчасно. Спробуй пізніше.');
+    throw new Error('Bedrock is unavailable or didn’t respond in time. Try again later.');
   }
   if (!response.ok) {
     await response.body?.cancel();
-    if (response.status === 429) throw new Error('Bedrock: перевищено ліміт запитів. Спробуй пізніше.');
-    if ([401, 403].includes(response.status)) throw new Error('Bedrock: перевір ключ і доступ до моделі.');
-    throw new Error(`Bedrock: помилка запиту (${response.status}).`);
+    if (response.status === 429) throw new Error('Bedrock: request limit exceeded. Try again later.');
+    if ([401, 403].includes(response.status)) throw new Error('Bedrock: check the key and access to the model.');
+    throw aiError('Bedrock: request failed ({status}).', { status: response.status });
   }
   return response.json();
 }
 
+// Errors carry an English message plus { key, vars } so server/i18n.js can translate them.
+function aiError(key, vars) {
+  return Object.assign(new Error(key.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m))), { i18n: { key, vars } });
+}
+
+// Returns { key, vars } for display in the user's language.
 export function errorMessage(e) {
-  if (e instanceof Anthropic.AuthenticationError) return 'Claude API: невірний ключ (ANTHROPIC_API_KEY).';
-  if (e instanceof Anthropic.RateLimitError) return 'Claude API: перевищено ліміт запитів, спробуй пізніше.';
-  if (e instanceof Anthropic.APIConnectionError) return 'Claude API недоступний: немає з’єднання.';
-  if (e instanceof Anthropic.APIError) return `Claude API помилка ${e.status ?? ''}: ${e.message}`;
-  return e?.message || String(e);
+  if (e instanceof Anthropic.AuthenticationError) return { key: 'Claude API: invalid key (ANTHROPIC_API_KEY).' };
+  if (e instanceof Anthropic.RateLimitError) return { key: 'Claude API: request limit exceeded, try again later.' };
+  if (e instanceof Anthropic.APIConnectionError) return { key: 'Claude API is unavailable: no connection.' };
+  if (e instanceof Anthropic.APIError) return { key: 'Claude API error {status}: {message}', vars: { status: e.status ?? '', message: e.message } };
+  return e?.i18n || { key: e?.message || String(e) };
 }

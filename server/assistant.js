@@ -1,4 +1,5 @@
 import { answerWorkspace } from './ai.js';
+import { tr } from './i18n.js';
 
 const excerpt = (value, length = 1200) => String(value ?? '').trim().slice(0, length);
 const terms = (text) => new Set((String(text).normalize('NFKC').toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []).map((word) => word.slice(0, 5)));
@@ -9,7 +10,7 @@ const topicTerms = {
   hypothesis: terms('гіпотеза гіпотези експеримент тестування висновки hypothesis experiment testing'),
 };
 
-export async function askAssistant({ question, turns, team, viewerId, today, tasks, knowledge, projects, hypotheses, nameOf }) {
+export async function askAssistant({ question, turns, team, lang = 'en', viewerId, today, tasks, knowledge, projects, hypotheses, nameOf }) {
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const records = [];
   function add(kind, id, title, data, target = id) {
@@ -28,12 +29,12 @@ export async function askAssistant({ question, turns, team, viewerId, today, tas
     project: p.name, projectStatus: p.status, goal: g.goal, metric: g.metric, target: g.target, current: g.current, due: g.by,
   }, p.id));
   for (const h of hypotheses) add('hypothesis', h.id, h.statement || h.then, {
-    statement: excerpt(h.statement || `Якщо ${h.if}, то ${h.then}, бо ${h.because}`),
+    statement: excerpt(h.statement || `If ${h.if}, then ${h.then}, because ${h.because}`),
     project: projectNames.get(h.project), status: h.status, owner: nameOf(h.owner), metric: h.metric,
     target: h.target, current: h.current, from: h.from, until: h.to, verdict: excerpt(h.verdict, 500),
     learnings: (h.learnings || []).slice(-3).map((l) => excerpt(l.text, 300)),
   });
-  if (!records.length) return { answer: 'У цьому просторі поки немає задач, знань, цілей або гіпотез, на які я міг би спиратися.', sources: [] };
+  if (!records.length) return { answer: tr(lang, 'There are no tasks, knowledge, goals or hypotheses in this space yet that I could rely on.'), sources: [] };
 
   const all = new Map(records.map((r) => [r.key, r]));
   const history = turns.slice(-6).map((turn) => ({
@@ -80,6 +81,6 @@ export async function askAssistant({ question, turns, team, viewerId, today, tas
   const sources = [...new Set(output.sources)].filter((key) => selected.has(key)).slice(0, 8)
     .map((key) => { const { kind, title, target } = all.get(key); return { key, kind, title, target }; });
   const answer = excerpt(output.answer, 10000);
-  if (!answer) throw new Error('Асистент повернув порожню відповідь. Спробуй ще раз.');
+  if (!answer) throw new Error('The assistant returned an empty answer. Try again.');
   return { answer, sources };
 }

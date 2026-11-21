@@ -72,3 +72,7 @@ team-knowledge-graph { display: block; min-width: 0; }
   .kg-caption { min-height: 78px; }
 }
 @media (pointer: coarse) { .kg-motion, .kg-queue button { min-height: 44px; } }
+.orbit-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.orbit-lang { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid #ffffff2e; border-radius: 9px; }
+.orbit-lang button { min-height: 30px; border: 0; border-radius: 6px; background: none; color: #cac2d2; padding: 4px 11px; font: 650 12.5px Archivo, "Helvetica Neue", sans-serif; cursor: pointer; }
+.orbit-lang button.on { background: #e3ccfa; color: #271936; }

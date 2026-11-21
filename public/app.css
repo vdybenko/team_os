@@ -287,3 +287,4 @@ code{font-size:13px;background:var(--soft);padding:1px 5px;border-radius:5px;ove
   .assistant-thread{padding:14px 11px 8px}.assistant-prompts{grid-template-columns:1fr;margin-top:13px}
   .assistant-compose form{align-items:stretch;flex-wrap:wrap}.assistant-compose textarea{flex-basis:100%}.assistant-compose button[type=submit]{margin-left:auto}
 }
+.langrow{display:flex;padding:6px 8px 0}

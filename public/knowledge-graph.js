@@ -1,5 +1,7 @@
 /* Animated sample workspace on the sign-in page. All examples are local. */
 (() => {
+  // Texts follow the page language set by app.js; translations live in public/i18n.js.
+  const tr = (s) => (document.documentElement.lang === 'uk' && window.TEAMOS_I18N?.uk?.[s]) || s;
   const hubs = [
     { id: 'project', name: 'Pricing launch', x: 345, y: 180, color: '#efd6ff' },
     { id: 'ideas', name: 'Hypotheses', x: 180, y: 72, color: '#bfa3f0' },
@@ -51,7 +53,7 @@
     for (const [scale, opacity] of [[3.7,.06],[2,.14],[1,1]]) {
       mark(group,'circle',{r:size * scale, fill:'currentColor', opacity});
     }
-    mark(group, 'text', {y:size + 20, class:i ? 'kg-label' : 'kg-label kg-main-label'}).textContent = hub.name;
+    mark(group, 'text', {y:size + 20, class:i ? 'kg-label' : 'kg-label kg-main-label'}).textContent = tr(hub.name);
     return group;
   }
   function record(parent, label, isSource) {
@@ -59,16 +61,16 @@
     mark(g, 'circle', {r:isSource ? 11 : 8, class:'kg-aura'});
     mark(g, 'circle', {r:isSource ? 4.8 : 3.8, class:'kg-record-dot'});
     const text = mark(g, 'text', {y: -13, class:'kg-label kg-record-label'});
-    text.textContent = label;
+    text.textContent = tr(label);
     return {g, text};
   }
   class KnowledgeGraph extends HTMLElement {
     connectedCallback() {
       this.innerHTML = `<figure class="kg">
-        <div class="kg-bar"><figcaption>Team knowledge graph</figcaption><button type="button" class="kg-motion"></button></div>
-        <svg class="kg-map" viewBox="0 0 660 385" role="img" aria-label="Example pricing launch project connected to documents, goals, hypotheses, commitments, and team members"></svg>
+        <div class="kg-bar"><figcaption>${tr('Team knowledge graph')}</figcaption><button type="button" class="kg-motion"></button></div>
+        <svg class="kg-map" viewBox="0 0 660 385" role="img" aria-label="${tr('Example pricing launch project connected to documents, goals, hypotheses, commitments, and team members')}"></svg>
         <div class="kg-caption"><div class="kg-origin"><span class="kg-type"></span><strong></strong></div><p></p></div>
-        <div class="kg-queue" role="group" aria-label="Example sources"></div>
+        <div class="kg-queue" role="group" aria-label="${tr('Example sources')}"></div>
       </figure>`;
       this.abort = new AbortController();
       const options = {signal:this.abort.signal};
@@ -97,8 +99,8 @@
       const queue = this.querySelector('.kg-queue');
       this.buttons = stories.map((story,i) => {
         const b = document.createElement('button');
-        b.type = 'button'; b.textContent = story.type;
-        b.setAttribute('aria-label','Show ' + story.title);
+        b.type = 'button'; b.textContent = tr(story.type);
+        b.setAttribute('aria-label', tr('Show {title}').replace('{title}', tr(story.title)));
         b.addEventListener('click', () => {
           this.elapsed = this.playing ? 0 : 3400;
           this.select(i);
@@ -125,8 +127,8 @@
     }
     setPlaying(playing) {
       this.playing = playing;
-      this.motion.innerHTML = playing ? '<span aria-hidden="true">Ⅱ</span> Pause' : '<span aria-hidden="true">▷</span> Play';
-      this.motion.setAttribute('aria-label',playing ? 'Pause graph animation' : 'Play graph animation');
+      this.motion.innerHTML = playing ? `<span aria-hidden="true">Ⅱ</span> ${tr('Pause')}` : `<span aria-hidden="true">▷</span> ${tr('Play')}`;
+      this.motion.setAttribute('aria-label', tr(playing ? 'Pause graph animation' : 'Play graph animation'));
       if (!playing && this.media.matches) this.elapsed = Math.max(this.elapsed,3400);
       this.paint();
       this.schedule();
@@ -135,9 +137,9 @@
       this.index = index;
       this.seen.add(index);
       const story = stories[index];
-      this.caption.querySelector('.kg-type').textContent = story.type;
-      this.caption.querySelector('strong').textContent = story.title;
-      this.caption.querySelector('p').textContent = story.detail;
+      this.caption.querySelector('.kg-type').textContent = tr(story.type);
+      this.caption.querySelector('strong').textContent = tr(story.title);
+      this.caption.querySelector('p').textContent = tr(story.detail);
       this.buttons.forEach((button,i) => button.setAttribute('aria-pressed',String(i === index)));
     }
     schedule() {

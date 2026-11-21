@@ -1,19 +1,21 @@
 # TeamOS v0.1
 
-Другий мозок команди, який наповнюється з мітингів. Специфікація: [docs/01-vision-and-ui-spec.md](docs/01-vision-and-ui-spec.md), клікабельний прототип: [prototype/index.html](prototype/index.html).
+A team's second brain that fills itself from meetings. Specification: [docs/01-vision-and-ui-spec.md](docs/01-vision-and-ui-spec.md); clickable prototype: [prototype/index.html](prototype/index.html).
 
-## Що є у v0.1
+## What's in v0.1
 
-- **Вхід через одноразове посилання на email.** Особистий простір створюється автоматично.
-- **Команди**: створення, запрошення посиланням, ролі Owner / Admin / Member, передача ownership.
-- **Інбокс**: вставити транскрипт / нотатку або завантажити `.txt .md .vtt .srt`. AI витягує задачі, оновлення статусів, фрагменти знань, нові проєкти й гіпотези з цитатами. Записи потрапляють до бази знань після підтвердження в **Review**.
-- **Задачі** (комітменти): матриця Ейзенхауера, канбан, список, «делеговане»; бокова панель із коментарями та історією. Статус і поля змінює **лише постановник**; виконавець коментує. Пропозиція AI змінити статус чужої задачі йде в інбокс постановника.
-- **Проєкти** (статус: активний / пауза / завершено / архів, vision, цілі) і **гіпотези** («Якщо… то… бо…», статус: чернетка / тестуємо / підтверджено / спростовано, метрика, learnings, вердикт).
-- **Знання** (рішення, домовленості, факти, процеси, контекст; приватні або командні; заміна старого рішення новим) і **Team vision**.
+- **Sign-in with a one-time email link.** A personal workspace is created automatically.
+- **Teams**: create a team, invite people with a link, Owner / Admin / Member roles, transfer ownership.
+- **Inbox**: paste a transcript or note, or upload `.txt .md .vtt .srt`. AI extracts tasks, status updates, knowledge chunks, new projects and hypotheses, each with a quote. Items reach the knowledge base only after you confirm them in **Review**.
+- **Tasks** (commitments): Eisenhower matrix, kanban, list, "delegated"; a side panel with comments and history. **Only the requester** changes the status and fields; the owner comments. An AI proposal to change the status of someone else's task goes to the requester's inbox.
+- **Projects** (status: active / paused / done / archived, vision, goals) and **hypotheses** ("If… then… because…", status: draft / testing / validated / invalidated, metric, learnings, verdict).
+- **Knowledge** (decisions, agreements, facts, processes, context; private or team-wide; a new decision can replace an old one) and **Team vision**.
+- **Assistant**: ask questions about your workspace's tasks, knowledge, goals and hypotheses, with links to the records it used.
+- **Interface in English and Ukrainian**: switch the language in the sidebar or on the sign-in screen.
 
-Ще не зроблено (див. §10 специфікації): календар, Gmail/Drive, ⌘K Ask з RAG, Meeting mode, щоденний дайджест, надсилання листів-запрошень.
+Not done yet (see §10 of the specification): calendar, Gmail/Drive, Meeting mode, daily digest, sending invite emails.
 
-## Запуск
+## Getting started
 
 ```bash
 npm install
@@ -27,120 +29,128 @@ cp .env.example .env
 npm run dev
 ```
 
-Відкрий http://localhost:3000. Поки SendGrid не налаштовано, на localhost доступний вхід для розробки.
+Open http://localhost:3000. Until SendGrid is configured, a development sign-in is available on localhost.
 
-### Вхід через одноразове посилання
+### Sign-in with a one-time link
 
-1. Передай серверу `SENDGRID_API_KEY` з дозволом Mail Send і підтверджену адресу відправника в `SENDGRID_FROM_EMAIL`.
-2. Задай публічний HTTPS URL у `BASE_URL`. За локальним reverse proxy, що передає початкову IP-адресу клієнта, встанови `TRUST_LOCAL_PROXY=1`.
-3. Запроси посилання з екрана входу, відкрий лист і підтвердь вхід. Посилання діє 15 хвилин і спрацьовує один раз.
+1. Give the server a `SENDGRID_API_KEY` with the Mail Send permission and a verified sender address in `SENDGRID_FROM_EMAIL`.
+2. Set a public HTTPS URL in `BASE_URL`. Behind a local reverse proxy that forwards the client's original IP address, set `TRUST_LOCAL_PROXY=1`.
+3. Request a link on the sign-in screen, open the email and confirm the sign-in. The link is valid for 15 minutes and works once.
 
-### AI-аналіз
+### AI analysis
 
-Для Amazon Bedrock задай `AI_PROVIDER=bedrock` і передай `AWS_BEARER_TOKEN_BEDROCK` через середовище сервера. Значення з `.env.example` використовують endpoint Bedrock в Ірландії (`eu-west-1`) та європейський профіль Amazon Nova 2 Lite. TeamOS перевіряє формат відповіді й звіряє цитати зі джерелом. Кожен підтверджений фрагмент знань зберігається в окремому Markdown-файлі з джерелом і цитатою.
+For Amazon Bedrock, set `AI_PROVIDER=bedrock` and pass `AWS_BEARER_TOKEN_BEDROCK` through the server environment. The values in `.env.example` use the Bedrock endpoint in Ireland (`eu-west-1`) and the European Amazon Nova 2 Lite profile. TeamOS validates the response format and checks quotes against the source. Each confirmed knowledge chunk is stored in its own Markdown file with its source and quote.
 
-Для прямого Claude API задай `AI_PROVIDER=anthropic` і `ANTHROPIC_API_KEY`. Серверний fallback Anthropic працює в цьому режимі.
+For the Claude API directly, set `AI_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`. Anthropic's server-side fallback works in this mode.
 
-Для OpenAI задай `AI_PROVIDER=openai`, `OPENAI_API_KEY` та, за потреби, `OPENAI_MODEL` (типово `gpt-4.1-mini`). TeamOS надсилає текст і контекст команди до Responses API з `store: false`. Без налаштованого провайдера записи можна опрацювати вручну в Review.
+For OpenAI, set `AI_PROVIDER=openai`, `OPENAI_API_KEY` and, if needed, `OPENAI_MODEL` (default `gpt-4.1-mini`). TeamOS sends the text and team context to the Responses API with `store: false`. Without a configured provider, items can be processed manually in Review.
 
-## Як зберігаються дані
+## How data is stored
 
-Усе — звичайні файли в `DATA_DIR` (за замовчуванням `./data`, у `.gitignore`). Задачі, проєкти й гіпотези — JSON, знання — Markdown з front matter. У кожній папці є `index.md` — точка входу, з якої посиланнями можна дійти до кожного файлу (генерується автоматично після кожного запису).
+Leave `S3_BUCKET` empty to use local storage. The default is `storage/` in the project root, which is ignored by Git. Set `DATA_DIR` to use a different directory. On first use, TeamOS copies an existing default `data/` store into `storage/`, preserving IDs and the session signing key. An explicitly configured directory with the previous layout remains readable.
 
-```
-data/
-  index.md                          ← корінь: усі команди й користувачі
-  users/<userId>/
-    index.md                        ← точка входу користувача
-    profile.json                    ← ім’я, email-и, aliases для транскриптів
-    teams/<teamId>/                 ← окрема папка на кожну команду користувача
-      index.md
-      inbox/<id>.json               ← запис інбоксу + пропозиції AI
-      inbox/<id>.md                 ← сирий транскрипт (бачить лише автор)
-      tasks/<id>.json               ← приватні задачі (бере участь лише один учасник)
-      knowledge/<id>.md             ← приватні знання
-  teams/<teamId>/                   ← папка команди, поза папками користувачів
-    index.md                        ← точка входу команди
-    team.json                       ← учасники, ролі, запрошення
-    vision.md                       ← Team vision
-    projects/<id>.json
+Local files and S3 objects use the same structure:
+
+```text
+settings/
+  users/<userId>.json
+  auth/session-secret
+  auth/signin-links/<sha256>.json
+records/primary/
+  teams/<teamId>/
+    team.json
+    vision.md
+    projects/<id>.json           # project goals are stored in the goals field
     hypotheses/<id>.json
-    tasks/<id>.json                 ← спільні задачі (виконавець ≠ постановник)
-    knowledge/<id>.md               ← спільна база знань
+    tasks/<id>.json              # shared tasks
+    knowledge/<id>.md            # shared knowledge
+  users/<userId>/teams/<teamId>/
+    tasks/<id>.json              # private tasks
+    knowledge/<id>.md            # private knowledge with a teamId reference
+    inbox/<id>.json
+    inbox/<id>.md
+    assistant/<id>.json
 ```
 
-Особистий простір — це команда з одним учасником (`teams/personal-<userId>`). Задача переїжджає між папкою користувача і папкою команди автоматично, коли змінюється її виконавець.
+Local mode also generates navigable `index.md` files. Private records stay in the owner's folder and retain their team context. Changing a knowledge item's visibility moves it between the owner and team folders. Email sign-in links expire after 15 minutes and can be used once.
 
-### Пряме зберігання задач і знань у S3
+### Amazon S3 as the primary store
 
-Задай `S3_BUCKET`, `S3_REGION`, `S3_OWNER_ACCOUNT` і передай облікові дані через середовище AWS SDK. TeamOS читатиме й записуватиме задачі в JSON та знання в Markdown безпосередньо в `records/primary/teams/`. Приватність визначає сам запис, тому зміна доступу замінює той самий об’єкт. Профілі, команди, проєкти, гіпотези та інбокс зберігаються в `DATA_DIR`.
+Set `S3_BUCKET`, `S3_REGION` and `S3_OWNER_ACCOUNT`, and pass credentials through the AWS SDK environment. All application state is read and written directly in S3. A replacement instance needs access to the same bucket and the deployment configuration for email and AI. If `SESSION_SECRET` is set explicitly, provide the same value on the new instance.
 
-Для переходу з локальних файлів призупини записи і виклич `migrateRecordsToS3()` із `server/store.js` із налаштованим середовищем S3. Перенесення безпечно повторювати, поки застосунок призупинений. За порожнього `S3_BUCKET` діє файлове сховище.
+Pause application writes while running a migration.
 
-## Структура коду
+- `node --env-file-if-exists=.env server/migrate-to-s3.js files` copies a local file store into S3.
+- `node --env-file-if-exists=.env server/migrate-to-s3.js split` upgrades a deployment that already keeps tasks and knowledge in S3 and the rest on disk.
 
-- [server/index.js](server/index.js) — HTTP API, права доступу, застосування пропозицій з Review.
-- [server/store.js](server/store.js) — файлове сховище і генерація `index.md`.
-- [server/auth.js](server/auth.js) — Google OAuth і підписана сесійна cookie.
-- [server/ai.js](server/ai.js) — аналізатор інбоксу через Bedrock або Claude API зі структурованим JSON.
-- [public/](public/) — клієнт без збірки (vanilla JS), стилі з прототипу.
+The migration verifies copied records and stops if a destination contains different data. It can be repeated while writes are paused.
+
+## Code structure
+
+- [server/index.js](server/index.js) — HTTP API, access rules, applying proposals from Review.
+- [server/store.js](server/store.js) — file storage and `index.md` generation.
+- [server/auth.js](server/auth.js) — one-time email link sign-in and the signed session cookie.
+- [server/ai.js](server/ai.js) — the inbox analyzer via Bedrock, the Claude API or OpenAI with structured JSON.
+- [server/i18n.js](server/i18n.js) — Ukrainian translations of server messages.
+- [public/](public/) — the client without a build step (vanilla JS), styles from the prototype.
+- [public/i18n.js](public/i18n.js) — Ukrainian translations of the interface (English is the source language).
 
 ## Roadmap
 
-Що лишилось до повної реалізації [специфікації](docs/01-vision-and-ui-spec.md). Порядок усередині етапу — приблизний пріоритет.
+What's left for a full implementation of the [specification](docs/01-vision-and-ui-spec.md). The order within a stage is a rough priority.
 
-### v0.2 — джерела і щоденна робота
+### v0.2 — sources and daily work
 
-- **Google Calendar** (кілька акаунтів): тиждень/день, вибір календарів, прив’язка запису інбоксу до мітингу (учасники й дата → кращий матчинг людей).
-- **Team availability**: free/busy учасників, налаштування приватності (free/busy / назви подій / нічого).
-- **Meeting Prep**: на події — відкриті комітменти між учасниками і рішення по пов’язаних проєктах; кнопка «Drop transcript».
-- **Gmail** (кілька акаунтів): AI-тріаж «Потребує відповіді / Чекаю відповіді / Містить комітмент / FYI», кнопка «→ Інбокс».
-- **Google Drive**: Picker (`drive.file`) і автопошук транскриптів Meet у Meet Recordings.
-- **Forward-to-inbox**: окрема email-адреса команди, листи на яку падають в інбокс.
-- **Завантаження файлів** `.docx` і `.pdf` (зараз лише текстові формати).
-- **Person view + Meeting mode** для 1:1: картки по одній, швидкі кнопки статусу, перенесення дедлайну, коментар.
-- **⌘K Ask**: питання природною мовою до задач і знань (RAG) з відповіддю і посиланнями на джерела.
-- **Щоденний дайджест** (email): нові делеговані задачі, прострочене, що чекає review, нові коментарі.
-- **Сповіщення** в застосунку: нова задача мені, коментар до моєї задачі, пропозиція статусу від виконавця.
-- **Листи-запрошення**: надсилання інвайту на email замість ручного копіювання посилання.
+- **Google Calendar** (several accounts): week/day, choosing calendars, linking an inbox item to a meeting (attendees and date → better people matching).
+- **Team availability**: members' free/busy, privacy settings (free/busy / event titles / nothing).
+- **Meeting Prep**: on an event, open commitments between attendees and decisions on related projects; a "Drop transcript" button.
+- **Gmail** (several accounts): AI triage "Needs a reply / Waiting for a reply / Contains a commitment / FYI", a "→ Inbox" button.
+- **Google Drive**: Picker (`drive.file`) and automatic discovery of Meet transcripts in Meet Recordings.
+- **Forward-to-inbox**: a dedicated team email address whose messages land in the inbox.
+- **File uploads** for `.docx` and `.pdf` (only text formats for now).
+- **Person view + Meeting mode** for 1:1s: one card at a time, quick status buttons, moving the deadline, a comment.
+- **⌘K Ask**: natural-language questions to tasks and knowledge (RAG) with an answer and links to sources.
+- **Daily digest** (email): newly delegated tasks, overdue items, what is waiting for review, new comments.
+- **In-app notifications**: a new task for me, a comment on my task, a status proposal from the owner.
+- **Invite emails**: sending the invite by email instead of copying the link by hand.
 
-### v0.3 — Second Brain через MCP
+### v0.3 — Second Brain via MCP
 
-**TeamOS MCP-сервер**, щоб спілкуватися зі своїм Second Brain із Claude (claude.ai, Claude Desktop, Claude Code) або Codex, не відкриваючи TeamOS.
+A **TeamOS MCP server** so you can talk to your Second Brain from Claude (claude.ai, Claude Desktop, Claude Code) or Codex without opening TeamOS.
 
-- **Два рівні доступу**:
-  - *Мій Second Brain* — один конектор на всі мої команди й особистий простір; агент бачить те саме, що я в UI, і може питати «що я винен усім командам до п’ятниці».
-  - *Second Brain команди* — конектор, обмежений однією командою, для спільних агентів і автоматизацій команди.
-- **Інструменти (tools)**: пошук і питання по знаннях, задачах, проєктах і гіпотезах; «що я винен / що мені винні»; підготовка до мітингу з людиною; додати транскрипт, нотатку або лист в інбокс; створити задачу, знання, гіпотезу; запропонувати зміну статусу; додати learning до гіпотези.
-- **Ресурси (resources)**: `index.md` користувача і команд як точки входу — агент іде посиланнями до потрібних JSON і Markdown, як людина в Obsidian.
-- **Ті самі права, що в UI**: статус змінює лише постановник, сирі транскрипти бачить лише автор, Member не бачить чужих задач. Запис від агента за замовчуванням іде в інбокс як пропозиція (human-in-the-loop), пряме застосування — опційно для власних задач.
-- **Авторизація**: віддалений MCP (Streamable HTTP) з OAuth через той самий Google-вхід; токени з обмеженим scope (одна команда / усі мої / лише читання).
-- **Локальний режим**: оскільки дані — це файли з `index.md`, для self-host можна просто дати Claude Code чи Codex доступ до папки `data/` лише на читання.
-- Також MCP-клієнт у зворотний бік: підтягувати транскрипти з Omi, Fireflies, Zoom.
+- **Two access levels**:
+  - *My Second Brain* — one connector for all my teams and my personal workspace; the agent sees what I see in the UI and can answer "what do I owe all my teams by Friday".
+  - *Team Second Brain* — a connector limited to one team, for the team's shared agents and automations.
+- **Tools**: search and questions across knowledge, tasks, projects and hypotheses; "what I owe / what I'm owed"; preparing for a meeting with a person; adding a transcript, note or email to the inbox; creating a task, knowledge item or hypothesis; proposing a status change; adding a learning to a hypothesis.
+- **Resources**: the user's and teams' `index.md` files as entry points — the agent follows links to the JSON and Markdown it needs, like a person in Obsidian.
+- **The same permissions as the UI**: only the requester changes a status, raw transcripts are visible only to their author, a Member doesn't see other people's tasks. By default an agent's write goes to the inbox as a proposal (human-in-the-loop); applying directly is optional for your own tasks.
+- **Authorization**: a remote MCP server (Streamable HTTP) with OAuth through the same sign-in; scoped tokens (one team / all of mine / read-only).
+- **Local mode**: since the data is files with `index.md`, a self-hosted install can simply give Claude Code or Codex read-only access to the `data/` folder.
+- Also an MCP client in the other direction: pulling transcripts from Omi, Fireflies, Zoom.
 
-### v0.3+ — інші канали і довіра до AI
+### v0.3+ — other channels and trust in AI
 
-- **Telegram і Slack боти**: як джерело для інбоксу і як канал сповіщень.
-- **Onboarding pack**: AI збирає з Team Space і командних знань документ «що треба знати новенькому».
-- **Learnings з транскриптів**: AI пропонує висновки для гіпотез («на мітингу сказали, що конверсія 2% → додати як learning?») і оновлення метрик.
-- **Review UX**: хоткеї J/K/Space/E, UI прив’язки імен («"Сашко" → Oleksandr S.») з автоматичним збереженням у aliases, альтернативи при сумнівах AI («Можливо, проєкт TeamOS?»).
-- **Дедуплікація мітингів**: якщо двоє кинули транскрипт того самого мітингу — «Цей мітинг вже обробив Oleksandr», пропонувати лише нове.
-- **Зовнішні контакти** як окрема сутність (ім’я, email, компанія) замість вільного тексту.
-- **Передача ролі постановника**, коли людина пішла з команди (Admin/Owner).
-- **Автоприйняття** пропозицій з високою впевненістю (вимкнено за замовчуванням).
-- **Інтерфейс англійською** (EN + UA).
+- **Telegram and Slack bots**: as an inbox source and a notification channel.
+- **Onboarding pack**: AI assembles a "what a newcomer needs to know" document from the Team Space and team knowledge.
+- **Learnings from transcripts**: AI proposes conclusions for hypotheses ("the meeting said conversion is 2% → add as a learning?") and metric updates.
+- **Review UX**: J/K/Space/E hotkeys, a name-linking UI ("'Sashko' → Oleksandr S.") that saves to aliases automatically, alternatives when the AI is unsure ("Maybe the TeamOS project?").
+- **Meeting deduplication**: if two people drop a transcript of the same meeting — "Oleksandr already processed this meeting" — propose only what is new.
+- **External contacts** as a separate entity (name, email, company) instead of free text.
+- **Transferring the requester role** when someone leaves the team (Admin/Owner).
+- **Auto-accepting** high-confidence proposals (off by default).
+- **More interface languages** beyond English and Ukrainian.
 
-### Self-host і SaaS
+### Self-host and SaaS
 
-- **Docker-пакет** і інструкція для self-host (свій Google OAuth client).
-- **BYO LLM**: вибір провайдера і ключа в налаштуваннях (Anthropic / OpenAI / Gemini / локальна модель).
-- **Розділ Settings** у UI: мова аналізу, правило терміновості, приватність, AI, сповіщення.
-- **Публічний SaaS**: верифікація Google OAuth для sensitive/restricted scopes (Calendar, Gmail, Drive), білінг.
+- **Docker package** and self-host instructions.
+- **BYO LLM**: choosing the provider and key in settings (Anthropic / OpenAI / Gemini / a local model).
+- **Settings section** in the UI: analysis language, urgency rule, privacy, AI, notifications.
+- **Public SaaS**: Google OAuth verification for sensitive/restricted scopes (Calendar, Gmail, Drive), billing.
 
-### Технічний борг
+### Technical debt
 
-- Автотести для API і правил доступу.
-- Блокування запису або база даних для паралельної роботи багатьох людей (зараз — один процес Node і файли).
-- Черга для AI-аналізу з повторними спробами (зараз — у пам’яті процесу).
-- Мобільна верстка ключових екранів.
-- Метрики успіху зі специфікації: час розбору мітингу, precision і recall пропозицій, активні учасники.
+- Automated tests for the API and access rules.
+- Write locking or a database for many people working in parallel (currently one Node process and files).
+- A queue for AI analysis with retries (currently in process memory).
+- Mobile layout for key screens.
+- Success metrics from the specification: time to process a meeting, precision and recall of proposals, active members.
