@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TeamOS прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, precise work tool — a shipped product, not a poster.
+   IDEA: a meeting's minutes turned into a ledger of who owes whom what.
+   PICTURE: the working app itself; on login, a transcript splitting into commitment cards.
+   COLOUR and TYPE: white / near-black ink, one grey family, signal red only for overdue and badges; Archivo (wide for titles).
+   LAYOUT: fixed left nav, sticky top bar, content in cards and tables; drawer on the right. */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#0e0e0e);--side:light-dark(#f5f5f3,#151515);--card:light-dark(#ffffff,#161616);--soft:light-dark(#f6f6f4,#1c1c1c);
+--ink:light-dark(#111111,#f1f1f1);--mut:light-dark(#686868,#9c9c9c);--line:light-dark(#e4e4e0,#2b2b2b);--line2:light-dark(#d4d4cf,#3a3a3a);
+--red:#e4002b;--redbg:light-dark(#fde8ec,#3a0d16);--amber:light-dark(#9a5b00,#f0b45a);--amberbg:light-dark(#fff3dc,#3a2a0c);
+--green:light-dark(#0b7a52,#4fd19c);--greenbg:light-dark(#e3f5ec,#0f2e22);--hi:light-dark(#fff2a6,#4b4310);--blue:light-dark(#1f4fd8,#7fa2ff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+h1,h2,h3{font-stretch:112%;line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:30px;font-weight:800}h2{font-size:19px;font-weight:750}h3{font-size:15px;font-weight:700}
+.i{flex:none;vertical-align:-3px}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.side{background:var(--side);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow:auto;padding:12px 10px;display:flex;flex-direction:column;gap:2px}
+.teamsw{display:flex;align-items:center;gap:8px;padding:8px;border-radius:10px;border:0;background:none;width:100%;text-align:left;font-weight:700}
+.teamsw:hover{background:var(--line)}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.tmenu{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;margin:2px 0 6px;box-shadow:0 8px 24px #0002}
+.tmenu button{display:flex;gap:8px;align-items:center;width:100%;border:0;background:none;padding:7px 8px;border-radius:7px;text-align:left}
+.tmenu button:hover{background:var(--soft)}
+.srch{display:flex;align-items:center;gap:8px;margin:6px 0 10px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--mut);width:100%;text-align:left;font-size:14px}
+.srch kbd{margin-left:auto}
+kbd{font:600 11px Archivo,system-ui,sans-serif;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--mut);background:var(--card)}
+.nv{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;border:0;background:none;width:100%;text-align:left;color:var(--ink);font-size:14.5px}
+.nv:hover{background:var(--line)}
+.nv.on{background:var(--ink);color:var(--bg)}
+.nv .bd{margin-left:auto;background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:0 7px;line-height:18px}
+.nv.sub{padding-left:34px;font-size:13.5px;color:var(--mut)}.nv.sub.on{color:var(--bg)}
+.sect{font-size:12px;font-weight:700;color:var(--mut);padding:14px 10px 4px}
+.dot{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none}
+.spacer{flex:1}
+.me{display:flex;align-items:center;gap:9px;padding:8px;border-top:1px solid var(--line);margin-top:8px;font-size:14px}
+.main{min-width:0}
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 28px;min-height:58px}
+.demo{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut)}
+.demo select{padding:5px 8px;border-radius:8px;border:1px solid var(--line2);background:var(--card)}
+.page{padding:26px 28px 120px;max-width:1320px}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:var(--card);border-radius:9px;padding:7px 13px;font-weight:600;font-size:14px;white-space:nowrap;min-height:36px}
+.btn:hover{border-color:var(--ink)}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.pri:hover{opacity:.88}
+.btn.ghost{border-color:transparent;background:none}.btn.ghost:hover{background:var(--soft)}
+.btn.sm{padding:3px 9px;min-height:28px;font-size:13px;border-radius:7px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.nv:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.hd{display:flex;align-items:flex-end;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.hd .sub{color:var(--mut);margin-top:6px}
+.hd .act{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;padding:3px;gap:2px;background:var(--card);flex-wrap:wrap}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:7px;font-weight:600;font-size:13.5px;color:var(--mut)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg.sm button{padding:3px 9px;font-size:12.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card h2{font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.card h2 .lnk{margin-left:auto;font:600 13px Archivo,system-ui,sans-serif;color:var(--mut);border:0;background:none}
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,.95fr)}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.col{display:flex;flex-direction:column;gap:16px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--soft);color:var(--mut);white-space:nowrap;border:0}
+.chip.red{background:var(--redbg);color:var(--red)}.chip.amber{background:var(--amberbg);color:var(--amber)}.chip.green{background:var(--greenbg);color:var(--green)}
+.chip.big{font-size:14px;padding:6px 12px;background:var(--card);border:1px solid var(--line);color:var(--ink)}
+.chip.big b{font-size:16px}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--mut);white-space:nowrap}
+.tag::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+.av{--s:24px;width:var(--s);height:var(--s);border-radius:50%;background:var(--c,#888);color:#fff;display:inline-grid;place-items:center;font-size:calc(var(--s)*.45);font-weight:700;flex:none}
+.av.ext{background:var(--soft);color:var(--mut);border:1px dashed var(--line2)}
+.avs{display:inline-flex}.avs .av{margin-left:-6px;border:2px solid var(--card)}.avs .av:first-child{margin-left:0}
+.trow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:9px;cursor:pointer;border:0;background:none;width:100%;text-align:left}
+.trow:hover{background:var(--soft)}
+.trow .tt{flex:1;min-width:0}
+.trow .tt b{font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .mt{display:flex;gap:10px;align-items:center;margin-top:2px;flex-wrap:wrap;font-size:12.5px;color:var(--mut)}
+.st{width:14px;height:14px;border-radius:50%;border:2px solid var(--line2);flex:none}
+.st.progress{border-color:var(--blue);background:conic-gradient(var(--blue) 0 50%,transparent 0)}
+.st.waiting{border-color:var(--amber);border-style:dashed}
+.st.done{border-color:var(--green);background:var(--green)}
+.st.cancelled{border-color:var(--mut);background:var(--line2)}
+.empty{color:var(--mut);padding:18px 8px;text-align:center;font-size:14px}
+.lock{display:flex;gap:8px;align-items:flex-start;background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13.5px;color:var(--mut)}
+.cmt{display:inline-flex;align-items:center;gap:3px}.cmt.new{color:var(--red);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12.5px;color:var(--mut);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}tbody tr:hover td{background:var(--soft)}
+.grp td{background:var(--soft);font-weight:700;cursor:default}
+select.in,input.in,textarea.in{border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:6px 9px;font-size:14px;min-height:34px}
+textarea.in{width:100%;resize:vertical}
+label.fl{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mut);font-weight:600}
+/* matrix + kanban */
+.mx{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.q{border:1px solid var(--line);border-radius:14px;padding:12px;min-height:250px;background:var(--card);transition:background .15s}
+.q.over,.kcol.over{background:var(--soft);outline:2px dashed var(--line2)}
+.q h3{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.q h3 small{font-weight:500;color:var(--mut);font-size:12.5px;font-stretch:100%}
+.q.q11 h3{color:var(--red)}
+.kb{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px}
+.kcol{background:var(--soft);border-radius:14px;padding:10px;min-height:360px}
+.kcol h3{display:flex;gap:8px;align-items:center;padding:4px 4px 10px}
+.kc{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 11px;margin-bottom:8px;cursor:grab}
+.kc:hover{border-color:var(--line2)}.kc b{font-weight:600;display:block;margin-bottom:6px;font-size:14px}
+.kc .mt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--mut)}
+.dragging{opacity:.4}
+/* drawer & modal */
+#drawer{position:fixed;inset:0 0 0 auto;width:min(480px,100vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-12px 0 40px #0002;z-index:20;transform:translateX(105%);transition:transform .22s ease;overflow:auto}
+#drawer.on{transform:none}
+.dw{padding:18px 22px 40px}
+.dwh{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.dwt{font:750 21px/1.2 Archivo,system-ui,sans-serif;font-stretch:108%;width:100%;border:1px solid transparent;border-radius:8px;padding:4px 6px;margin:0 -6px 8px;background:none;resize:none}
+.dwt:not([readonly]):hover{border-color:var(--line2)}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:9px 12px;align-items:center;font-size:14px;margin:14px 0}
+.kv>span{color:var(--mut);font-size:13px}
+.box{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:14px}
+.box h3{font-size:13px;color:var(--mut);margin-bottom:8px;font-stretch:100%}
+.quote{border-left:3px solid var(--line2);padding:2px 0 2px 10px;font-size:14px}
+.hist{font-size:13px;color:var(--mut);display:grid;gap:6px}
+.cm{display:flex;gap:9px;margin-bottom:10px;font-size:14px}.cm .when{color:var(--mut);font-size:12px}
+.ov{position:fixed;inset:0;background:#0006;z-index:30;display:grid;place-items:start center;padding:8vh 16px;overflow:auto}
+.md{background:var(--card);border-radius:16px;width:min(620px,100%);box-shadow:0 30px 80px #0005;padding:20px 22px}
+.md.wide{width:min(760px,100%)}
+.mdh{display:flex;align-items:center;gap:10px;margin-bottom:14px}.mdh .x{margin-left:auto}
+.mdf{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;align-items:center}
+.hint{font-size:13px;color:var(--mut)}
+code{font-size:13px;background:var(--soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:50;max-width:90vw}
+#toast.on{opacity:1;transform:translateX(-50%)}
+/* inbox + review */
+.irow{display:flex;align-items:center;gap:14px;padding:13px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.irow:hover{background:var(--soft)}
+.iico{width:36px;height:36px;border-radius:10px;background:var(--soft);display:grid;place-items:center;flex:none}
+.rv{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:20px;align-items:start}
+.src{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow:auto;padding:4px 14px 14px}
+.ln{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:6px 8px;border-radius:8px;font-size:14px;transition:background .15s}
+.ln .ts{color:var(--mut);font-size:12px;padding-top:2px}
+.ln b{font-weight:700}
+.ln.hl{background:var(--hi)}
+.sec{margin:22px 0 10px;display:flex;align-items:center;gap:8px}.sec:first-child{margin-top:0}
+.sec .n{color:var(--mut);font-weight:600}
+.prop{display:flex;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--card);transition:opacity .15s,border-color .15s}
+.prop:hover{border-color:var(--ink)}
+.prop.off{opacity:.5}
+.prop>input{width:18px;height:18px;margin-top:3px;accent-color:var(--ink);flex:none}
+.pbody{flex:1;min-width:0}
+.ttl{font:650 15.5px Archivo,system-ui,sans-serif;width:100%;border:1px solid transparent;border-radius:7px;padding:3px 6px;margin:-3px -6px 6px;background:none}
+.ttl:hover,.ttl:focus{border-color:var(--line2)}
+.fields{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:13px;color:var(--mut);align-items:center}
+.fields label{display:inline-flex;align-items:center;gap:6px}
+.fields select,.fields input[type=date]{border:1px solid var(--line);background:var(--soft);border-radius:7px;padding:3px 6px;font-size:13px;color:var(--ink);max-width:180px}
+.fields input[type=checkbox]{accent-color:var(--ink)}
+.ev{font-size:13.5px;color:var(--mut);margin-top:9px;border-left:3px solid var(--line2);padding-left:9px}
+.ev .ts{font-size:12px;margin-left:4px}
+.pmeta{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.conf{font-size:12px;font-weight:600;color:var(--green)}.conf.med{color:var(--amber)}
+.warn{display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:var(--amberbg);color:var(--amber);border-radius:9px;padding:8px 10px;margin-top:9px;font-size:13.5px}
+.warn .seg{margin-left:auto}
+.route{font-size:13px;color:var(--blue);margin-top:6px;display:flex;gap:6px;align-items:center}
+.bar{position:sticky;bottom:0;z-index:4;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 -6px 30px #0001;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-top:16px}.bar .hint{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sum{background:var(--soft);border-radius:12px;padding:12px 16px;margin-bottom:18px}
+.sum ul{margin:6px 0 0;padding-left:18px}
+.done-box{text-align:center;padding:48px 20px}
+.done-box .big{font:800 44px/1 Archivo,system-ui,sans-serif;font-stretch:115%}
+.alias{display:inline-flex;gap:5px;align-items:center;font-size:12.5px;background:var(--greenbg);color:var(--green);border-radius:20px;padding:2px 9px;font-weight:600}
+/* calendar */
+.cal{display:grid;grid-template-columns:230px minmax(0,1fr);gap:20px}
+.cgrid{display:grid;border:1px solid var(--line);border-radius:14px;overflow:auto;background:var(--card)}
+.ccol{position:relative;border-left:1px solid var(--line);min-width:150px}
+.ccol:first-child{border-left:0;min-width:56px}
+.chd{height:44px;display:flex;align-items:center;gap:7px;justify-content:center;border-bottom:1px solid var(--line);font-weight:700;font-size:13.5px;position:sticky;top:0;background:var(--card);z-index:1}
+.hr{height:48px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--mut);padding:2px 6px;text-align:right}
+.evt{position:absolute;left:5px;right:5px;border-radius:8px;padding:4px 7px;font-size:12.5px;line-height:1.25;background:color-mix(in srgb,var(--c) 16%,var(--card));border-left:3px solid var(--c);cursor:pointer;overflow:hidden}
+.evt b{display:block;font-weight:650}
+.evt.busy{background:repeating-linear-gradient(135deg,var(--soft) 0 6px,var(--line) 6px 8px);border-left-color:var(--line2);color:var(--mut);cursor:default}
+.now{position:absolute;left:0;right:0;height:2px;background:var(--red);z-index:2}
+.cklist{display:grid;gap:6px;font-size:14px}.cklist label{display:flex;gap:8px;align-items:center}
+.cklist input{accent-color:var(--ink);width:16px;height:16px}
+/* mail */
+.mrow{display:grid;grid-template-columns:180px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.mrow .s{font-weight:650}.mrow .ai{color:var(--mut);font-size:13.5px}
+/* knowledge */
+.kn{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px;background:var(--card)}
+.kn.sup{opacity:.55}.kn.sup .ktx{text-decoration:line-through}
+.ktx{font-weight:600;font-size:15px;margin:6px 0 4px}
+.km{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);align-items:center}
+.ty{font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;background:var(--soft)}
+.ty.decision{background:var(--ink);color:var(--bg)}
+.tl{border-left:2px solid var(--line2);margin-left:6px;padding-left:18px}
+.tl .kn{position:relative}.tl .kn::before{content:"";position:absolute;left:-25px;top:18px;width:10px;height:10px;border-radius:50%;background:var(--ink);border:2px solid var(--bg)}
+/* projects + hyp */
+.prog{height:8px;border-radius:8px;background:var(--soft);overflow:hidden;margin-top:6px}.prog i{display:block;height:100%;background:var(--ink);border-radius:8px}
+.hyp{border:1px solid var(--line);border-radius:14px;padding:15px 17px;background:var(--card);cursor:pointer}
+.hyp:hover{border-color:var(--ink)}
+.stmt{font-size:15px;line-height:1.45}.stmt em{font-style:normal;font-weight:700}
+.bigstmt{font:600 24px/1.3 Archivo,system-ui,sans-serif;font-stretch:104%;max-width:900px}
+.bigstmt em{font-style:normal;color:var(--mut);font-weight:500}
+.doc{max-width:760px;font-size:16px;line-height:1.65}
+.doc h2{margin:26px 0 8px}.doc[contenteditable=true]{outline:2px dashed var(--line2);outline-offset:10px;border-radius:4px}
+/* person */
+.mm{max-width:640px;margin:0 auto}
+.mmcard{border:1px solid var(--line);border-radius:18px;padding:26px;background:var(--card);box-shadow:0 10px 40px #0001}
+.mmcard .t{font:750 24px/1.2 Archivo,system-ui,sans-serif;font-stretch:108%;margin:10px 0 14px}
+.stbtns{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 12px}
+/* login + onboarding */
+.lg{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}
+.lgl{background:var(--ink);color:var(--bg);padding:48px 56px;display:flex;flex-direction:column;gap:28px}.lgm{display:grid;gap:22px;margin:auto 0}
+.lgl h1{font-size:clamp(34px,4.2vw,52px);line-height:1.04;color:var(--bg)}
+.lgl p{color:color-mix(in srgb,var(--bg) 70%,transparent);font-size:17px;max-width:520px;margin:0}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);gap:10px;align-items:center;margin-top:18px}
+.tx{background:color-mix(in srgb,var(--bg) 8%,var(--ink));border-radius:14px;padding:14px;font-size:13px;display:grid;gap:8px;color:color-mix(in srgb,var(--bg) 82%,transparent)}
+.tx mark{background:#e4002b33;color:inherit;border-radius:3px;padding:0 2px}
+.arrow{font-size:26px;text-align:center;color:var(--red)}
+.outs{display:grid;gap:8px}
+.oc{background:var(--bg);color:var(--ink);border-radius:11px;padding:9px 11px;font-size:13px;box-shadow:0 6px 20px #0004;animation:pop .5s both}
+.oc:nth-child(2){animation-delay:.15s}.oc:nth-child(3){animation-delay:.3s}
+.oc small{display:block;color:var(--mut);font-size:11.5px;font-weight:700}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}}
+@media(prefers-reduced-motion:reduce){.oc{animation:none}#drawer{transition:none}}
+.lgr{display:grid;place-items:center;padding:40px}
+.lgbox{width:min(380px,100%);display:grid;gap:14px}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--line2);border-radius:11px;padding:12px;font-weight:700;background:var(--card);font-size:15px}
+.gbtn:hover{border-color:var(--ink)}
+.inv{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;font-size:14px}
+.ob{max-width:720px;margin:0 auto;padding:40px 24px}
+.steps{display:flex;gap:6px;margin-bottom:28px}
+.steps i{flex:1;height:4px;border-radius:4px;background:var(--line)}.steps i.on{background:var(--ink)}
+.opt{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;cursor:pointer;background:var(--card);width:100%;text-align:left}
+.opt.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.conn{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.tg{position:relative;width:36px;height:21px;flex:none}.tg input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
+.tg span{position:absolute;inset:0;border-radius:20px;background:var(--line2);transition:.15s}
+.tg span::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.15s}
+.tg input:checked+span{background:var(--ink)}.tg input:checked+span::after{left:18px;background:var(--bg)}
+.tg input:focus-visible+span{outline:2px solid var(--blue)}
+.ask{background:var(--soft);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:14.5px}
+.res{display:grid;gap:2px;margin-top:10px;max-height:46vh;overflow:auto}
+.p1{font-size:11px;font-weight:700;border:1px solid var(--line2);border-radius:5px;padding:0 5px;color:var(--mut)}
+@media(max-width:1100px){.g3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.g3>.col:last-child{grid-column:1/-1}}
+@media(max-width:900px){.app{grid-template-columns:64px minmax(0,1fr)}.side .lbl,.side .bd,.side .sect,.side .srch,.nv.sub,.side .tmenu{display:none}.nv{justify-content:center}.teamsw{justify-content:center}
+.rv,.cal,.g2,.g3,.lg{grid-template-columns:minmax(0,1fr)}.src{position:static;max-height:none}.mx{grid-template-columns:minmax(0,1fr)}.mrow{grid-template-columns:minmax(0,1fr)}.page{padding:20px 16px 100px}.top{padding:10px 16px;flex-wrap:wrap}.lgl{padding:32px 24px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="drawer" aria-hidden="true"></div>
+<div id="modal"></div>
+<div id="toast" role="status"></div>
+<script>
+{
+/* ---------- helpers ---------- */
+const TODAY='2026-11-23';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const D=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const diff=(a,b)=>Math.round((D(b)-D(a))/864e5);
+const WD=['Нд','Пн','Вт','Ср','Чт','Пт','Сб'],MO=['січ','лют','бер','квіт','трав','черв','лип','серп','вер','жовт','лист','груд'];
+const fd=s=>{if(!s)return '—';const d=D(s);return `${WD[d.getDay()]}, ${d.getDate()} ${MO[d.getMonth()]}`};
+const fds=s=>{const d=D(s);return `${d.getDate()} ${MO[d.getMonth()]}`};
+const I={dash:'M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z',inbox:'M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6H3v-6z',tasks:'M4 4h16v16H4zM8 12l3 3 5-6',cal:'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',mail:'M3 6h18v12H3zM3 6l9 7 9-7',kn:'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4zM5 16a4 4 0 0 1 4-4h10',vision:'M12 3l9 9-9 9-9-9z',users:'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 20a5 5 0 0 0-4-5',plug:'M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4',gear:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12h3M2 12h3M12 2v3M12 19v3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2',search:'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5',plus:'M12 5v14M5 12h14',x:'M6 6l12 12M18 6L6 18',lock:'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',file:'M6 3h9l4 4v14H6zM14 3v5h5',chat:'M4 5h16v11H9l-5 4z',warn:'M12 3l10 18H2zM12 10v5M12 18v.5',mic:'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',note:'M5 3h14v18H5zM9 8h6M9 12h6M9 16h3',arrow:'M5 12h14M13 6l6 6-6 6',back:'M19 12H5M11 6l-6 6 6 6',chev:'M6 9l6 6 6-6',cmt:'M4 5h16v11H9l-5 4z',route:'M5 12h14M13 6l6 6-6 6',spark:'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6',drive:'M8 3h8l6 11-4 7H6l-4-7z',out:'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6'};
+const ico=(n,s=16)=>`<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${I[n]}"/></svg>`;
+
+/* ---------- demo data ---------- */
+const P={vd:{id:'vd',name:'Володимир',full:'Володимир Д.',email:'vd@linxa.com',role:'owner',c:'#1f4fd8',share:true},
+ok:{id:'ok',name:'Олександр',full:'Олександр Коваль',email:'oleksandr@linxa.com',role:'member',c:'#0b8a5f',share:true},
+im:{id:'im',name:'Ірина',full:'Ірина Мельник',email:'iryna.melnyk@gmail.com',role:'admin',c:'#b4441c',share:true},
+mb:{id:'mb',name:'Максим',full:'Максим Бондар',email:'maksym@linxa.com',role:'member',c:'#7a3fb0',share:false}};
+const EXT={acme:{name:'Mark L. · Acme'},fund:{name:'Anna · North Fund'}};
+let INV=[{email:'tetiana@agency.com',role:'member'}];
+const pn=id=>P[id]?P[id].name:EXT[id]?EXT[id].name:'—';
+const av=(id,s=24)=>P[id]?`<span class="av" style="--c:${P[id].c};--s:${s}px" title="${esc(P[id].full)}">${P[id].name[0]}</span>`:`<span class="av ext" style="--s:${s}px" title="${esc(pn(id))}">${esc(pn(id)[0])}</span>`;
+const PR=[{id:'linxa',name:'Linxa',c:'#1f4fd8',o:'vd',m:['vd','ok','im','mb'],vision:'Linxa — платформа LinkedIn-аутрічу з AI-агентами, які працюють як ще один член sales-команди.',goals:[{g:'Запустити платний план MCP',metric:'Платних акаунтів MCP',target:50,cur:12,by:'2027-01-29'},{g:'Підняти активацію після онбордингу',metric:'Реєстрація → активація, %',target:40,cur:27,by:'2026-12-31'}]},
+{id:'teamos',name:'TeamOS',c:'#0b8a5f',o:'vd',m:['vd','im','mb'],vision:'Другий мозок команди, який сам наповнюється з мітингів, листів і чатів. SaaS і open-source для self-host.',goals:[{g:'MVP для нашої команди',metric:'Готових екранів MVP',target:12,cur:3,by:'2026-12-15'},{g:'Пілот з 3 командами',metric:'Активних команд',target:3,cur:0,by:'2027-01-15'}]}];
+const prj=id=>PR.find(p=>p.id===id);
+const tag=id=>{const p=prj(id);return p?`<span class="tag" style="--c:${p.c}">${esc(p.name)}</span>`:''};
+let H=[{id:'h1',proj:'linxa',if:'дати 100 безкоштовних викликів MCP на місяць',then:'≥ 30% активних користувачів MCP перейдуть на платний план за 30 днів',bo:'цінність MCP стає видно лише після кількох десятків викликів',o:'vd',metric:'Конверсія free → paid',target:'30%',cur:'—',from:'2026-11-23',to:'2026-12-23',st:'testing',learn:[]},
+{id:'h2',proj:'linxa',if:'вести трафік на URL analyser замість головної сторінки',then:'конверсія в реєстрацію буде ≥ 8%',bo:'людина одразу бачить результат на своєму сайті',o:'im',metric:'Конверсія в реєстрацію',target:'8%',cur:'6%',from:'2026-11-09',to:'2026-12-07',st:'testing',learn:[{d:'2026-11-16',txt:'Перший тиждень: 5,1%. Основний відтік — на кроці логіну.'}]},
+{id:'h3',proj:'teamos',if:'дати команді інбокс з AI-розбором мітингів',then:'команда розбиратиме годинний мітинг менш ніж за 3 хв і додаватиме ≥ 3 транскрипти на тиждень',bo:'фіксувати домовленості стане дешевше, ніж тримати їх у голові',o:'vd',metric:'Транскриптів на команду / тиждень',target:'≥ 3',cur:'—',from:'2026-12-01',to:'2026-12-31',st:'draft',learn:[]}];
+const HST={draft:'Чернетка',testing:'Тестуємо',validated:'Підтверджено',invalidated:'Спростовано'};
+const hyp=id=>H.find(h=>h.id===id);
+const hcode=id=>'H'+(H.findIndex(h=>h.id===id)+1);
+const STL={open:'Відкрито',progress:'В роботі',waiting:'Очікує',done:'Готово',cancelled:'Скасовано'};
+let T=[
+{id:'t2',t:'Задеплоїти webhook-и Pipedrive',o:'mb',r:'vd',due:'2026-11-20',imp:true,st:'progress',proj:'linxa',src:{item:'old',title:'Sprint sync — 13 лист',ts:'08:12',q:'Максиме, вебхуки Pipedrive на тобі, до наступної п’ятниці.'},cm:[{a:'mb',d:'21 лист, 18:04',txt:'Вебхуки на проді з вівторка. Лишилось додати ретраї — винесу окремо.',unread:true}],hist:[['13 лист','Створено з «Sprint sync — 13 лист», підтвердив Володимир'],['17 лист','Володимир: Відкрито → В роботі']]},
+{id:'t3',t:'Написати 10 питань для інтерв’ю з командами',o:'vd',r:'vd',due:'2026-11-24',imp:true,st:'open',proj:'teamos',hyp:'h3'},
+{id:'t4',t:'Надіслати Acme пропозицію по пілоту',o:'vd',r:'acme',by:'vd',due:'2026-11-23',imp:true,st:'progress',proj:'linxa',src:{item:'old',title:'Дзвінок з Acme — 19 лист',ts:'31:05',q:'Я до понеділка пришлю вам пропозицію по пілоту.'}},
+{id:'t6',t:'Оновити скріншоти в Chrome Web Store',o:'im',r:'ok',due:'2026-11-27',imp:false,st:'open',proj:'linxa'},
+{id:'t8',t:'Рев’ю дизайну екрану Review',o:'vd',r:'im',due:'2026-11-24',imp:true,st:'open',proj:'teamos'},
+{id:'t9',t:'Перевірити хмарний білінг за листопад',o:'vd',r:'vd',due:'2026-11-30',imp:true,st:'open',proj:'linxa'},
+{id:'t10',t:'Домовитись про спільний вебінар з партнером',o:'ok',r:'vd',due:'2026-12-02',imp:true,st:'progress',proj:'linxa'},
+{id:'t11',t:'Дописати документацію MCP tools',o:'ok',r:'vd',due:'2026-11-20',imp:true,st:'progress',proj:'linxa',hyp:'h1',cm:[{a:'ok',d:'19 лист, 11:20',txt:'Лишилось 3 tools, завтра закінчу.'}]},
+{id:'t12',t:'Створити Google OAuth client для TeamOS',o:'mb',r:'vd',due:'2026-11-18',imp:true,st:'done',proj:'teamos'},
+{id:'t13',t:'Відповісти North Fund на питання по метриках',o:'vd',r:'fund',by:'vd',due:'2026-11-22',imp:false,st:'open',proj:null},
+{id:'t14',t:'Почистити старі сегменти в CRM',o:'vd',r:'vd',due:null,imp:false,st:'open',proj:'linxa'},
+{id:'t15',t:'Зібрати фідбек від 5 користувачів MCP',o:'im',r:'vd',due:'2026-11-26',imp:true,st:'open',proj:'linxa',hyp:'h1'},
+{id:'t16',t:'Підготувати лендінг TeamOS',o:'im',r:'im',due:'2026-12-04',imp:true,st:'open',proj:'teamos'},
+{id:'t17',t:'Налаштувати CI для репозиторію team_os',o:'mb',r:'mb',due:'2026-11-25',imp:false,st:'progress',proj:'teamos'}
+].map(t=>({hyp:null,src:null,cm:[],hist:[],u:null,by:t.r,...t}));
+let K=[
+{id:'k1',type:'decision',txt:'Безкоштовний тариф Linxa MCP — 50 викликів на місяць',why:'Обмежити витрати на LLM на старті',scope:'team',proj:'linxa',by:'vd',date:'2026-11-12',src:'Чат #pricing — 12 лист'},
+{id:'k2',type:'process',txt:'Weekly sync — щоп’ятниці о 15:00. Транскрипт у TeamOS кидає ведучий.',why:'',scope:'team',proj:null,by:'vd',date:'2026-11-06',src:'Kickoff — 6 лист'},
+{id:'k3',type:'decision',txt:'Мова інтерфейсу TeamOS на старті — англійська й українська',why:'Перші користувачі — українські команди, далі міжнародний ринок',scope:'team',proj:'teamos',by:'vd',date:'2026-11-21',src:'TeamOS — vision draft'},
+{id:'k4',type:'context',txt:'Acme: рішення по пілоту приймає Mark L., бюджет погоджують у грудні',why:'',scope:'private',proj:'linxa',by:'vd',date:'2026-11-19',src:'Дзвінок з Acme — 19 лист'},
+{id:'k5',type:'agreement',txt:'Код-рев’ю обов’язкове для кожного PR у team_os',why:'',scope:'team',proj:'teamos',by:'mb',date:'2026-11-17',src:'Чат #dev — 17 лист'},
+{id:'k6',type:'fact',txt:'Google Meet зберігає транскрипти в Google Drive, у папці Meet Recordings',why:'',scope:'team',proj:'teamos',by:'mb',date:'2026-11-19',src:'Чат #dev — 19 лист'}
+].map(k=>({sup:null,supBy:null,...k}));
+const KT={decision:'Рішення',agreement:'Домовленість',fact:'Факт',process:'Процес',context:'Контекст'};
+const L=(id,ts,sp,txt)=>({id,ts,sp,txt});
+let IN=[
+{id:'i1',owner:'vd',type:'transcript',title:'Weekly sync — 20 лист',date:'2026-11-20',src:'Google Meet · транскрипт',parts:['vd','ok','im','mb'],aliases:[['«Саш»','ok'],['«Максиме»','mb'],['«Ірино»','im']],st:'review',
+summary:['MCP: безкоштовний тариф підняли з 50 до 100 викликів/міс; Олександр робить сторінку з цінами до п’ятниці.','Pipedrive-вебхуки вже на проді; ретраї — окремою задачею на Максима.','URL analyser дає 6% конверсії при цілі 8% — Ірина розбирає джерела трафіку.','TeamOS: self-host тільки через Docker compose; ідея пілоту на 3 командах.'],
+lines:[L('l1','00:01','vd','Окей, поїхали. Почнемо з MCP.'),L('l2','00:45','ok','По MCP — документацію по tools я дописав, вона вже на сайті.'),L('l3','02:10','vd','Супер. Тоді по ціні: фіксуємо безкоштовно 100 викликів на місяць, далі платний план.'),L('l4','02:32','im','Минулого разу ми ж казали 50.'),L('l5','02:40','vd','Так, але 50 замало для тесту, ставимо 100. Саш, давай ти до п’ятниці зробиш сторінку з цінами.'),L('l6','02:58','ok','Ок, до п’ятниці зроблю.'),L('l7','05:12','mb','По Pipedrive — вебхуки вже на проді з вівторка, лишилось додати ретраї.'),L('l8','05:30','vd','Тоді задачу з вебхуками закриваємо, а ретраї — окремою задачею. Максиме, до середи?'),L('l9','05:36','mb','Так, до середи.'),L('l10','07:05','im','URL analyser: за тиждень 412 аналізів, у реєстрацію перейшло 6%.'),L('l11','07:30','vd','Ціль була 8. Ірино, збери до середи розбивку по джерелах трафіку — подивимось, де провал.'),L('l12','09:40','vd','І ще: я до понеділка відправлю Acme пропозицію по пілоту.'),L('l13','11:02','mb','Для TeamOS пропоную self-host тільки через Docker compose, без Kubernetes на старті.'),L('l14','11:20','vd','Погоджуюсь. Максиме, підготуєш compose до 4 грудня?'),L('l15','11:31','mb','Так.'),L('l16','13:15','im','Ще ідея — протестувати онбординг TeamOS на трьох знайомих командах.'),L('l17','13:40','vd','Добре, це гіпотеза. Пілот на 3 командах у грудні.'),L('l18','14:30','ok','По вебінару з партнером — чекаю відповіді від них, поки тиша.'),L('l19','15:05','vd','І давайте домовимось: рішення по прайсингу фіксуємо тільки після weekly, не в чатах.')],
+props:[
+{id:'p1',kind:'task',on:true,conf:'high',ev:['l5','l6'],t:'Зробити сторінку з цінами для MCP',o:'ok',r:'vd',due:'2026-11-27',proj:'linxa',hyp:'h1',imp:true},
+{id:'p2',kind:'task',on:true,conf:'high',ev:['l8','l9'],t:'Додати ретраї для вебхуків Pipedrive',o:'mb',r:'vd',due:'2026-11-25',proj:'linxa',hyp:null,imp:false},
+{id:'p3',kind:'task',on:true,conf:'high',ev:['l11'],t:'Зібрати розбивку конверсії URL analyser по джерелах трафіку',o:'im',r:'vd',due:'2026-11-25',proj:'linxa',hyp:'h2',imp:true},
+{id:'p4',kind:'task',on:true,conf:'high',ev:['l12'],t:'Відправити Acme пропозицію по пілоту',o:'vd',r:'acme',due:'2026-11-23',proj:'linxa',hyp:null,imp:true,dup:'t4',merge:true},
+{id:'p5',kind:'task',on:true,conf:'high',ev:['l13','l14','l15'],t:'Підготувати Docker compose для self-host TeamOS',o:'mb',r:'vd',due:'2026-12-04',proj:'teamos',hyp:null,imp:true},
+{id:'p6',kind:'status',on:true,conf:'high',ev:['l7','l8'],task:'t2',to:'done'},
+{id:'p7',kind:'status',on:true,conf:'high',ev:['l2'],task:'t11',to:'done'},
+{id:'p8',kind:'status',on:true,conf:'med',ev:['l18'],task:'t10',to:'waiting'},
+{id:'p9',kind:'kn',on:true,conf:'high',ev:['l3','l4','l5'],type:'decision',txt:'Безкоштовний тариф Linxa MCP — 100 викликів на місяць, далі платний план',why:'50 викликів замало, щоб протестувати продукт',scope:'team',proj:'linxa',conflict:'k1',res:'replace'},
+{id:'p10',kind:'kn',on:true,conf:'high',ev:['l13','l14'],type:'decision',txt:'Self-host TeamOS — тільки через Docker compose, без Kubernetes на старті',why:'',scope:'team',proj:'teamos'},
+{id:'p11',kind:'kn',on:true,conf:'high',ev:['l10','l11'],type:'fact',txt:'URL analyser за тиждень: 412 аналізів, конверсія в реєстрацію 6% (ціль 8%)',why:'',scope:'team',proj:'linxa',learn:'h2',addLearn:true},
+{id:'p12',kind:'kn',on:false,conf:'med',ev:['l19'],type:'agreement',txt:'Рішення по прайсингу фіксуємо тільки після weekly, не в чатах',why:'',scope:'team',proj:null},
+{id:'p13',kind:'hyp',on:false,conf:'med',ev:['l16','l17'],txt:'Пілот онбордингу TeamOS на 3 знайомих командах у грудні',proj:'teamos',o:'im'}]},
+{id:'i2',owner:'vd',type:'email',title:'Re: Pilot scope — Acme',date:'2026-11-21',src:'Gmail · vd@linxa.com',parts:['vd','acme'],aliases:[],st:'review',summary:['Acme чекає пропозицію по пілоту до понеділка, старт з 10 місць.','SSO — обов’язкова умова для розгортання після пілоту.'],
+lines:[L('e1','','acme','Hi Volodymyr, thanks for the demo on Thursday — the team liked the reply assistant.'),L('e2','','acme','Could you send the pilot proposal by Monday? We would start with 10 seats.'),L('e3','','acme','Also, we need SSO before any rollout beyond the pilot.')],
+props:[{id:'q1',kind:'task',on:true,conf:'high',ev:['e2'],t:'Надіслати Acme пропозицію по пілоту (10 місць)',o:'vd',r:'acme',due:'2026-11-23',proj:'linxa',hyp:null,imp:true,dup:'t4',merge:true},
+{id:'q2',kind:'kn',on:true,conf:'high',ev:['e2','e3'],type:'context',txt:'Acme: пілот на 10 місць; SSO — обов’язкова умова для розгортання після пілоту',why:'',scope:'private',proj:'linxa'}]},
+{id:'i3',owner:'vd',type:'transcript',title:'1:1 з Іриною — 19 лист',date:'2026-11-19',src:'Файл · .vtt',st:'processing'},
+{id:'i4',owner:'vd',type:'chat',title:'Чат #pricing — уривок',date:'2026-11-12',src:'Вставлений текст',st:'done',res:'1 рішення · 0 задач'},
+{id:'i5',owner:'vd',type:'doc',title:'TeamOS — vision draft',date:'2026-11-21',src:'Google Drive',st:'done',res:'3 знання · 1 проєкт'},
+{id:'i6',owner:'vd',type:'email',title:'Product Hunt Daily',date:'2026-11-22',src:'Gmail · volodymyr.d@gmail.com',st:'ignored',res:'Нічого для збереження'},
+{id:'i7',owner:'ok',type:'note',title:'Дзвінок з партнером — 22 лист',date:'2026-11-22',src:'Нотатка',parts:['ok'],aliases:[],st:'review',summary:['Партнер зацікавлений у вебінарі, дати — після 1 грудня.'],
+lines:[L('n1','','ok','Партнер відповів: вебінар цікавий, але дати обговоримо після 1 грудня.'),L('n2','','ok','Попросили надіслати 3 варіанти дат до вівторка.')],
+props:[{id:'r1',kind:'status',on:true,conf:'high',ev:['n1'],task:'t10',to:'waiting'},{id:'r2',kind:'task',on:true,conf:'high',ev:['n2'],t:'Надіслати партнеру 3 варіанти дат для вебінару',o:'ok',r:'ok',due:'2026-11-24',proj:'linxa',hyp:null,imp:true}]}
+];
+const MAIL=[{cat:'reply',from:'Mark L. · Acme',subj:'Re: Pilot scope',sum:'Просить пропозицію по пілоту до понеділка; 10 місць; SSO — умова.',acc:0,time:'Сб 09:12'},
+{cat:'reply',from:'Anna · North Fund',subj:'Quick questions on metrics',sum:'Питає про retention і вартість залучення за жовтень.',acc:0,time:'Пт 17:40'},
+{cat:'reply',from:'Тетяна · Agency',subj:'Запрошення в TeamOS',sum:'Питає, чи можна увійти особистим Gmail замість робочого.',acc:1,time:'Нд 20:15'},
+{cat:'waiting',from:'Ви → Partner Inc.',subj:'Joint webinar',sum:'Ви запропонували вебінар 4 дні тому — відповіді досі немає.',acc:0,time:'Чт'},
+{cat:'commit',from:'Ірина Мельник',subj:'Скріни для Chrome Web Store',sum:'Ірина обіцяє оновлені скріншоти до 27 лист.',acc:1,time:'Пт 12:03'},
+{cat:'fyi',from:'Cloud billing',subj:'Your November invoice is ready',sum:'Рахунок за листопад доступний у консолі.',acc:0,time:'Нд'}];
+const MCAT={reply:'Потребує відповіді',waiting:'Чекаю відповіді',commit:'Містить комітмент',fyi:'FYI'};
+let ACC=[{email:'vd@linxa.com',kind:'Робочий',c:'#1f4fd8',svc:{cal:true,mail:true,drive:true},cals:[['vd@linxa.com',true],['Linxa Team',true]],sync:'2 хв тому'},
+{email:'volodymyr.d@gmail.com',kind:'Особистий',c:'#b4441c',svc:{cal:true,mail:true,drive:false},cals:[['Особистий',true],['Дні народження',false]],sync:'5 хв тому'}];
+const CALS=[{id:'work',name:'vd@linxa.com',c:'#1f4fd8'},{id:'teamcal',name:'Linxa Team',c:'#0b8a5f'},{id:'personal',name:'Особистий (gmail)',c:'#b4441c'}];
+const EV=[{id:'e1',cal:'work',t:'Daily standup',s:'10:00',e:'10:20',parts:['vd','ok','im','mb']},{id:'e2',cal:'work',t:'1:1 з Олександром',s:'11:30',e:'12:00',parts:['vd','ok']},{id:'e3',cal:'work',t:'Дзвінок з Acme',s:'14:00',e:'14:45',parts:['vd','acme']},{id:'e4',cal:'teamcal',t:'Design review — TeamOS',s:'16:00',e:'17:00',parts:['vd','im','mb']},{id:'e5',cal:'personal',t:'Спортзал',s:'19:00',e:'20:00',parts:['vd']}];
+const BUSY={vd:[['10:00','10:20'],['11:30','12:00'],['14:00','14:45'],['16:00','17:00'],['19:00','20:00']],ok:[['10:00','10:20'],['11:30','12:00'],['13:00','15:00']],im:[['10:00','10:20'],['12:00','13:00'],['16:00','17:00']],mb:[['09:00','10:00'],['10:00','10:20'],['16:00','17:00'],['17:30','18:30']]};
+
+/* ---------- state ---------- */
+const S={me:'vd',team:'linxa',tmenu:false,tab:'matrix',dir:'all',person:'',proj:'',grp:'person',dash:'all',itab:'review',rid:'i1',applied:null,knt:'all',kscope:'all',klog:false,kproj:'',ptab:'overview',mcat:'all',macc:-1,cals:{work:true,teamcal:true,personal:true},calT:{},evSel:null,meet:null,drawer:null,modal:null,ob:{step:1,mode:'create',name:'Linxa Team'},vEdit:false};
+const me=()=>P[S.me];
+const isAdmin=()=>['owner','admin'].includes(me().role);
+const canSee=t=>(t.o===S.me||t.r===S.me||t.by===S.me||isAdmin())&&(S.team!=='personal'||(t.o===S.me&&t.r===S.me));
+const canEdit=t=>P[t.r]?t.r===S.me:t.by===S.me;
+const isOpen=t=>!['done','cancelled'].includes(t.st);
+const vis=()=>T.filter(canSee);
+const urgent=t=>t.u!=null?t.u:!!(t.due&&diff(TODAY,t.due)<=2);
+const myInbox=()=>IN.filter(i=>i.owner===S.me);
+const reqLabel=t=>P[t.r]?pn(t.r):pn(t.r)+' (зовн.)';
+
+/* ---------- components ---------- */
+const dueChip=t=>{if(!t.due)return '<span class="chip">Без дедлайну</span>';if(!isOpen(t))return `<span class="chip">${fd(t.due)}</span>`;const n=diff(TODAY,t.due);const c=n<0?'red':n<=1?'amber':'';const l=n<0?`Прострочено · ${fds(t.due)}`:n===0?'Сьогодні':n===1?'Завтра':fd(t.due);return `<span class="chip ${c}">${l}</span>`};
+const unread=t=>t.r===S.me&&t.cm.some(c=>c.unread);
+const cmt=t=>t.cm.length?`<span class="cmt ${unread(t)?'new':''}">${ico('cmt',13)}${t.cm.length}</span>`:'';
+const who=t=>t.o===S.me&&t.r===S.me?'<span>собі</span>':t.o===S.me?`<span>я → ${esc(reqLabel(t))}</span>`:`${av(t.o,18)}<span>${esc(pn(t.o))}${t.r!==S.me?' ← '+esc(pn(t.r)):''}</span>`;
+const trow=t=>`<button class="trow" data-a="open" data-id="${t.id}"><span class="st ${t.st}" title="${STL[t.st]}"></span><span class="tt"><b>${esc(t.t)}</b><span class="mt">${who(t)}${dueChip(t)}${tag(t.proj)}${t.hyp?`<span class="chip">${hcode(t.hyp)}</span>`:''}${cmt(t)}</span></span></button>`;
+const kcard=t=>`<div class="kc" draggable="true" data-drag="${t.id}" data-a="open" data-id="${t.id}"><b>${esc(t.t)}</b><div class="mt">${av(t.o,18)}${dueChip(t)}${tag(t.proj)}${cmt(t)}${canEdit(t)?'':ico('lock',12)}</div></div>`;
+const selP=(f,pid,val,ext)=>`<select data-f="${f}" data-p="${pid}">${Object.values(P).map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${esc(p.name)}</option>`).join('')}${ext?Object.entries(EXT).map(([k,e])=>`<option value="${k}" ${k===val?'selected':''}>${esc(e.name)}</option>`).join(''):''}</select>`;
+const selProj=(f,pid,val)=>`<select data-f="${f}" data-p="${pid}"><option value="">Без проєкту</option>${PR.map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
+const selHyp=(f,pid,val,proj)=>`<select data-f="${f}" data-p="${pid}"><option value="">Без гіпотези</option>${H.filter(h=>!proj||h.proj===proj).map(h=>`<option value="${h.id}" ${h.id===val?'selected':''}>${hcode(h.id)} · ${esc(h.if.slice(0,32))}…</option>`).join('')}</select>`;
+
+/* ---------- nav + shell ---------- */
+const R=()=>location.hash.slice(1)||'dashboard';
+function nav(){
+ const r=R(),on=h=>r===h||r.startsWith(h+'-')?'on':'';
+ const ib=myInbox().filter(i=>i.st==='review').length,mb=S.me==='vd'?MAIL.filter(m=>m.cat==='reply').length:0;
+ const tn=S.team==='linxa'?'Linxa Team':'Особистий';
+ const proj=PR.filter(p=>p.m.includes(S.me)||isAdmin());
+ return `<button class="teamsw" data-a="tmenu"><span class="logo">${S.team==='linxa'?'LT':'Я'}</span><span class="lbl">${tn}</span><span class="lbl" style="margin-left:auto">${ico('chev',14)}</span></button>
+ ${S.tmenu?`<div class="tmenu"><button data-a="team" data-v="linxa"><span class="logo">LT</span>Linxa Team</button><button data-a="team" data-v="personal"><span class="logo">Я</span>Особистий</button><button data-a="toast" data-m="Створення команди — у прототипі через онбординг">${ico('plus')}Створити команду</button></div>`:''}
+ <button class="srch" data-a="ask">${ico('search',15)}<span class="lbl">Пошук і питання</span><kbd>⌘K</kbd></button>
+ <button class="nv ${on('dashboard')}" data-a="go" data-h="dashboard">${ico('dash')}<span class="lbl">Дашборд</span></button>
+ <button class="nv ${on('inbox')||on('review')}" data-a="go" data-h="inbox">${ico('inbox')}<span class="lbl">Інбокс</span>${ib?`<span class="bd">${ib}</span>`:''}</button>
+ <button class="nv ${on('tasks')}" data-a="go" data-h="tasks">${ico('tasks')}<span class="lbl">Задачі</span></button>
+ <button class="nv ${on('calendar')}" data-a="go" data-h="calendar">${ico('cal')}<span class="lbl">Календар</span></button>
+ <button class="nv ${on('mail')}" data-a="go" data-h="mail">${ico('mail')}<span class="lbl">Пошта</span>${mb?`<span class="bd">${mb}</span>`:''}</button>
+ <button class="nv ${on('knowledge')}" data-a="go" data-h="knowledge">${ico('kn')}<span class="lbl">Знання</span></button>
+ <div class="sect">Team Space</div>
+ <button class="nv ${on('vision')}" data-a="go" data-h="vision">${ico('vision')}<span class="lbl">Team vision</span></button>
+ ${proj.map(p=>`<button class="nv ${on('project-'+p.id)}" data-a="go" data-h="project-${p.id}"><span class="dot" style="--c:${p.c}"></span><span class="lbl">${esc(p.name)}</span></button>${H.filter(h=>h.proj===p.id).map(h=>`<button class="nv sub ${r==='hyp-'+h.id?'on':''}" data-a="go" data-h="hyp-${h.id}">${hcode(h.id)} · ${HST[h.st]}</button>`).join('')}`).join('')}
+ ${isAdmin()?`<button class="nv" data-a="toast" data-m="Новий проєкт: назва, vision, ціль — у наступній ітерації прототипу">${ico('plus')}<span class="lbl">Новий проєкт</span></button>`:''}
+ <div class="spacer"></div>
+ <button class="nv ${on('members')}" data-a="go" data-h="members">${ico('users')}<span class="lbl">Учасники</span></button>
+ <button class="nv ${on('connections')}" data-a="go" data-h="connections">${ico('plug')}<span class="lbl">Підключення</span></button>
+ <button class="nv ${on('prefs')}" data-a="go" data-h="prefs">${ico('gear')}<span class="lbl">Налаштування</span></button>
+ <div class="me">${av(S.me,28)}<span class="lbl"><b>${esc(me().full)}</b><br><span class="hint">${roleName(me().role)}</span></span><button class="btn ghost sm lbl" style="margin-left:auto" data-a="go" data-h="login" title="Вийти">${ico('out',14)}</button></div>`;
+}
+const roleName=r=>({owner:'Owner',admin:'Admin',member:'Member'})[r];
+function top(){
+ return `<div class="demo"><span class="chip">Прототип · демо-дані</span>Дивитись як <select data-f="as" aria-label="Дивитись як">${Object.values(P).filter(p=>p.id!=='mb').map(p=>`<option value="${p.id}" ${p.id===S.me?'selected':''}>${esc(p.name)} · ${roleName(p.role)}</option>`).join('')}</select></div>
+ <div class="spacer"></div><button class="btn pri" data-a="add">${ico('plus')}Додати в інбокс <kbd style="background:none;color:inherit;border-color:#fff5">I</kbd></button>`;
+}
+
+/* ---------- pages ---------- */
+function pDashboard(){
+ const v=vis().filter(isOpen),mine=v.filter(t=>t.o===S.me).sort((a,b)=>(a.due||'9')<(b.due||'9')?-1:1);
+ const mf=S.dash==='team'?mine.filter(t=>P[t.r]&&t.r!==S.me):S.dash==='ext'?mine.filter(t=>!P[t.r]):mine;
+ const owed=v.filter(t=>t.r===S.me&&t.o!==S.me);
+ const byP={};owed.forEach(t=>(byP[t.o]=byP[t.o]||[]).push(t));
+ const over=mine.filter(t=>t.due&&diff(TODAY,t.due)<0).length+owed.filter(t=>t.due&&diff(TODAY,t.due)<0).length;
+ const evs=myEvents(),rv=myInbox().filter(i=>i.st==='review');
+ const unr=owed.filter(unread);
+ const dec=K.filter(k=>k.scope==='team'&&!k.supBy).sort((a,b)=>a.date<b.date?1:-1).slice(0,4);
+ return `<div class="hd"><div><h1>Доброго ранку, ${esc(me().name)}</h1><div class="sub">Понеділок, 23 листопада</div></div></div>
+ <div class="chips" style="margin-bottom:20px"><button class="chip big" data-a="go" data-h="inbox"><b>${rv.length}</b> чекають review</button><span class="chip big" style="${over?'color:var(--red)':''}"><b>${over}</b> прострочено</span><span class="chip big"><b>${evs.length}</b> подій сьогодні</span>${unr.length?`<span class="chip big" style="color:var(--red)"><b>${unr.length}</b> новий коментар</span>`:''}</div>
+ <div class="grid g3">
+ <div class="col"><div class="card"><h2>Я винен <span class="seg sm" style="margin-left:auto">${[['all','Всі'],['team','Команді'],['ext','Зовнішнім']].map(([k,l])=>`<button class="${S.dash===k?'on':''}" data-a="dash" data-v="${k}">${l}</button>`).join('')}</span></h2>${mf.length?mf.map(trow).join(''):'<div class="empty">Немає відкритих комітментів</div>'}</div>
+ ${unr.length?`<div class="card"><h2>Нові коментарі</h2>${unr.map(t=>`<button class="trow" data-a="open" data-id="${t.id}">${av(t.cm.at(-1).a)}<span class="tt"><b>${esc(t.t)}</b><span class="mt">${esc(t.cm.at(-1).txt)}</span></span></button>`).join('')}</div>`:''}</div>
+ <div class="col"><div class="card"><h2>Мені винні <button class="lnk" data-a="tasksTab" data-v="delegated">Усі →</button></h2>${Object.keys(byP).length?Object.entries(byP).map(([pid,ts])=>{const od=ts.filter(t=>t.due&&diff(TODAY,t.due)<0).length;const nx=ts.filter(t=>t.due).sort((a,b)=>a.due<b.due?-1:1)[0];return `<button class="trow" data-a="go" data-h="person-${pid}">${av(pid,32)}<span class="tt"><b>${esc(P[pid].full)}</b><span class="mt"><span>${ts.length} відкритих</span>${od?`<span class="chip red">${od} прострочено</span>`:''}${nx?`<span>найближчий: ${fd(nx.due)}</span>`:''}</span></span>${ico('arrow',14)}</button>`}).join(''):`<div class="empty">Ти ще нічого не делегував.<br>Задачі з’являться після розбору мітингу.</div>`}</div>
+ <div class="card"><h2>Інбокс <button class="lnk" data-a="go" data-h="inbox">Відкрити →</button></h2>${rv.length?rv.map(i=>`<button class="trow" data-a="review" data-id="${i.id}"><span class="iico">${ico(typeIco(i.type))}</span><span class="tt"><b>${esc(i.title)}</b><span class="mt">${i.props.length} пропозицій · ${esc(i.src)}</span></span><span class="btn sm">Review</span></button>`).join(''):'<div class="empty">Інбокс розібраний</div>'}</div></div>
+ <div class="col"><div class="card"><h2>Сьогодні <button class="lnk" data-a="go" data-h="calendar">Календар →</button></h2>${evs.map(e=>`<button class="trow" data-a="evt" data-id="${e.id}"><span style="width:44px;font-weight:700;font-size:13px">${e.s}</span><span class="tt"><b>${esc(e.t)}</b><span class="mt"><span class="avs">${e.parts.map(p=>av(p,18)).join('')}</span>${e.parts.length>1?'<span class="chip">Prep</span>':''}</span></span></button>`).join('')||'<div class="empty">Подій немає</div>'}</div>
+ <div class="card"><h2>Нещодавні рішення <button class="lnk" data-a="go" data-h="knowledge">Знання →</button></h2>${dec.map(k=>`<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="ty ${k.type}">${KT[k.type]}</span> ${esc(k.txt)}<div class="hint">${fds(k.date)} · ${tag(k.proj)}</div></div>`).join('')}</div>
+ <div class="card"><h2>Активні гіпотези</h2>${H.filter(h=>h.st==='testing').map(h=>{const ts=T.filter(t=>t.hyp===h.id),dn=ts.filter(t=>t.st==='done').length;return `<button class="trow" data-a="go" data-h="hyp-${h.id}"><span class="tt"><b>${hcode(h.id)} · ${esc(h.then)}</b><span class="mt">${av(h.o,18)}<span>ще ${diff(TODAY,h.to)} дн.</span><span>${dn}/${ts.length} задач</span></span></span></button>`}).join('')}</div></div>
+ </div>`;
+}
+const typeIco=t=>({transcript:'mic',email:'mail',doc:'drive',chat:'chat',note:'note'})[t]||'file';
+function pInbox(){
+ const it=myInbox(),c=k=>it.filter(i=>i.st===k).length;
+ const list=it.filter(i=>i.st===S.itab);
+ return `<div class="hd"><div><h1>Інбокс</h1><div class="sub">Особистий: сирі джерела бачиш тільки ти. Команді потрапляє лише те, що ти підтвердиш.</div></div><div class="act"><button class="btn pri" data-a="add">${ico('plus')}Додати</button></div></div>
+ <div class="seg" style="margin-bottom:14px">${[['review','Чекають review'],['processing','Обробляються'],['done','Розібрані'],['ignored','Пропущені']].map(([k,l])=>`<button class="${S.itab===k?'on':''}" data-a="itab" data-v="${k}">${l} · ${c(k)}</button>`).join('')}</div>
+ <div class="card" style="padding:0">${list.length?list.map(i=>`<div class="irow" data-a="${i.st==='review'?'review':'toast'}" data-id="${i.id}" data-m="${i.st==='processing'?'AI ще аналізує цей запис':'Запис уже розібрано'}"><span class="iico">${ico(typeIco(i.type),18)}</span><span style="flex:1"><b>${esc(i.title)}</b><div class="hint">${esc(i.src)} · ${fd(i.date)} · Linxa Team</div></span>${i.st==='review'?`<span class="chips">${cnt(i)}</span><span class="btn sm pri">Review ${ico('arrow',13)}</span>`:i.st==='processing'?'<span class="chip amber">Аналізую…</span>':`<span class="hint">${esc(i.res||'')}</span>`}</div>`).join(''):'<div class="empty">Тут порожньо</div>'}</div>
+ <p class="hint" style="margin-top:14px">Листи можна пересилати на <code>linxa-team.k7f2@in.teamos.app</code> — вони з’являться тут.</p>`;
+}
+const cnt=i=>{const n=k=>i.props.filter(p=>p.kind===k).length;return [['task','задач'],['status','статусів'],['kn','знань'],['hyp','гіпотез']].filter(([k])=>n(k)).map(([k,l])=>`<span class="chip">${n(k)} ${l}</span>`).join('')};
+function pReview(){
+ const it=IN.find(i=>i.id===S.rid);
+ if(!it||it.owner!==S.me)return `<div class="empty">Цей запис належить іншому учаснику. Інбокс — особистий.</div><p style="text-align:center"><button class="btn" data-a="go" data-h="inbox">До інбоксу</button></p>`;
+ if(S.applied&&S.applied.id===it.id){const a=S.applied;return `<div class="done-box"><div class="big">Готово</div><p style="font-size:17px;margin:14px 0 4px">${a.lines.join(' · ')}</p><p class="hint">${a.notify}</p><div class="chips" style="justify-content:center;margin-top:18px"><button class="btn pri" data-a="go" data-h="tasks">До задач</button><button class="btn" data-a="go" data-h="knowledge">До знань</button><button class="btn" data-a="go" data-h="inbox">До інбоксу</button></div></div>`}
+ const sec=(k,l)=>{const ps=it.props.filter(p=>p.kind===k);return ps.length?`<div class="sec"><h2>${l}</h2><span class="n">${ps.length}</span></div>${ps.map(p=>propCard(it,p)).join('')}`:''};
+ const on=it.props.filter(p=>p.on).length;
+ return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="inbox">${ico('back',14)} Інбокс</button><h1 style="margin-top:8px">${esc(it.title)}</h1><div class="sub" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${esc(it.src)} · ${fd(it.date)} <span class="avs">${(it.parts||[]).map(p=>av(p,22)).join('')}</span>${(it.aliases||[]).map(([a,p])=>`<span class="alias">${esc(a)} → ${esc(pn(p))} ✓</span>`).join('')}</div></div></div>
+ <div class="rv"><div class="card src" data-keep="src"><div class="sum"><b>Коротко</b><ul>${it.summary.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>${it.lines.map(l=>`<div class="ln" id="ln-${l.id}"><span class="ts">${l.ts}</span><span><b>${esc(pn(l.sp))}:</b> ${esc(l.txt)}</span></div>`).join('')}<p class="hint" style="margin:10px 8px 0">${ico('lock',13)} Сирий текст бачиш тільки ти.</p></div>
+ <div>${sec('task','Нові комітменти')}${sec('status','Оновлення статусів')}${sec('kn','Знання')}${sec('hyp','Інше')}
+ <div class="bar"><b>Обрано ${on} з ${it.props.length}</b><span class="hint">Наведи на картку — підсвічу цитату зліва</span><button class="btn" data-a="toast" data-m="Чернетку збережено">Зберегти чернетку</button><button class="btn pri" data-a="apply">Застосувати обране <kbd style="background:none;color:inherit;border-color:#fff5">⌘↵</kbd></button></div></div></div>`;
+}
+function propCard(it,p){
+ const ev=(p.ev||[]).map(id=>it.lines.find(l=>l.id===id)).filter(Boolean);
+ const q=ev.length?`<div class="ev">“${esc(ev.map(l=>l.txt).join(' … '))}”<span class="ts">${ev[0].ts}</span></div>`:'';
+ let b='';
+ if(p.kind==='task'){
+  b=`<input class="ttl" data-f="pt" data-p="${p.id}" value="${esc(p.t)}" aria-label="Назва задачі"><div class="fields"><label>Виконавець ${selP('po',p.id,p.o)}</label><label>Постановник ${selP('pr',p.id,p.r,true)}</label><label>Дедлайн <input type="date" data-f="pdue" data-p="${p.id}" value="${p.due||''}"></label><label>Проєкт ${selProj('pproj',p.id,p.proj)}</label><label>Гіпотеза ${selHyp('phyp',p.id,p.hyp,p.proj)}</label><label><input type="checkbox" data-f="pimp" data-p="${p.id}" ${p.imp?'checked':''}> Важливо</label></div>`;
+  if(p.o!==S.me&&p.o)b+=`<div class="route">${ico('route',13)} ${esc(pn(p.o))} побачить задачу у своєму «Я винен»</div>`;
+  if(p.dup){const d=T.find(x=>x.id===p.dup);if(d)b+=`<div class="warn">${ico('warn')} Схоже на існуючу задачу «${esc(d.t)}»<span class="seg sm"><button class="${p.merge?'on':''}" data-a="pset" data-p="${p.id}" data-k="merge" data-v="1">Об’єднати</button><button class="${p.merge?'':'on'}" data-a="pset" data-p="${p.id}" data-k="merge" data-v="0">Створити нову</button></span></div>`}
+ }else if(p.kind==='status'){
+  const t=T.find(x=>x.id===p.task);
+  b=`<div style="font-weight:650">«${esc(t.t)}»</div><div class="fields" style="margin-top:6px"><span class="chip">${STL[t.st]}</span> → <select data-f="pto" data-p="${p.id}">${Object.entries(STL).map(([k,l])=>`<option value="${k}" ${k===p.to?'selected':''}>${l}</option>`).join('')}</select>${av(t.o,18)} ${esc(pn(t.o))}</div>`;
+  if(!canEdit(t))b+=`<div class="route">${ico('route',13)} Задачу поставив ${esc(pn(t.r))} — пропозиція піде йому на підтвердження</div>`;
+ }else if(p.kind==='kn'){
+  b=`<div class="fields" style="margin-bottom:6px"><select data-f="ktype" data-p="${p.id}">${Object.entries(KT).map(([k,l])=>`<option value="${k}" ${k===p.type?'selected':''}>${l}</option>`).join('')}</select><span class="seg sm"><button class="${p.scope==='private'?'on':''}" data-a="pset" data-p="${p.id}" data-k="scope" data-v="private">${ico('lock',12)} Тільки я</button><button class="${p.scope==='team'?'on':''}" data-a="pset" data-p="${p.id}" data-k="scope" data-v="team">${ico('users',12)} Команда</button></span><label>Проєкт ${selProj('kproj',p.id,p.proj)}</label></div><input class="ttl" data-f="pt" data-p="${p.id}" value="${esc(p.txt)}" aria-label="Текст знання">${p.why?`<div class="hint">Чому: ${esc(p.why)}</div>`:''}`;
+  if(p.conflict){const k=K.find(x=>x.id===p.conflict);b+=`<div class="warn">${ico('warn')} Суперечить рішенню від ${fds(k.date)}: «${esc(k.txt)}»<span class="seg sm"><button class="${p.res==='replace'?'on':''}" data-a="pset" data-p="${p.id}" data-k="res" data-v="replace">Замінити старе</button><button class="${p.res==='both'?'on':''}" data-a="pset" data-p="${p.id}" data-k="res" data-v="both">Зберегти обидва</button></span></div>`}
+  if(p.learn)b+=`<label class="fields" style="margin-top:8px"><input type="checkbox" data-f="plearn" data-p="${p.id}" ${p.addLearn?'checked':''}> Також додати як learning до гіпотези ${hcode(p.learn)}</label>`;
+ }else{
+  b=`<div class="hint">Нова гіпотеза в проєкті ${esc(prj(p.proj).name)}</div><input class="ttl" data-f="pt" data-p="${p.id}" value="${esc(p.txt)}" aria-label="Гіпотеза"><div class="fields"><label>Відповідальний ${selP('po',p.id,p.o)}</label><label>Проєкт ${selProj('pproj',p.id,p.proj)}</label></div>`;
+ }
+ return `<div class="prop ${p.on?'':'off'}" data-ev="${(p.ev||[]).join(',')}"><input type="checkbox" data-f="pon" data-p="${p.id}" ${p.on?'checked':''} aria-label="Зберегти"><div class="pbody">${b}${q}<div class="pmeta"><span class="conf ${p.conf}">${p.conf==='high'?'Висока впевненість':'Середня впевненість — перевір'}</span></div></div></div>`;
+}
+function pTasks(){
+ const views=[['matrix','Матриця'],['kanban','Канбан'],['list','Список'],['delegated','Делеговане']];
+ let ts=vis();
+ if(S.dir==='mine')ts=ts.filter(t=>t.o===S.me);if(S.dir==='owed')ts=ts.filter(t=>t.r===S.me&&t.o!==S.me);if(S.dir==='team')ts=ts.filter(t=>t.o!==S.me&&t.r!==S.me);
+ if(S.person)ts=ts.filter(t=>t.o===S.person||t.r===S.person);if(S.proj)ts=ts.filter(t=>t.proj===S.proj);
+ const f=`<div class="chips" style="margin-bottom:16px;align-items:center"><select class="in" data-f="dir" aria-label="Напрям"><option value="all">Усі напрями</option><option value="mine" ${S.dir==='mine'?'selected':''}>Я винен</option><option value="owed" ${S.dir==='owed'?'selected':''}>Мені винні</option>${isAdmin()?`<option value="team" ${S.dir==='team'?'selected':''}>Між іншими (видно адмінам)</option>`:''}</select><select class="in" data-f="fperson" aria-label="Людина"><option value="">Усі люди</option>${Object.values(P).filter(p=>p.id!==S.me).map(p=>`<option value="${p.id}" ${S.person===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select><select class="in" data-f="fproj" aria-label="Проєкт"><option value="">Усі проєкти</option>${PR.map(p=>`<option value="${p.id}" ${S.proj===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>${me().role==='member'?`<span class="hint">${ico('lock',13)} Ти бачиш лише задачі, де ти виконавець або постановник</span>`:''}</div>`;
+ let body='';
+ if(S.tab==='matrix'){const o=ts.filter(isOpen),Q=[['11','Зробити зараз','Терміново і важливо'],['01','Запланувати','Важливо, не терміново'],['10','Делегувати','Терміново, не важливо'],['00','Відкинути','Ні те, ні інше']];
+  body=`<div class="mx">${Q.map(([k,l,s])=>{const it=o.filter(t=>(urgent(t)?'1':'0')+(t.imp?'1':'0')===k);return `<div class="q q${k}" data-drop="q:${k}"><h3>${l} <small>${s} · ${it.length}</small></h3>${it.map(t=>`<div draggable="true" data-drag="${t.id}">${trow(t)}${k==='10'&&t.o===S.me&&canEdit(t)?`<div style="padding:0 0 6px 32px"><button class="btn sm" data-a="open" data-id="${t.id}">Делегувати</button></div>`:''}</div>`).join('')||'<div class="empty">Перетягни сюди задачу</div>'}</div>`}).join('')}</div><p class="hint" style="margin-top:12px">Терміновість — з дедлайну (≤ 2 дні), важливість — прапорець. Перетягування доступне лише постановнику задачі.</p>`}
+ else if(S.tab==='kanban'){body=`<div class="kb">${['open','progress','waiting','done'].map(s=>{const it=ts.filter(t=>t.st===s);return `<div class="kcol" data-drop="st:${s}"><h3><span class="st ${s}"></span>${STL[s]} <span class="hint">${it.length}</span></h3>${it.map(kcard).join('')}</div>`}).join('')}</div>`}
+ else if(S.tab==='list'){const key=t=>S.grp==='person'?t.o:S.grp==='project'?(t.proj||'—'):'all';const g={};ts.forEach(t=>(g[key(t)]=g[key(t)]||[]).push(t));
+  body=`<div class="chips" style="margin-bottom:10px;align-items:center"><span class="hint">Групувати:</span><span class="seg sm">${[['person','За виконавцем'],['project','За проєктом'],['none','Без групування']].map(([k,l])=>`<button class="${S.grp===k?'on':''}" data-a="grp" data-v="${k}">${l}</button>`).join('')}</span></div><div class="card" style="padding:4px 6px"><table><thead><tr><th>Задача</th><th>Виконавець</th><th>Постановник</th><th>Дедлайн</th><th>Статус</th><th>Проєкт</th><th>Гіпотеза</th></tr></thead><tbody>${Object.entries(g).map(([k,it])=>`${S.grp!=='none'?`<tr class="grp"><td colspan="7">${S.grp==='person'?esc(pn(k)):esc(prj(k)?.name||'Без проєкту')} · ${it.length}</td></tr>`:''}${it.map(t=>`<tr data-a="open" data-id="${t.id}"><td><b style="font-weight:600">${esc(t.t)}</b> ${cmt(t)}</td><td>${av(t.o,20)} ${esc(pn(t.o))}</td><td>${esc(reqLabel(t))}</td><td>${dueChip(t)}</td><td><span class="st ${t.st}" style="display:inline-block;vertical-align:-2px"></span> ${STL[t.st]}</td><td>${tag(t.proj)}</td><td>${t.hyp?hcode(t.hyp):''}</td></tr>`).join('')}`).join('')}</tbody></table></div>`}
+ else{const d=vis().filter(t=>t.r===S.me&&t.o!==S.me),g={};d.forEach(t=>(g[t.o]=g[t.o]||[]).push(t));
+  body=`<div class="grid g2">${Object.entries(g).map(([pid,it])=>{const o=it.filter(isOpen),od=o.filter(t=>t.due&&diff(TODAY,t.due)<0).length,nc=it.filter(unread).length;return `<div class="card"><h2>${av(pid,28)} ${esc(P[pid].full)}<button class="btn sm" style="margin-left:auto" data-a="meet" data-id="${pid}">Meeting mode</button></h2><div class="chips" style="margin-bottom:8px"><span class="chip">${o.length} відкрито</span>${od?`<span class="chip red">${od} прострочено</span>`:''}${nc?`<span class="chip red">${nc} нових коментарів</span>`:''}</div>${it.map(trow).join('')}</div>`}).join('')||'<div class="empty">Немає делегованих задач</div>'}</div>`}
+ return `<div class="hd"><div><h1>Задачі</h1><div class="sub">Комітменти між людьми: хто → кому → що → до коли</div></div><div class="act"><span class="seg">${views.map(([k,l])=>`<button class="${S.tab===k?'on':''}" data-a="tasksTab" data-v="${k}">${l}</button>`).join('')}</span><button class="btn pri" data-a="newTask">${ico('plus')}Нова задача</button></div></div>${S.tab==='delegated'?'':f}${body}`;
+}
+function myEvents(){return EV.filter(e=>S.me==='vd'?S.cals[e.cal]:e.parts.includes(S.me)&&e.cal!=='personal')}
+const tm=s=>{const [h,m]=s.split(':').map(Number);return h+m/60};
+function pCalendar(){
+ const st=8,en=21,ph=48,y=s=>(tm(s)-st)*ph+44;
+ const others=Object.values(P).filter(p=>p.id!==S.me);
+ const cols=[{id:S.me,name:'Я',evs:myEvents()},...others.filter(p=>S.calT[p.id]).map(p=>({id:p.id,name:p.name,busy:p.share?BUSY[p.id]:null}))];
+ const hrs=Array.from({length:en-st},(_,i)=>`<div class="hr">${st+i}:00</div>`).join('');
+ const sel=S.evSel&&EV.find(e=>e.id===S.evSel);
+ return `<div class="hd"><div><h1>Календар</h1><div class="sub">Понеділок, 23 листопада</div></div><div class="act"><span class="seg"><button class="on">День</button><button data-a="toast" data-m="Тижневий вид — у наступній ітерації">Тиждень</button></span></div></div>
+ <div class="cal"><div class="col"><div class="card"><h3 style="margin-bottom:10px">Мої календарі</h3>${S.me==='vd'?ACC.map((a,ai)=>`<div class="hint" style="margin:8px 0 4px">${esc(a.email)}</div><div class="cklist">${CALS.filter(c=>(ai===0)===(c.id!=='personal')).map(c=>`<label><input type="checkbox" data-f="cal" data-id="${c.id}" ${S.cals[c.id]?'checked':''}><span class="dot" style="--c:${c.c}"></span>${esc(c.name)}</label>`).join('')}</div>`).join(''):`<div class="cklist"><label><input type="checkbox" checked disabled><span class="dot" style="--c:#1f4fd8"></span>${esc(me().email)}</label></div>`}</div>
+ <div class="card"><h3 style="margin-bottom:10px">Зайнятість команди</h3><div class="cklist">${others.map(p=>`<label><input type="checkbox" data-f="calT" data-id="${p.id}" ${S.calT[p.id]?'checked':''}>${av(p.id,20)}${esc(p.name)}${p.share?'':'<span class="hint">· не ділиться</span>'}</label>`).join('')}</div><p class="hint" style="margin:10px 0 0">Видно лише free/busy, без назв подій.</p></div></div>
+ <div style="display:grid;grid-template-columns:minmax(0,1fr) ${sel?'300px':'0'};gap:${sel?16:0}px"><div class="cgrid" style="grid-template-columns:56px repeat(${cols.length},minmax(150px,1fr))"><div class="ccol"><div class="chd"></div>${hrs}</div>${cols.map(c=>`<div class="ccol"><div class="chd">${av(c.id,20)}${esc(c.name)}</div>${hrs.replace(/>\d+:00</g,'><')}${c.evs?c.evs.map(e=>{const cl=CALS.find(x=>x.id===e.cal);return `<div class="evt" style="--c:${cl.c};top:${y(e.s)}px;height:${Math.max(26,(tm(e.e)-tm(e.s))*ph-3)}px" data-a="evt" data-id="${e.id}"><b>${esc(e.t)}</b>${tm(e.e)-tm(e.s)>=.5?e.s+'–'+e.e:''}</div>`}).join(''):c.busy?c.busy.map(([a,b])=>`<div class="evt busy" style="top:${y(a)}px;height:${Math.max(20,(tm(b)-tm(a))*ph-3)}px">Зайнято</div>`).join(''):`<div class="empty" style="position:absolute;top:120px;left:0;right:0">Не ділиться календарем</div>`}${c.id===S.me?`<div class="now" style="top:${y('09:20')}px"></div>`:''}</div>`).join('')}</div>
+ ${sel?evPanel(sel):'<div></div>'}</div></div>`;
+}
+function evPanel(e){
+ const ppl=e.parts.filter(p=>p!==S.me);
+ const prep=vis().filter(t=>isOpen(t)&&ppl.some(p=>(t.o===p&&t.r===S.me)||(t.r===p&&t.o===S.me)));
+ const projs=[...new Set(prep.map(t=>t.proj).filter(Boolean))];
+ const dec=K.filter(k=>k.scope==='team'&&!k.supBy&&projs.includes(k.proj)).slice(0,3);
+ return `<div class="card" style="align-self:start;position:sticky;top:76px"><div style="display:flex;gap:8px"><h2 style="margin:0">${esc(e.t)}</h2><button class="btn ghost sm" style="margin-left:auto" data-a="evClose" aria-label="Закрити">${ico('x',14)}</button></div><div class="hint" style="margin:4px 0 10px">Пн, 23 лист · ${e.s}–${e.e}</div><div class="avs" style="margin-bottom:12px">${e.parts.map(p=>av(p,26)).join('')}</div>
+ <h3 style="margin:8px 0 4px">Prep: відкриті комітменти</h3>${prep.length?prep.map(trow).join(''):'<div class="hint">Немає відкритих комітментів між учасниками</div>'}
+ ${dec.length?`<h3 style="margin:14px 0 6px">Рішення по цих проєктах</h3>${dec.map(k=>`<div style="font-size:13.5px;margin-bottom:6px">• ${esc(k.txt)}</div>`).join('')}`:''}
+ <button class="btn pri" style="width:100%;justify-content:center;margin-top:14px" data-a="add" data-ev="${e.id}">${ico('mic')}Додати транскрипт</button><p class="hint" style="margin:8px 0 0">Після зустрічі TeamOS шукає транскрипт у Google Drive (Meet Recordings).</p></div>`;
+}
+function pMail(){
+ if(S.me!=='vd')return `<div class="hd"><h1>Пошта</h1></div><div class="card"><div class="empty">Підключи Gmail у розділі «Підключення», щоб бачити листи, які потребують реакції.<br><br><button class="btn pri" data-a="go" data-h="connections">Підключити Gmail</button></div></div>`;
+ const ls=MAIL.filter(m=>(S.mcat==='all'||m.cat===S.mcat)&&(S.macc<0||m.acc===S.macc));
+ return `<div class="hd"><div><h1>Пошта</h1><div class="sub">AI-тріаж з усіх підключених Gmail. Відповідаєш — у Gmail.</div></div></div>
+ <div class="chips" style="margin-bottom:14px;align-items:center"><span class="seg">${[['all','Усі'],...Object.entries(MCAT)].map(([k,l])=>`<button class="${S.mcat===k?'on':''}" data-a="mcat" data-v="${k}">${l} · ${k==='all'?MAIL.length:MAIL.filter(m=>m.cat===k).length}</button>`).join('')}</span><span class="seg sm"><button class="${S.macc<0?'on':''}" data-a="macc" data-v="-1">Усі акаунти</button>${ACC.map((a,i)=>`<button class="${S.macc===i?'on':''}" data-a="macc" data-v="${i}">${esc(a.email)}</button>`).join('')}</span></div>
+ <div class="card" style="padding:0">${ls.map(m=>`<div class="mrow"><div><b>${esc(m.from)}</b><div class="hint"><span class="dot" style="--c:${ACC[m.acc].c};display:inline-block"></span> ${esc(ACC[m.acc].kind)} · ${m.time}</div></div><div><div class="s">${esc(m.subj)}</div><div class="ai">${ico('spark',13)} ${esc(m.sum)}</div></div><div class="chips"><span class="chip ${m.cat==='reply'?'red':m.cat==='commit'?'green':''}">${MCAT[m.cat]}</span><button class="btn sm" data-a="toast" data-m="Лист додано в інбокс на аналіз">→ Інбокс</button><button class="btn sm ghost" data-a="toast" data-m="Відкриється в Gmail">Gmail ${ico('out',12)}</button></div></div>`).join('')||'<div class="empty">Нічого не потребує уваги</div>'}</div>`;
+}
+const knOk=k=>k.scope==='team'||k.by===S.me;
+function knCard(k){const src=k.src;return `<div class="kn ${k.supBy?'sup':''}"><div class="km"><span class="ty ${k.type}">${KT[k.type]}</span>${k.scope==='private'?`<span>${ico('lock',12)} Тільки я</span>`:`<span>${ico('users',12)} Команда</span>`}${tag(k.proj)}</div><div class="ktx">${esc(k.txt)}</div>${k.why?`<div class="hint">Чому: ${esc(k.why)}</div>`:''}<div class="km" style="margin-top:6px">${av(k.by,18)}<span>${esc(pn(k.by))} · ${fds(k.date)}</span><span>Джерело: ${esc(src)}</span>${k.sup?`<span>замінює «${esc(K.find(x=>x.id===k.sup).txt)}»</span>`:''}${k.supBy?`<span class="chip red">замінено ${fds(K.find(x=>x.id===k.supBy).date)}</span>`:''}</div></div>`}
+function pKnowledge(){
+ let ks=K.filter(knOk);
+ if(S.team==='personal')ks=ks.filter(k=>k.scope==='private');
+ if(S.kscope!=='all')ks=ks.filter(k=>k.scope===S.kscope);if(S.kproj)ks=ks.filter(k=>k.proj===S.kproj);
+ const head=`<div class="hd"><div><h1>Знання</h1><div class="sub">Домовленості, рішення і факти — з посиланням на джерело</div></div><div class="act"><button class="btn" data-a="onb">${ico('spark')}Onboarding pack <span class="p1">P1</span></button><button class="btn pri" data-a="newKn">${ico('plus')}Додати</button></div></div>
+ <div class="chips" style="margin-bottom:16px;align-items:center"><span class="seg">${[['all','Усі'],['decision','Рішення'],['agreement','Домовленості'],['fact','Факти'],['process','Процеси'],['context','Контекст']].map(([k,l])=>`<button class="${S.knt===k&&!S.klog?'on':''}" data-a="knt" data-v="${k}">${l}</button>`).join('')}</span><span class="seg"><button class="${S.klog?'on':''}" data-a="klog">Decision log</button></span><select class="in" data-f="kscope" aria-label="Видимість"><option value="all">Командні й мої</option><option value="team" ${S.kscope==='team'?'selected':''}>Тільки командні</option><option value="private" ${S.kscope==='private'?'selected':''}>Тільки мої</option></select><select class="in" data-f="kproj2" aria-label="Проєкт"><option value="">Усі проєкти</option>${PR.map(p=>`<option value="${p.id}" ${S.kproj===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>`;
+ if(S.klog){const d=ks.filter(k=>k.type==='decision').sort((a,b)=>a.date<b.date?1:-1);return head+`<div class="tl">${d.map(knCard).join('')}</div>`}
+ const list=ks.filter(k=>!k.supBy&&(S.knt==='all'||k.type===S.knt)).sort((a,b)=>a.date<b.date?1:-1);
+ return head+(list.map(knCard).join('')||'<div class="empty">Поки порожньо</div>');
+}
+function pVision(){
+ const ed=isAdmin();
+ return `<div class="hd"><div><h1>Team vision</h1><div class="sub">Linxa Team · оновлено 21 лист · Володимир</div></div><div class="act">${ed?`<button class="btn ${S.vEdit?'pri':''}" data-a="vEdit">${S.vEdit?'Зберегти':'Редагувати'}</button>`:`<span class="hint">${ico('lock',13)} Редагують Owner і Admin</span>`}</div></div>
+ <div class="card"><div class="doc" contenteditable="${S.vEdit}"><h2 style="margin-top:0">Місія</h2><p>Будуємо AI-продукти, які забирають рутину з комунікації, щоб люди займались розмовами, а не записами про них.</p><h2>Що для нас важливо</h2><p><b>Домовились — записали.</b> Кожен комітмент після мітингу потрапляє в TeamOS з виконавцем і дедлайном.</p><p><b>Гіпотези, а не думки.</b> Великі зміни запускаємо як гіпотезу з метрикою і терміном.</p><p><b>Прозорість без мікроменеджменту.</b> Статус змінює той, хто поставив задачу; виконавець пише коментар, коли є що сказати.</p><h2>Як ми працюємо</h2><p>Weekly sync щоп’ятниці, 1:1 раз на тиждень. Транскрипт кожної зустрічі розбирає ведучий одразу після неї.</p><h2>Проєкти</h2>${PR.map(p=>`<p>${tag(p.id)} — ${esc(p.vision)}</p>`).join('')}</div></div>`;
+}
+function pProject(id){
+ const p=prj(id);if(!p)return '<div class="empty">Проєкт не знайдено</div>';
+ const ts=vis().filter(t=>t.proj===id),dn=ts.filter(t=>t.st==='done').length;
+ const hs=H.filter(h=>h.proj===id),ks=K.filter(k=>k.proj===id&&knOk(k)&&!k.supBy);
+ let b='';
+ if(S.ptab==='overview')b=`<div class="grid g2"><div class="card"><h2>Vision</h2><p style="margin:0;font-size:16px">${esc(p.vision)}</p><div class="chips" style="margin-top:14px;align-items:center"><span class="hint">Owner</span>${av(p.o)} ${esc(pn(p.o))}<span class="hint" style="margin-left:10px">Учасники</span><span class="avs">${p.m.map(m=>av(m)).join('')}</span></div></div>
+ <div class="card"><h2>Прогрес задач</h2><div style="font:800 36px Archivo,system-ui,sans-serif;font-stretch:112%">${dn}<span class="hint" style="font-size:18px"> / ${ts.length}</span></div><div class="prog"><i style="width:${ts.length?dn/ts.length*100:0}%"></i></div><div class="chips" style="margin-top:10px">${['open','progress','waiting'].map(s=>`<span class="chip">${STL[s]}: ${ts.filter(t=>t.st===s).length}</span>`).join('')}</div></div></div>
+ <div class="card" style="margin-top:16px"><h2>Цілі</h2><table><thead><tr><th>Ціль</th><th>Метрика</th><th style="text-align:right">Зараз</th><th style="text-align:right">Ціль</th><th>Прогрес</th><th>До</th></tr></thead><tbody>${p.goals.map(g=>`<tr style="cursor:default"><td><b style="font-weight:600">${esc(g.g)}</b></td><td>${esc(g.metric)}</td><td style="text-align:right">${g.cur}</td><td style="text-align:right">${g.target}</td><td style="width:160px"><div class="prog"><i style="width:${Math.min(100,g.cur/g.target*100)}%"></i></div></td><td>${fds(g.by)}</td></tr>`).join('')}</tbody></table></div>`;
+ else if(S.ptab==='hyps')b=`<div class="grid g2">${hs.map(hypCard).join('')}</div>`;
+ else if(S.ptab==='tasks')b=`<div class="card">${ts.map(trow).join('')||'<div class="empty">Немає задач, які ти бачиш</div>'}</div>`;
+ else b=ks.map(knCard).join('')||'<div class="empty">Поки немає знань</div>';
+ return `<div class="hd"><div><div class="hint">Team Space · проєкт</div><h1 style="display:flex;gap:10px;align-items:center"><span class="dot" style="--c:${p.c};width:14px;height:14px"></span>${esc(p.name)}</h1></div><div class="act"><span class="seg">${[['overview','Огляд'],['hyps','Гіпотези · '+hs.length],['tasks','Задачі · '+ts.length],['kn','Знання · '+ks.length]].map(([k,l])=>`<button class="${S.ptab===k?'on':''}" data-a="ptab" data-v="${k}">${l}</button>`).join('')}</span></div></div>${b}`;
+}
+const stmt=h=>`<span class="stmt"><em>Якщо</em> ${esc(h.if)}, <em>то</em> ${esc(h.then)}, <em>бо</em> ${esc(h.bo)}.</span>`;
+const hypChip=h=>`<span class="chip ${h.st==='testing'?'amber':h.st==='validated'?'green':h.st==='invalidated'?'red':''}">${HST[h.st]}</span>`;
+function hypCard(h){const ts=T.filter(t=>t.hyp===h.id),dn=ts.filter(t=>t.st==='done').length;return `<div class="hyp" data-a="go" data-h="hyp-${h.id}"><div class="chips" style="margin-bottom:8px;align-items:center"><b>${hcode(h.id)}</b>${hypChip(h)}<span class="hint">${fds(h.from)} – ${fds(h.to)}</span></div>${stmt(h)}<div class="chips" style="margin-top:10px;align-items:center">${av(h.o,20)}<span class="hint">${esc(pn(h.o))}</span><span class="chip">${esc(h.metric)}: ${esc(h.cur)} / ${esc(h.target)}</span><span class="chip">${dn}/${ts.length} задач</span></div></div>`}
+function pHyp(id){
+ const h=hyp(id);if(!h)return '<div class="empty">Гіпотезу не знайдено</div>';
+ const ts=vis().filter(t=>t.hyp===id),ed=isAdmin()||h.o===S.me;
+ const sug=id==='h2'&&!h.learn.some(l=>l.txt.includes('412'))?`<div class="warn" style="margin-bottom:10px">${ico('spark')} З «Weekly sync — 20 лист»: «за тиждень 412 аналізів, у реєстрацію перейшло 6%». Додати як learning?<span class="seg sm"><button data-a="addLearn">Додати</button></span></div>`:'';
+ return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="project-${h.proj}">${ico('back',14)} ${esc(prj(h.proj).name)}</button><div class="chips" style="margin-top:10px;align-items:center"><b>${hcode(id)}</b>${hypChip(h)}</div></div><div class="act">${ed?`<select class="in" data-f="hst" data-id="${id}" aria-label="Статус">${Object.entries(HST).map(([k,l])=>`<option value="${k}" ${k===h.st?'selected':''}>${l}</option>`).join('')}</select>`:''}</div></div>
+ <div class="bigstmt" style="margin-bottom:24px"><em>Якщо</em> ${esc(h.if)}, <em>то</em> ${esc(h.then)}, <em>бо</em> ${esc(h.bo)}.</div>
+ <div class="chips" style="margin-bottom:22px"><span class="chip big">Відповідальний: <b>${esc(pn(h.o))}</b></span><span class="chip big">${esc(h.metric)}: <b>${esc(h.cur)}</b> / ${esc(h.target)}</span><span class="chip big">${fds(h.from)} – ${fds(h.to)}</span></div>
+ <div class="grid g2"><div class="card"><h2>Задачі гіпотези · ${ts.length}</h2>${ts.map(trow).join('')||'<div class="empty">Прив’яжи задачі з Review або з картки задачі</div>'}</div>
+ <div class="card"><h2>Learnings</h2>${sug}${h.learn.map(l=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="hint">${fds(l.d)}</div>${esc(l.txt)}</div>`).join('')||'<div class="empty">Висновки з’являться тут — вручну або з транскриптів</div>'}<h3 style="margin:16px 0 6px">Вердикт</h3><div class="hint">${h.st==='testing'?'Ще тестуємо — вердикт після '+fds(h.to):h.st==='draft'?'Гіпотеза ще не запущена':HST[h.st]}</div></div></div>`;
+}
+function pPerson(id){
+ const p=P[id];if(!p)return '<div class="empty">Людину не знайдено</div>';
+ const iOwe=vis().filter(t=>isOpen(t)&&t.o===S.me&&t.r===id),theyOwe=vis().filter(t=>isOpen(t)&&t.o===id&&t.r===S.me);
+ const nx=EV.find(e=>e.parts.includes(id)&&e.parts.includes(S.me)&&e.parts.length===2);
+ if(S.meet===id){const list=[...theyOwe,...iOwe];const i=Math.min(S.mi||0,list.length);if(i>=list.length)return `<div class="mm done-box"><div class="big">Все пройшли</div><p class="hint">${list.length} задач переглянуто з ${esc(p.name)}</p><button class="btn pri" data-a="meetEnd">Завершити</button></div>`;const t=list[i],ce=canEdit(t);
+  return `<div class="mm"><div class="hd"><div><div class="hint">Meeting mode · ${esc(p.full)}</div><h2 style="margin-top:4px">${i+1} з ${list.length}</h2></div><div class="act"><button class="btn" data-a="meetEnd">Вийти</button></div></div><div class="prog" style="margin-bottom:18px"><i style="width:${i/list.length*100}%"></i></div>
+  <div class="mmcard"><div class="chips">${t.o===S.me?'<span class="chip">Я винен</span>':`<span class="chip">${esc(p.name)} винен мені</span>`}${dueChip(t)}${tag(t.proj)}<span class="chip">${STL[t.st]}</span></div><div class="t">${esc(t.t)}</div>${t.cm.length?`<div class="quote">${esc(t.cm.at(-1).txt)}<div class="hint">${esc(pn(t.cm.at(-1).a))} · ${t.cm.at(-1).d}</div></div>`:''}
+  ${ce?`<div class="stbtns">${[['done','Готово'],['progress','В роботі'],['waiting','Очікує'],['open','Відкрито']].map(([k,l])=>`<button class="btn ${t.st===k?'pri':''}" data-a="mst" data-id="${t.id}" data-v="${k}">${l}</button>`).join('')}<input type="date" class="in" data-f="mdue" data-id="${t.id}" value="${t.due||''}" aria-label="Перенести дедлайн"></div>`:`<div class="lock" style="margin:16px 0">${ico('lock')}Статус змінює ${esc(pn(t.r))}. Ти можеш залишити коментар.</div>`}
+  <textarea class="in" id="mcm" rows="2" placeholder="Коментар до задачі…"></textarea><div class="mdf"><button class="btn" data-a="mnext" data-id="${t.id}" data-v="-1" ${i?'':'disabled'}>Назад</button><button class="btn pri" data-a="mnext" data-id="${t.id}" data-v="1">Далі ${ico('arrow',14)}</button></div></div></div>`}
+ const sk=K.filter(k=>k.scope==='team'&&k.by===id).slice(0,3);
+ return `<div class="hd"><div style="display:flex;gap:14px;align-items:center">${av(id,52)}<div><h1>${esc(p.full)}</h1><div class="sub">${roleName(p.role)} · ${esc(p.email)}${nx?` · наступна зустріч: ${esc(nx.t)}, Пн ${nx.s}`:''}</div></div></div><div class="act"><button class="btn pri" data-a="meet" data-id="${id}">Meeting mode</button></div></div>
+ <div class="grid g2"><div class="card"><h2>${esc(p.name)} винен мені · ${theyOwe.length}</h2>${theyOwe.map(trow).join('')||'<div class="empty">Нічого</div>'}</div><div class="card"><h2>Я винен ${esc(p.name)} · ${iOwe.length}</h2>${iOwe.map(trow).join('')||'<div class="empty">Нічого</div>'}</div></div>
+ ${sk.length?`<div class="card" style="margin-top:16px"><h2>Знання, які додав ${esc(p.name)}</h2>${sk.map(knCard).join('')}</div>`:''}`;
+}
+function pMembers(){
+ const ad=isAdmin(),own=me().role==='owner';
+ return `<div class="hd"><div><h1>Учасники</h1><div class="sub">Linxa Team · ${Object.keys(P).length} учасники, ${INV.length} запрошення</div></div><div class="act">${own?`<button class="btn" data-a="transfer">Передати ownership</button>`:''}${ad?`<button class="btn pri" data-a="invite">${ico('plus')}Запросити</button>`:''}</div></div>
+ <div class="card" style="padding:4px 6px"><table class="stack"><thead><tr><th>Людина</th><th>Email</th><th>Роль</th><th>Календар</th><th style="text-align:right">Відкритих комітментів</th></tr></thead><tbody>${Object.values(P).map(p=>`<tr data-a="go" data-h="person-${p.id}"><td>${av(p.id,26)} <b style="font-weight:600">${esc(p.full)}</b>${p.id===S.me?' <span class="hint">(ти)</span>':''}</td><td>${esc(p.email)}</td><td>${ad&&p.role!=='owner'&&p.id!==S.me?`<select class="in" data-f="role" data-id="${p.id}" aria-label="Роль"><option value="admin" ${p.role==='admin'?'selected':''}>Admin</option><option value="member" ${p.role==='member'?'selected':''}>Member</option></select>`:roleName(p.role)}</td><td>${p.share?'<span class="chip green">free/busy</span>':'<span class="chip">не ділиться</span>'}</td><td style="text-align:right">${T.filter(t=>isOpen(t)&&t.o===p.id).length}</td></tr>`).join('')}${INV.map(i=>`<tr style="cursor:default"><td><span class="av ext" style="--s:26px">?</span> <span class="hint">${esc(i.email)}</span></td><td>${esc(i.email)}</td><td>${roleName(i.role)}</td><td><span class="chip amber">Запрошено</span></td><td style="text-align:right">${ad?'<button class="btn sm" data-a="toast" data-m="Запрошення надіслано повторно">Надіслати ще раз</button>':''}</td></tr>`).join('')}</tbody></table></div>
+ <div class="card" style="margin-top:16px"><h2>Хто що бачить</h2><table class="stack"><thead><tr><th>Дія</th><th>Owner</th><th>Admin</th><th>Member</th></tr></thead><tbody style="cursor:default">${[['Запрошувати, міняти ролі','✓','✓','—'],['Передати ownership, видалити команду','✓','—','—'],['Бачити задачі між іншими людьми','✓','✓','—'],['Редагувати Team vision і проєкти','✓','✓','—'],['Змінювати статус задачі','лише свої поставлені','лише свої поставлені','лише свої поставлені'],['Бачити сирі транскрипти інших','—','—','—']].map(r=>`<tr style="cursor:default">${r.map((c,i)=>`<td${i?' style="color:var(--mut)"':''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function pConnections(){
+ const acc=S.me==='vd'?ACC:[{email:me().email,kind:'Робочий',c:me().c,svc:{cal:true,mail:false,drive:false},cals:[[me().email,true]],sync:'1 хв тому'}];
+ const sv=[['cal','Google Calendar','cal'],['mail','Gmail','mail'],['drive','Google Drive','drive']];
+ return `<div class="hd"><div><h1>Підключення</h1><div class="sub">Підключай кілька Google-акаунтів — робочі й особисті. Дані з них бачиш тільки ти.</div></div><div class="act"><button class="btn pri" data-a="toast" data-m="Відкриється вікно Google OAuth">${ico('plus')}Підключити Google-акаунт</button></div></div>
+ <div class="grid g2">${acc.map((a,ai)=>`<div class="card"><h2><span class="av" style="--c:${a.c};--s:28px">${a.email[0].toUpperCase()}</span>${esc(a.email)}<span class="chip" style="margin-left:auto">${a.kind}</span></h2>${sv.map(([k,l,ic])=>`<div class="conn">${ico(ic,18)}<span style="flex:1"><b>${l}</b>${k==='cal'&&a.svc.cal?`<div class="hint">${a.cals.map(c=>(c[1]?'✓ ':'○ ')+esc(c[0])).join(' · ')}</div>`:''}${k==='drive'&&a.svc.drive?'<div class="hint">Автопошук транскриптів Meet</div>':''}</span><label class="tg"><input type="checkbox" data-f="svc" data-i="${ai}" data-k="${k}" ${a.svc[k]?'checked':''} aria-label="${l}"><span></span></label></div>`).join('')}<div class="hint">Синхронізовано ${a.sync} · <button class="btn ghost sm" data-a="toast" data-m="Акаунт відключено (демо)">Відключити</button></div></div>`).join('')}</div>
+ <div class="card" style="margin-top:16px"><h2>Інші джерела <span class="p1">Скоро</span></h2><div class="chips">${['Telegram-бот','Slack','Zoom','Omi','Fireflies','Webhook / API','MCP-сервер TeamOS'].map(s=>`<span class="chip big" style="color:var(--mut)">${s}</span>`).join('')}</div></div>`;
+}
+function pPrefs(){
+ return `<div class="hd"><div><h1>Налаштування</h1></div></div><div class="grid g2"><div class="card"><h2>Команда</h2><div class="grid" style="gap:12px"><label class="fl">Назва<input class="in" value="Linxa Team" ${isAdmin()?'':'disabled'}></label><label class="fl">Адреса для пересилання в інбокс<input class="in" value="linxa-team.k7f2@in.teamos.app" readonly></label><label class="fl">Мова аналізу<select class="in"><option>Автовизначення (UA / EN / RU)</option><option>Українська</option><option>English</option></select></label><label class="fl">Терміново, якщо до дедлайну ≤<select class="in"><option>1 день</option><option selected>2 дні</option><option>3 дні</option></select></label></div></div>
+ <div class="card"><h2>Приватність</h2><div class="cklist" style="gap:10px"><b style="font-size:13px">Що команда бачить з мого календаря</b><label><input type="radio" name="cp" checked> Тільки зайнятість (free/busy)</label><label><input type="radio" name="cp"> Назви подій</label><label><input type="radio" name="cp"> Нічого</label></div><p class="hint">Сирі джерела з інбоксу завжди бачиш тільки ти.</p></div>
+ <div class="card"><h2>AI</h2><div class="grid" style="gap:12px"><label class="fl">Провайдер (self-host)<select class="in"><option>Anthropic</option><option>OpenAI</option><option>Google Gemini</option><option>Локальна модель (Ollama)</option></select></label><label class="fl">API-ключ<input class="in" type="password" value="sk-demo-key"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Автоматично застосовувати пропозиції з високою впевненістю</label></div></div>
+ <div class="card"><h2>Сповіщення</h2><div class="cklist" style="gap:10px"><label><input type="checkbox" checked> Щоденний дайджест о 9:00 (email)</label><label><input type="checkbox" checked> Нова задача мені</label><label><input type="checkbox" checked> Коментар до задачі, яку я поставив</label><label><input type="checkbox"> Telegram <span class="p1">Скоро</span></label></div></div></div>`;
+}
+function pLogin(){
+ return `<div class="lg"><div class="lgl"><div style="display:flex;gap:10px;align-items:center;font-weight:800"><span class="logo" style="background:var(--bg);color:var(--ink)">T</span>TeamOS</div><div class="lgm"><h1>Другий мозок команди, який наповнюється з ваших мітингів</h1><p>Кидаєш транскрипт — TeamOS витягує, хто кому що пообіцяв, які рішення прийняли і що змінилось. Ти лише підтверджуєш.</p>
+ <div class="flow"><div class="tx"><div><b>Володимир:</b> Саш, давай ти <mark>до п’ятниці зробиш сторінку з цінами</mark>.</div><div><b>Максим:</b> Вебхуки <mark>вже на проді</mark> з вівторка.</div><div><b>Володимир:</b> <mark>Фіксуємо 100 викликів</mark> на місяць безкоштовно.</div></div><div class="arrow">→</div><div class="outs"><div class="oc"><small>Комітмент · Олександр → Володимир</small>Сторінка з цінами · Пт, 27 лист</div><div class="oc"><small>Статус</small>Вебхуки Pipedrive → Готово</div><div class="oc"><small>Рішення · команда</small>Free tier MCP — 100 викликів/міс</div></div></div></div></div>
+ <div class="lgr"><div class="lgbox"><h2 style="font-size:24px">Увійти в TeamOS</h2>${S.invite?`<div class="inv">${av('vd',32)}<span><b>Володимир</b> запросив тебе в команду <b>Linxa Team</b></span></div>`:''}<button class="gbtn" data-a="login"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.6a4.8 4.8 0 0 1-2.1 3.1v2.6h3.4c2-1.8 3.1-4.5 3.1-7.5z"/><path fill="#34A853" d="M12 22c2.8 0 5.2-.9 6.9-2.5l-3.4-2.6c-.9.6-2.1 1-3.5 1-2.7 0-5-1.8-5.8-4.3H2.7v2.7A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.2 13.6a6 6 0 0 1 0-3.8V7.1H2.7a10 10 0 0 0 0 9z"/><path fill="#EA4335" d="M12 6c1.5 0 2.9.5 4 1.5l3-3A10 10 0 0 0 2.7 7.1l3.5 2.7C7 7.8 9.3 6 12 6z"/></svg>Продовжити з Google</button><p class="hint" style="margin:0">Підійде будь-який акаунт — робочий чи особистий.</p><p class="hint" style="margin:10px 0 0">Open-source · можна розгорнути у себе · <a href="https://github.com/vdybenko/team_os">GitHub</a></p><button class="btn ghost sm" data-a="invToggle" style="justify-self:start">${S.invite?'Демо: звичайний вхід':'Демо: прийшов за інвайтом'}</button></div></div></div>`;
+}
+function pOnboarding(){
+ const o=S.ob,st=o.step;
+ const steps=`<div class="steps">${[1,2,3,4].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>`;
+ let b='';
+ if(st===1)b=`<h1>Почнемо з команди</h1><p class="hint" style="font-size:15px">Команд може бути скільки завгодно. Особистий простір є завжди.</p><div class="grid" style="gap:10px;margin:20px 0">${[['create','Створити команду','Ти станеш Owner і зможеш запросити людей'],['personal','Тільки для себе','Особистий другий мозок, без команди']].map(([k,l,s])=>`<button class="opt ${o.mode===k?'on':''}" data-a="obMode" data-v="${k}"><span class="logo">${k==='create'?ico('users'):ico('lock')}</span><span><b>${l}</b><div class="hint">${s}</div></span></button>`).join('')}</div>${o.mode==='create'?`<label class="fl">Назва команди<input class="in" data-f="obName" value="${esc(o.name)}"></label>`:''}`;
+ else if(st===2)b=`<h1>Запроси людей</h1><p class="hint" style="font-size:15px">На будь-яку пошту — робочу чи особисту. Ролі можна змінити пізніше.</p><div class="grid" style="gap:8px;margin:20px 0">${['oleksandr@linxa.com','iryna.melnyk@gmail.com',''].map((e,i)=>`<div style="display:flex;gap:8px"><input class="in" style="flex:1" value="${e}" placeholder="email@example.com" aria-label="Email"><select class="in" aria-label="Роль"><option>Member</option><option ${i===1?'selected':''}>Admin</option></select></div>`).join('')}</div>`;
+ else if(st===3)b=`<h1>Підключи джерела</h1><p class="hint" style="font-size:15px">Можна кілька Google-акаунтів. Команда бачить лише твою зайнятість у календарі.</p><div style="margin:20px 0">${[['cal','Google Calendar','Мітинги, учасники, зайнятість',true],['mail','Gmail','Листи, на які треба відреагувати',false],['drive','Google Drive','Транскрипти Meet і документи',false]].map(([k,l,s,c])=>`<div class="conn">${ico(k,20)}<span style="flex:1"><b>${l}</b><div class="hint">${s}</div></span><button class="btn sm ${c?'':'pri'}" data-a="obConn" data-v="${k}">${c||S.obc?.[k]?'✓ Підключено':'Підключити'}</button></div>`).join('')}<button class="btn ghost sm">${ico('plus')}Додати ще один Google-акаунт</button></div>`;
+ else b=`<h1>Кинь транскрипт останнього мітингу</h1><p class="hint" style="font-size:15px">TeamOS знайде комітменти, рішення і зміни статусів. Ти лише підтвердиш.</p><textarea class="in" rows="7" style="margin:20px 0 10px" placeholder="Встав сюди текст транскрипту або чату…"></textarea><div class="chips"><button class="btn" data-a="obSample">${ico('spark')}Спробувати з демо-транскриптом</button><button class="btn ghost" data-a="go" data-h="dashboard">Пропустити</button></div>`;
+ return `<div class="ob"><div style="display:flex;gap:10px;align-items:center;font-weight:800;margin-bottom:28px"><span class="logo">T</span>TeamOS</div>${steps}${b}<div class="mdf" style="justify-content:space-between;margin-top:28px"><button class="btn ghost" data-a="obStep" data-v="-1" ${st>1?'':'disabled'}>Назад</button>${st<4?`<span style="display:flex;gap:8px">${st>1?`<button class="btn ghost" data-a="obStep" data-v="1">Пропустити</button>`:''}<button class="btn pri" data-a="obStep" data-v="1">Далі</button></span>`:''}</div></div>`;
+}
+
+/* ---------- drawer ---------- */
+function drawer(){
+ const el=document.getElementById('drawer');const t=S.drawer&&T.find(x=>x.id===S.drawer);
+ if(!t){el.classList.remove('on');el.setAttribute('aria-hidden','true');return}
+ if(t.r===S.me)t.cm.forEach(c=>c.unread=false);
+ const ce=canEdit(t),ro=ce?'':'disabled';
+ const srcOwn=t.src&&IN.find(i=>i.id===t.src.item&&i.owner===S.me);
+ el.innerHTML=`<div class="dw"><div class="dwh"><span class="st ${t.st}"></span>${ce?`<select class="in" data-f="tst" aria-label="Статус">${Object.entries(STL).map(([k,l])=>`<option value="${k}" ${k===t.st?'selected':''}>${l}</option>`).join('')}</select>`:`<span class="chip">${STL[t.st]}</span>`}<button class="btn ghost sm" style="margin-left:auto" data-a="closeD" aria-label="Закрити">${ico('x')}</button></div>
+ <textarea class="dwt" rows="2" data-f="tt" ${ce?'':'readonly'} aria-label="Назва">${esc(t.t)}</textarea>
+ ${ce?'':`<div class="lock">${ico('lock')}<span>Статус і поля змінює <b>${esc(reqLabel(t))}</b> — той, хто поставив задачу. Якщо є оновлення, напиши коментар.</span></div>`}
+ <div class="kv"><span>Виконавець</span>${ce?`<select class="in" data-f="to" aria-label="Виконавець">${Object.values(P).map(p=>`<option value="${p.id}" ${p.id===t.o?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`:`<span>${av(t.o,20)} ${esc(pn(t.o))}</span>`}
+ <span>Постановник</span><span>${av(t.r,20)} ${esc(reqLabel(t))}</span>
+ <span>Дедлайн</span><span style="display:flex;gap:8px;align-items:center"><input type="date" class="in" data-f="tdue" value="${t.due||''}" ${ro} aria-label="Дедлайн">${dueChip(t)}</span>
+ <span>Пріоритет</span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="timp" ${t.imp?'checked':''} ${ro}> Важливо ${urgent(t)&&isOpen(t)?'<span class="chip red">Терміново</span>':''}</label>
+ <span>Проєкт</span><select class="in" data-f="tproj" ${ro} aria-label="Проєкт"><option value="">Без проєкту</option>${PR.map(p=>`<option value="${p.id}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+ <span>Гіпотеза</span><select class="in" data-f="thyp" ${ro} aria-label="Гіпотеза"><option value="">Без гіпотези</option>${H.filter(h=>!t.proj||h.proj===t.proj).map(h=>`<option value="${h.id}" ${h.id===t.hyp?'selected':''}>${hcode(h.id)} · ${esc(h.then.slice(0,40))}…</option>`).join('')}</select></div>
+ ${t.src?`<div class="box"><h3>Джерело</h3><div class="quote">“${esc(t.src.q)}”</div><div class="hint" style="margin-top:6px">${esc(t.src.title)}${t.src.ts?' · '+t.src.ts:''} · ${srcOwn?`<button class="btn ghost sm" data-a="review" data-id="${srcOwn.id}">Відкрити</button>`:`${ico('lock',12)} повний текст бачить лише той, хто його додав`}</div></div>`:''}
+ <div class="box"><h3>Коментарі · ${t.cm.length}</h3>${t.cm.map(c=>`<div class="cm">${av(c.a,26)}<div><b>${esc(pn(c.a))}</b> <span class="when">${c.d}</span><div>${esc(c.txt)}</div></div></div>`).join('')}<textarea class="in" id="cmt" rows="2" placeholder="${ce?'Коментар…':'Напиши, що зроблено або що блокує…'}"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" data-a="comment">Надіслати</button></div></div>
+ <div class="box"><h3>Історія</h3><div class="hist">${t.hist.map(h=>`<div><b style="color:var(--ink)">${h[0]}</b> · ${esc(h[1])}</div>`).join('')||'<div>Створено вручну</div>'}</div></div></div>`;
+ el.classList.add('on');el.setAttribute('aria-hidden','false');
+}
+
+/* ---------- modal ---------- */
+function modal(){
+ const el=document.getElementById('modal'),m=S.modal;
+ if(!m){el.innerHTML='';return}
+ let h='';
+ if(m.k==='add'){const ev=EV.filter(e=>e.parts.includes(S.me));h=`<div class="md wide"><div class="mdh"><h2>Додати в інбокс</h2><button class="btn ghost sm x" data-a="closeM" aria-label="Закрити">${ico('x')}</button></div><div class="seg" style="margin-bottom:14px">${[['paste','Вставити текст','file'],['file','Файл','file'],['drive','Google Drive','drive'],['gmail','Gmail','mail'],['note','Нотатка','note']].map(([k,l,i])=>`<button class="${m.tab===k?'on':''}" data-a="addTab" data-v="${k}">${l}</button>`).join('')}</div>
+ ${m.tab==='paste'||m.tab==='note'?`<textarea class="in" id="addTxt" rows="8" placeholder="${m.tab==='note'?'Запиши думку або домовленість — TeamOS розбере її так само, як транскрипт':'Встав транскрипт мітингу, уривок чату чи лист…'}"></textarea>`:m.tab==='file'?`<label class="card" style="display:grid;place-items:center;padding:36px;border-style:dashed;cursor:pointer;text-align:center">${ico('file',26)}<b style="margin-top:8px">Перетягни файл або обери</b><span class="hint">.txt .md .docx .pdf .vtt .srt</span><input type="file" hidden data-f="addFile"></label>`:m.tab==='drive'?`<div class="card" style="padding:6px 10px">${['Meet Recordings / Weekly sync — 20 лист (транскрипт)','Meet Recordings / 1:1 Iryna — 19 лист','TeamOS — vision draft'].map(f=>`<label class="conn" style="margin:6px 0"><input type="radio" name="drv"> ${ico('drive')} ${esc(f)}</label>`).join('')}</div>`:`<div class="card" style="padding:6px 10px">${MAIL.slice(0,4).map(x=>`<label class="conn" style="margin:6px 0"><input type="radio" name="gm"> <span><b>${esc(x.from)}</b> — ${esc(x.subj)}</span></label>`).join('')}</div>`}
+ <div class="grid g2" style="margin-top:14px;gap:12px"><label class="fl">Команда-контекст<select class="in"><option>Linxa Team (визначено автоматично)</option><option>Особистий</option></select></label><label class="fl">Пов’язати з мітингом<select class="in" id="addEv"><option value="">— не пов’язувати —</option>${ev.map(e=>`<option value="${e.id}" ${m.ev===e.id?'selected':''}>${esc(e.t)} · Пн ${e.s}</option>`).join('')}<option>Weekly sync · Пт 20 лист</option></select></label></div>
+ <div class="mdf"><span class="hint" style="margin-right:auto">Або пересилай листи на <code>linxa-team.k7f2@in.teamos.app</code></span><button class="btn" data-a="closeM">Скасувати</button><button class="btn pri" data-a="addGo">${ico('spark')}Проаналізувати</button></div></div>`}
+ else if(m.k==='ask'){h=`<div class="md wide"><div style="display:flex;gap:10px;align-items:center">${ico('search',18)}<input class="in" id="askq" data-f="askq" style="flex:1;border:0;font-size:17px" placeholder="Знайти задачу, рішення… або спитати: «Скільки безкоштовних викликів у MCP?»" value="${esc(m.q||'')}" autocomplete="off"><kbd>Esc</kbd></div><div id="askr">${askRes(m.q||'')}</div></div>`}
+ else if(m.k==='newTask'){h=`<div class="md"><div class="mdh"><h2>Нова задача</h2><button class="btn ghost sm x" data-a="closeM" aria-label="Закрити">${ico('x')}</button></div><div class="grid" style="gap:12px"><label class="fl">Що зробити<input class="in" id="ntT" placeholder="Напр.: Підготувати звіт для інвестора"></label><div class="grid g2" style="gap:12px"><label class="fl">Виконавець<select class="in" id="ntO">${Object.values(P).map(p=>`<option value="${p.id}" ${p.id===S.me?'selected':''}>${esc(p.name)}${p.id===S.me?' (я)':''}</option>`).join('')}</select></label><label class="fl">Дедлайн<input type="date" class="in" id="ntD" value="2026-11-27"></label><label class="fl">Проєкт<select class="in" id="ntP"><option value="">Без проєкту</option>${PR.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label><label style="display:flex;gap:8px;align-items:center;padding-top:20px"><input type="checkbox" id="ntI" checked> Важливо</label></div><p class="hint" style="margin:0">Постановник — ти. Тільки ти зможеш змінювати статус.</p></div><div class="mdf"><button class="btn" data-a="closeM">Скасувати</button><button class="btn pri" data-a="ntGo">Створити</button></div></div>`}
+ else if(m.k==='invite'){h=`<div class="md"><div class="mdh"><h2>Запросити в Linxa Team</h2><button class="btn ghost sm x" data-a="closeM" aria-label="Закрити">${ico('x')}</button></div><label class="fl">Email-и (через кому)<textarea class="in" id="invE" rows="3" placeholder="name@company.com, friend@gmail.com"></textarea></label><label class="fl" style="margin-top:12px">Роль<select class="in" id="invR"><option value="member">Member — бачить свої задачі й командні знання</option><option value="admin">Admin — бачить усе, керує учасниками</option></select></label><div class="mdf"><button class="btn" data-a="closeM">Скасувати</button><button class="btn pri" data-a="invGo">Надіслати запрошення</button></div></div>`}
+ else if(m.k==='transfer'){h=`<div class="md"><div class="mdh"><h2>Передати ownership</h2><button class="btn ghost sm x" data-a="closeM" aria-label="Закрити">${ico('x')}</button></div><p class="hint" style="font-size:14.5px">Новий Owner отримає повний контроль, ти станеш Admin.</p><label class="fl">Кому<select class="in" id="trTo">${Object.values(P).filter(p=>p.id!==S.me).map(p=>`<option value="${p.id}">${esc(p.full)}</option>`).join('')}</select></label><label class="fl" style="margin-top:12px">Введи назву команди «Linxa Team» для підтвердження<input class="in" id="trC" data-f="trC" autocomplete="off"></label><div class="mdf"><button class="btn" data-a="closeM">Скасувати</button><button class="btn pri" id="trBtn" data-a="trGo" disabled>Передати</button></div></div>`}
+ else if(m.k==='onb'){h=`<div class="md wide"><div class="mdh"><h2>Onboarding pack для нового учасника</h2><button class="btn ghost sm x" data-a="closeM" aria-label="Закрити">${ico('x')}</button></div><p class="hint">AI зібрав з Team Space і командних знань. Кожен пункт посилається на джерело.</p><div class="doc" style="font-size:15px"><h2 style="margin-top:6px">1. Хто ми і навіщо</h2><p>Місія з Team vision + 2 активні проєкти: Linxa і TeamOS.</p><h2>2. Що зараз тестуємо</h2>${H.filter(h=>h.st==='testing').map(h=>`<p>${hcode(h.id)}: ${esc(h.then)} — ${esc(pn(h.o))}</p>`).join('')}<h2>3. Ключові рішення</h2>${K.filter(k=>k.type==='decision'&&k.scope==='team'&&!k.supBy).map(k=>`<p>• ${esc(k.txt)} <span class="hint">(${esc(k.src)})</span></p>`).join('')}<h2>4. Як ми працюємо</h2>${K.filter(k=>['process','agreement'].includes(k.type)&&k.scope==='team').map(k=>`<p>• ${esc(k.txt)}</p>`).join('')}</div><div class="mdf"><button class="btn" data-a="toast" data-m="Посилання скопійовано">Скопіювати посилання</button><button class="btn pri" data-a="closeM">Готово</button></div></div>`}
+ else if(m.k==='newKn'){h=`<div class="md"><div class="mdh"><h2>Додати знання</h2><button class="btn ghost sm x" data-a="closeM" aria-label="Закрити">${ico('x')}</button></div><div class="grid" style="gap:12px"><label class="fl">Тип<select class="in" id="nkT">${Object.entries(KT).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select></label><label class="fl">Текст<textarea class="in" id="nkX" rows="3"></textarea></label><label class="fl">Чому (необов’язково)<input class="in" id="nkW"></label><label class="fl">Видимість<select class="in" id="nkS"><option value="team">Команда</option><option value="private">Тільки я</option></select></label></div><div class="mdf"><button class="btn" data-a="closeM">Скасувати</button><button class="btn pri" data-a="nkGo">Зберегти</button></div></div>`}
+ el.innerHTML=`<div class="ov" data-a="ovClose">${h}</div>`;
+ const f=el.querySelector('#askq,#addTxt,#ntT,#invE,#nkX');if(f)setTimeout(()=>f.focus(),20);
+}
+function askRes(q){
+ q=q.trim().toLowerCase();
+ if(!q)return `<div class="res"><div class="hint" style="padding:8px">Спробуй: «скільки безкоштовних викликів у MCP?», «docker», «що винен Максим»</div></div>`;
+ const ts=vis().filter(t=>t.t.toLowerCase().includes(q)||pn(t.o).toLowerCase().includes(q.replace(/[^а-яіїєґa-z’ ]/gi,'').split(' ').pop()||'@@')).slice(0,6);
+ const ks=K.filter(k=>knOk(k)&&!k.supBy&&k.txt.toLowerCase().includes(q)).slice(0,4);
+ const isQ=q.endsWith('?');
+ const ans=isQ?(()=>{const k=K.find(x=>!x.supBy&&x.txt.includes('MCP')&&x.type==='decision');return `<div class="ask"><div class="hint" style="margin-bottom:4px">${ico('spark',13)} Відповідь TeamOS</div>${k?`${esc(k.txt)}.${k.sup?' Раніше було 50 викликів — рішення замінено.':''}<div class="hint" style="margin-top:6px">Джерело: ${esc(k.src)} · ${fds(k.date)}</div>`:'Безкоштовний тариф MCP — 50 викликів на місяць (рішення від 12 лист). На Weekly sync 20 лист обговорювали 100 — запис ще чекає review.'}</div>`})():'';
+ return `${ans}<div class="res">${ts.map(trow).join('')}${ks.map(k=>`<div class="trow" style="cursor:default"><span class="ty ${k.type}">${KT[k.type]}</span><span class="tt"><b>${esc(k.txt)}</b></span></div>`).join('')}${!ts.length&&!ks.length&&!isQ?'<div class="hint" style="padding:8px">Нічого не знайдено. Додай «?», щоб спитати TeamOS.</div>':''}</div>`;
+}
+
+/* ---------- render ---------- */
+function render(){
+ const r=R();const keep={};document.querySelectorAll('[data-keep]').forEach(e=>keep[e.dataset.keep]=e.scrollTop);const sy=scrollY;
+ let c;
+ if(r==='login'){c=pLogin()}else if(r==='onboarding'){c=pOnboarding()}
+ else{const pg=r==='dashboard'?pDashboard():r==='inbox'?pInbox():r==='review'?pReview():r==='tasks'?pTasks():r==='calendar'?pCalendar():r==='mail'?pMail():r==='knowledge'?pKnowledge():r==='vision'?pVision():r.startsWith('project-')?pProject(r.slice(8)):r.startsWith('hyp-')?pHyp(r.slice(4)):r.startsWith('person-')?pPerson(r.slice(7)):r==='members'?pMembers():r==='connections'?pConnections():r==='prefs'?pPrefs():pDashboard();
+  c=`<div class="app"><aside class="side">${nav()}</aside><main class="main"><header class="top">${top()}</header><div class="page">${pg}</div></main></div>`}
+ document.getElementById('app').innerHTML=c;
+ document.querySelectorAll('[data-keep]').forEach(e=>{if(keep[e.dataset.keep])e.scrollTop=keep[e.dataset.keep]});scrollTo(0,sy);
+ drawer();modal();
+}
+let tt;const toast=m=>{const e=document.getElementById('toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2600)};
+const curItem=()=>IN.find(i=>i.id===S.rid);
+const prop=id=>{for(const i of IN)for(const p of i.props||[])if(p.id===id)return p};
+const dt=()=>'23 лист';
+const hist=(t,txt)=>t.hist.push([dt(),txt]);
+
+/* ---------- actions ---------- */
+const A={
+ go:el=>{S.tmenu=false;if(el.dataset.h.startsWith('project-'))S.ptab='overview';if(location.hash.slice(1)===el.dataset.h)render();else location.hash=el.dataset.h},
+ tmenu:()=>{S.tmenu=!S.tmenu;render()},
+ team:el=>{S.team=el.dataset.v;S.tmenu=false;toast(S.team==='personal'?'Особистий простір: тільки твої задачі собі й приватні знання':'Linxa Team');render()},
+ toast:el=>toast(el.dataset.m),
+ open:el=>{S.drawer=el.dataset.id;render()},
+ closeD:()=>{S.drawer=null;render()},
+ dash:el=>{S.dash=el.dataset.v;render()},
+ tasksTab:el=>{S.tab=el.dataset.v;if(R()!=='tasks')location.hash='tasks';else render()},
+ grp:el=>{S.grp=el.dataset.v;render()},
+ itab:el=>{S.itab=el.dataset.v;render()},
+ review:el=>{const i=IN.find(x=>x.id===el.dataset.id);if(!i)return;if(i.st!=='review'&&!(S.applied&&S.applied.id===i.id)){toast(i.st==='processing'?'AI ще аналізує цей запис':'Запис уже розібрано');return}S.rid=i.id;S.drawer=null;if(!S.applied||S.applied.id!==i.id)S.applied=null;if(R()==='review')render();else location.hash='review'},
+ pset:el=>{const p=prop(el.dataset.p);const v=el.dataset.v;p[el.dataset.k]=v==='1'?true:v==='0'?false:v;render()},
+ apply:()=>applyReview(),
+ add:el=>{S.modal={k:'add',tab:'paste',ev:el.dataset.ev||''};modal()},
+ addTab:el=>{S.modal.tab=el.dataset.v;modal()},
+ addGo:()=>{const txt=document.getElementById('addTxt');if(txt&&!txt.value.trim()&&S.modal.tab!=='drive'&&S.modal.tab!=='gmail'&&S.modal.tab!=='file'){txt.focus();toast('Встав текст або обери джерело');return}const evId=document.getElementById('addEv')?.value;const ev=EV.find(e=>e.id===evId);const id='n'+Date.now();
+  IN.unshift({id,owner:S.me,type:S.modal.tab==='gmail'?'email':S.modal.tab==='note'?'note':'transcript',title:ev?ev.t+' — 23 лист':(S.modal.tab==='note'?'Нотатка — 23 лист':'Новий запис — 23 лист'),date:TODAY,src:{paste:'Вставлений текст',file:'Файл',drive:'Google Drive',gmail:'Gmail',note:'Нотатка'}[S.modal.tab],st:'processing',parts:ev?ev.parts:[S.me],aliases:[]});
+  S.modal=null;S.itab='processing';toast('Аналізую… зазвичай 20–40 секунд');if(R()!=='inbox')location.hash='inbox';else render();
+  setTimeout(()=>{const it=IN.find(i=>i.id===id);it.st='review';it.summary=['Демо: у прототипі AI-аналіз імітується.'];it.lines=[L('x1','00:12',S.me,(txt&&txt.value.trim().slice(0,220))||'Текст джерела')];it.props=[{id:id+'a',kind:'task',on:true,conf:'med',ev:['x1'],t:'Задача, знайдена в новому записі',o:S.me,r:S.me,due:'2026-11-27',proj:'',hyp:null,imp:false},{id:id+'b',kind:'kn',on:true,conf:'med',ev:['x1'],type:'agreement',txt:'Домовленість, знайдена в новому записі',why:'',scope:'private',proj:''}];S.itab='review';toast('Готово: 2 пропозиції чекають review');render()},2600)},
+ closeM:()=>{S.modal=null;modal()},
+ ovClose:(el,e)=>{if(e.target===el){S.modal=null;modal()}},
+ ask:()=>{S.modal={k:'ask',q:''};modal()},
+ newTask:()=>{S.modal={k:'newTask'};modal()},
+ ntGo:()=>{const t=document.getElementById('ntT').value.trim();if(!t){toast('Напиши, що треба зробити');return}const o=document.getElementById('ntO').value;T.unshift({id:'t'+Date.now(),t,o,r:S.me,by:S.me,due:document.getElementById('ntD').value||null,imp:document.getElementById('ntI').checked,st:'open',proj:document.getElementById('ntP').value||null,hyp:null,src:null,cm:[],hist:[[dt(),'Створено вручну, '+me().name]],u:null});S.modal=null;toast(o===S.me?'Задачу створено':`Задачу поставлено: ${pn(o)} побачить її в «Я винен»`);render()},
+ invite:()=>{S.modal={k:'invite'};modal()},
+ invGo:()=>{const es=document.getElementById('invE').value.split(/[,\s]+/).filter(x=>x.includes('@'));if(!es.length){toast('Вкажи хоча б один email');return}es.forEach(e=>INV.push({email:e,role:document.getElementById('invR').value}));S.modal=null;toast(`Запрошення надіслано: ${es.length}`);render()},
+ transfer:()=>{S.modal={k:'transfer'};modal()},
+ trGo:()=>{const to=document.getElementById('trTo').value;P[to].role='owner';me().role='admin';S.modal=null;toast(`${P[to].name} тепер Owner. Ти — Admin.`);render()},
+ onb:()=>{S.modal={k:'onb'};modal()},
+ newKn:()=>{S.modal={k:'newKn'};modal()},
+ nkGo:()=>{const x=document.getElementById('nkX').value.trim();if(!x){toast('Напиши текст');return}K.unshift({id:'k'+Date.now(),type:document.getElementById('nkT').value,txt:x,why:document.getElementById('nkW').value,scope:document.getElementById('nkS').value,proj:null,by:S.me,date:TODAY,src:'Додано вручну',sup:null,supBy:null});S.modal=null;toast('Збережено');render()},
+ knt:el=>{S.knt=el.dataset.v;S.klog=false;render()},
+ klog:()=>{S.klog=!S.klog;render()},
+ ptab:el=>{S.ptab=el.dataset.v;render()},
+ mcat:el=>{S.mcat=el.dataset.v;render()},
+ macc:el=>{S.macc=+el.dataset.v;render()},
+ evt:el=>{S.evSel=el.dataset.id;if(R()!=='calendar')location.hash='calendar';else render()},
+ evClose:()=>{S.evSel=null;render()},
+ vEdit:()=>{if(S.vEdit)toast('Team vision збережено');S.vEdit=!S.vEdit;render()},
+ addLearn:(el,e,silent)=>{const h=hyp('h2');if(!h.learn.some(l=>l.txt.includes('412')))h.learn.unshift({d:'2026-11-20',txt:'Тиждень 2: 412 аналізів, конверсія в реєстрацію 6% (ціль 8%). Розбираємо джерела трафіку.'});if(!silent){toast('Learning додано');render()}},
+ meet:el=>{S.meet=el.dataset.id;S.mi=0;S.drawer=null;const h='person-'+el.dataset.id;if(R()===h)render();else location.hash=h},
+ meetEnd:()=>{S.meet=null;render()},
+ mst:el=>{const t=T.find(x=>x.id===el.dataset.id);if(!canEdit(t))return;hist(t,`${me().name}: ${STL[t.st]} → ${STL[el.dataset.v]} (Meeting mode)`);t.st=el.dataset.v;render()},
+ mnext:el=>{const c=document.getElementById('mcm');const t=T.find(x=>x.id===el.dataset.id);if(c&&c.value.trim())t.cm.push({a:S.me,d:'23 лист, зараз',txt:c.value.trim()});S.mi=Math.max(0,(S.mi||0)+(+el.dataset.v));render()},
+ comment:()=>{const c=document.getElementById('cmt');const t=T.find(x=>x.id===S.drawer);if(!c.value.trim())return;t.cm.push({a:S.me,d:'23 лист, зараз',txt:c.value.trim(),unread:t.r!==S.me});toast(t.r!==S.me?`${pn(t.r)} побачить коментар на дашборді`:'Коментар додано');render()},
+ login:()=>{location.hash=S.invite?'dashboard':'onboarding';if(S.invite)toast('Ласкаво просимо в Linxa Team')},
+ invToggle:()=>{S.invite=!S.invite;render()},
+ obMode:el=>{S.ob.mode=el.dataset.v;render()},
+ obStep:el=>{S.ob.step=Math.max(1,Math.min(4,S.ob.step+(+el.dataset.v)));if(S.ob.mode==='personal'&&S.ob.step===2)S.ob.step+=+el.dataset.v>0?1:-1;render()},
+ obConn:el=>{S.obc=S.obc||{};S.obc[el.dataset.v]=true;toast('Підключено (демо)');render()},
+ obSample:()=>{S.rid='i1';S.applied=null;location.hash='review'}
+};
+function applyReview(){
+ const it=curItem();if(!it||it.st!=='review')return;
+ const sel=it.props.filter(p=>p.on);if(!sel.length){toast('Нічого не обрано');return}
+ let nt=0,mg=0,su=0,rt=0,nk=0,nh=0;const notified=new Set();
+ sel.forEach(p=>{
+  const src={item:it.id,title:it.title,ts:(it.lines.find(l=>l.id===p.ev[0])||{}).ts||'',q:p.ev.map(id=>(it.lines.find(l=>l.id===id)||{}).txt).join(' … ')};
+  if(p.kind==='task'){if(p.dup&&p.merge){const d=T.find(x=>x.id===p.dup);hist(d,`Підтверджено ще раз у «${it.title}»`);mg++}else{T.unshift({id:'t'+p.id,t:p.t,o:p.o,r:p.r,by:S.me,due:p.due||null,imp:p.imp,st:'open',proj:p.proj||null,hyp:p.hyp||null,src,cm:[],hist:[[dt(),`Створено з «${it.title}», підтвердив ${me().name}`]],u:null});nt++;if(p.o!==S.me)notified.add(pn(p.o))}}
+  else if(p.kind==='status'){const t=T.find(x=>x.id===p.task);if(canEdit(t)){hist(t,`${STL[t.st]} → ${STL[p.to]} з «${it.title}», підтвердив ${me().name}`);t.st=p.to;su++}else{rt++;notified.add(pn(t.r))}}
+  else if(p.kind==='kn'){const k={id:'k'+p.id,type:p.type,txt:p.txt,why:p.why||'',scope:p.scope,proj:p.proj||null,by:S.me,date:'2026-11-20',src:it.title+(src.ts?' · '+src.ts:''),sup:null,supBy:null};if(p.conflict&&p.res==='replace'){k.sup=p.conflict;K.find(x=>x.id===p.conflict).supBy=k.id}K.unshift(k);nk++;if(p.learn&&p.addLearn)A.addLearn(null,null,true)}
+  else{H.push({id:'h'+(H.length+1),proj:p.proj,if:p.txt.toLowerCase(),then:'метрику визначимо',bo:'—',o:p.o,metric:'—',target:'—',cur:'—',from:'2026-12-01',to:'2026-12-31',st:'draft',learn:[]});nh++}
+ });
+ it.st='done';it.res=[nt&&nt+' задач',nk&&nk+' знань',su&&su+' статусів'].filter(Boolean).join(' · ');
+ const lines=[nt&&`${nt} нових комітментів`,mg&&`${mg} об’єднано з існуючими`,su&&`${su} статуси оновлено`,rt&&`${rt} пропозицій відправлено постановникам`,nk&&`${nk} знань збережено`,nh&&`${nh} гіпотеза-чернетка`].filter(Boolean);
+ S.applied={id:it.id,lines,notify:notified.size?`Сповіщення отримають: ${[...notified].join(', ')}`:'Усе збережено'};
+ scrollTo(0,0);render();
+}
+const F={
+ as:el=>{S.me=el.value;S.drawer=null;S.meet=null;S.applied=null;S.dir='all';S.person='';S.evSel=null;S.rid=S.me==='ok'?'i7':'i1';toast(`Тепер ти — ${me().name} (${roleName(me().role)})`);render()},
+ dir:el=>{S.dir=el.value;render()},fperson:el=>{S.person=el.value;render()},fproj:el=>{S.proj=el.value;render()},
+ kscope:el=>{S.kscope=el.value;render()},kproj2:el=>{S.kproj=el.value;render()},
+ pon:el=>{prop(el.dataset.p).on=el.checked;render()},
+ pt:el=>{const p=prop(el.dataset.p);if(p.kind==='task')p.t=el.value;else p.txt=el.value},
+ po:el=>{prop(el.dataset.p).o=el.value;render()},pr:el=>{prop(el.dataset.p).r=el.value;render()},
+ pdue:el=>{prop(el.dataset.p).due=el.value},pproj:el=>{const p=prop(el.dataset.p);p.proj=el.value;if(p.hyp&&hyp(p.hyp)?.proj!==p.proj)p.hyp=null;render()},
+ phyp:el=>{prop(el.dataset.p).hyp=el.value||null},pimp:el=>{prop(el.dataset.p).imp=el.checked},
+ pto:el=>{prop(el.dataset.p).to=el.value},ktype:el=>{prop(el.dataset.p).type=el.value},kproj:el=>{prop(el.dataset.p).proj=el.value},plearn:el=>{prop(el.dataset.p).addLearn=el.checked},
+ tst:el=>{const t=T.find(x=>x.id===S.drawer);if(!canEdit(t))return;hist(t,`${me().name}: ${STL[t.st]} → ${STL[el.value]}`);t.st=el.value;render()},
+ tt:el=>{const t=T.find(x=>x.id===S.drawer);if(canEdit(t)){t.t=el.value;render()}},
+ to:el=>{const t=T.find(x=>x.id===S.drawer);hist(t,`${me().name}: виконавець ${pn(t.o)} → ${pn(el.value)}`);t.o=el.value;toast(`${pn(el.value)} отримає сповіщення`);render()},
+ tdue:el=>{const t=T.find(x=>x.id===S.drawer);hist(t,`${me().name}: дедлайн → ${fd(el.value)}`);t.due=el.value||null;t.u=null;render()},
+ timp:el=>{const t=T.find(x=>x.id===S.drawer);t.imp=el.checked;render()},
+ tproj:el=>{const t=T.find(x=>x.id===S.drawer);t.proj=el.value||null;render()},thyp:el=>{const t=T.find(x=>x.id===S.drawer);t.hyp=el.value||null;render()},
+ mdue:el=>{const t=T.find(x=>x.id===el.dataset.id);if(!canEdit(t))return;hist(t,`${me().name}: дедлайн → ${fd(el.value)} (Meeting mode)`);t.due=el.value;toast('Дедлайн перенесено');render()},
+ cal:el=>{S.cals[el.dataset.id]=el.checked;render()},calT:el=>{S.calT[el.dataset.id]=el.checked;render()},
+ svc:el=>{ACC[el.dataset.i]&&(ACC[el.dataset.i].svc[el.dataset.k]=el.checked);toast(el.checked?'Підключено':'Відключено');render()},
+ role:el=>{P[el.dataset.id].role=el.value;toast(`${P[el.dataset.id].name} тепер ${roleName(el.value)}`);render()},
+ hst:el=>{hyp(el.dataset.id).st=el.value;render()},
+ obName:el=>{S.ob.name=el.value},
+ addFile:el=>{if(el.files[0])toast('Файл обрано: '+el.files[0].name)}
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;if(el.tagName==='INPUT'&&el.type!=='button')return;const a=el.dataset.a;if(a==='ovClose'&&e.target!==el)return;if(A[a]){A[a](el,e)}});
+document.addEventListener('change',e=>{const f=e.target.dataset.f;if(f&&F[f])F[f](e.target)});
+document.addEventListener('input',e=>{const f=e.target.dataset.f;if(f==='askq'){S.modal.q=e.target.value;document.getElementById('askr').innerHTML=askRes(e.target.value)}if(f==='trC'){document.getElementById('trBtn').disabled=e.target.value.trim()!=='Linxa Team'}});
+document.addEventListener('mouseover',e=>{const p=e.target.closest('.prop');document.querySelectorAll('.ln.hl').forEach(x=>x.classList.remove('hl'));if(!p||!p.dataset.ev)return;const ids=p.dataset.ev.split(',').filter(Boolean);ids.forEach(id=>document.getElementById('ln-'+id)?.classList.add('hl'));const f=document.getElementById('ln-'+ids[0]),box=f&&f.closest('.src');if(f&&box&&box.scrollHeight>box.clientHeight){const r=f.offsetTop-box.offsetTop;if(r<box.scrollTop||r>box.scrollTop+box.clientHeight-40)box.scrollTo({top:r-60,behavior:'smooth'})}});
+document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('[data-drag]');if(c){e.dataTransfer.setData('text/plain',c.dataset.drag);c.classList.add('dragging')}});
+document.addEventListener('dragend',()=>document.querySelectorAll('.dragging,.over').forEach(x=>x.classList.remove('dragging','over')));
+document.addEventListener('dragover',e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z){e.preventDefault();z.classList.add('over')}});
+document.addEventListener('dragleave',e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z&&!z.contains(e.relatedTarget))z.classList.remove('over')});
+document.addEventListener('drop',e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(!z)return;e.preventDefault();z.classList.remove('over');const t=T.find(x=>x.id===e.dataTransfer.getData('text/plain'));if(!t)return;if(!canEdit(t)){toast(`Змінювати може лише постановник — ${reqLabel(t)}`);return}const [k,v]=z.dataset.drop.split(':');if(k==='q'){t.u=v[0]==='1';t.imp=v[1]==='1'}else if(t.st!==v){hist(t,`${me().name}: ${STL[t.st]} → ${STL[v]}`);t.st=v}render()});
+document.addEventListener('keydown',e=>{const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)||document.activeElement.isContentEditable;
+ if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();A.ask()}
+ else if(e.key==='Escape'){if(S.modal){S.modal=null;modal()}else if(S.drawer){S.drawer=null;render()}}
+ else if((e.metaKey||e.ctrlKey)&&e.key==='Enter'&&R()==='review'&&!S.modal){e.preventDefault();applyReview()}
+ else if(!typing&&!S.modal&&(e.key==='i'||e.key==='і'||e.key==='I')&&!['login','onboarding'].includes(R())){e.preventDefault();A.add({dataset:{}})}});
+window.addEventListener('hashchange',()=>{S.tmenu=false;render()});
+render();
+}
+</script>
+</body>
+</html>
