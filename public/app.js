@@ -24,6 +24,7 @@ const STL = { open: 'Відкрито', progress: 'В роботі', waiting: '�
 const HST = { draft: 'Чернетка', testing: 'Тестуємо', validated: 'Підтверджено', invalidated: 'Спростовано' };
 const PST = { active: 'Активний', paused: 'На паузі', done: 'Завершено', archived: 'В архіві' };
 const KT = { decision: 'Рішення', agreement: 'Домовленість', fact: 'Факт', process: 'Процес', context: 'Контекст' };
+const TASK_SECTION_NAMES = { mine: 'Мої задачи', delegated: 'Делеговані' };
 const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 const ITYPE = { transcript: 'Транскрипт', email: 'Лист', chat: 'Чат', doc: 'Документ', note: 'Нотатка', routed: 'Пропозиція' };
 const typeIco = (t) => ({ transcript: 'mic', email: 'mail', doc: 'drive', chat: 'chat', note: 'note', routed: 'route' })[t] || 'file';
@@ -33,14 +34,14 @@ async function api(method, url, body) {
   const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
   const data = await r.json().catch(() => ({}));
   if (r.status === 401 && !url.startsWith('/auth')) { S.me = null; location.hash = 'login'; render(); throw new Error('Потрібно увійти'); }
-  if (!r.ok) throw new Error(data.error || `Помилка ${r.status}`);
+  if (!r.ok) throw new Error(data.error || (url.startsWith('/auth') ? `Request failed (${r.status}). Please try again.` : `Помилка ${r.status}`));
   return data;
 }
 const T = (p) => `/api/teams/${encodeURIComponent(S.tid)}${p}`;
 
 /* ---------- state ---------- */
 const S = {
-  me: null, teams: [], tid: null, d: null, ai: false, cfg: { google: false, dev: false },
+  me: null, teams: [], tid: null, d: null, ai: false, cfg: { emailLink: false, dev: false }, loginEmail: '', loginSent: false, loginBusy: false, loginError: '',
   tmenu: false, tab: 'matrix', dir: 'all', person: '', proj: '', fst: 'open', grp: 'person', dash: 'all', itab: 'review',
   knt: 'all', kscope: 'all', kproj: '', klog: false, ptab: 'overview', vEdit: false,
   review: null, applied: null, drawer: null, modal: null, pendingJoin: null, busy: false,
@@ -91,16 +92,22 @@ const stmt = (h) => `<span class="stmt"><em>Якщо</em> ${esc(h.if)}, <em>то
 const hypChip = (h) => `<span class="chip ${h.status === 'testing' ? 'amber' : h.status === 'validated' ? 'green' : h.status === 'invalidated' ? 'red' : ''}">${HST[h.status]}</span>`;
 const prjChip = (p) => `<span class="chip ${p.status === 'active' ? 'green' : p.status === 'paused' ? 'amber' : ''}">${PST[p.status]}</span>`;
 function md(src) { // tiny Markdown renderer (headings, lists, bold, italics, paragraphs)
-  const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|\W)_(.+?)_(?=\W|$)/g, '$1<i>$2</i>');
-  const out = []; let list = false;
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<i>$2</i>')
+    .replace(/(^|\W)_(.+?)_(?=\W|$)/g, '$1<i>$2</i>');
+  const out = []; let depth = 0;
+  const setDepth = (d) => { while (depth < d) { out.push('<ul>'); depth++; } while (depth > d) { out.push('</ul>'); depth--; } };
   for (const line of String(src || '').split('\n')) {
-    const h = /^(#{1,3})\s+(.*)$/.exec(line), li = /^\s*[-*]\s+(.*)$/.exec(line);
-    if (!li && list) { out.push('</ul>'); list = false; }
+    const h = /^(#{1,3})\s+(.*)$/.exec(line), li = /^(\s*)[-*]\s+(.*)$/.exec(line);
+    if (li) { setDepth(Math.min(3, Math.floor(li[1].length / 2) + 1)); out.push(`<li>${inline(li[2])}</li>`); continue; }
+    if (line.trim()) setDepth(0);
     if (h) out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`);
-    else if (li) { if (!list) { out.push('<ul>'); list = true; } out.push(`<li>${inline(li[1])}</li>`); }
     else if (line.trim()) out.push(`<p>${inline(line)}</p>`);
   }
-  if (list) out.push('</ul>');
+  setDepth(0);
   return out.join('');
 }
 
@@ -162,10 +169,11 @@ function nav() {
   <div class="spacer"></div>
   ${personal() ? '' : `<button class="nv ${on('members')}" data-a="go" data-h="members">${ico('users')}<span class="lbl">Учасники</span></button>`}
   <button class="nv ${on('profile')}" data-a="go" data-h="profile">${ico('gear')}<span class="lbl">Профіль</span></button>
+  <button class="nv ${on('roadmap')}" data-a="go" data-h="roadmap">${ico('route')}<span class="lbl">Roadmap</span></button>
   <div class="me">${av(uid(), 28)}<span class="lbl"><b>${esc(S.me.name)}</b><br><span class="hint">${ROLE[role()]}</span></span><button class="btn ghost sm lbl" style="margin-left:auto" data-a="logout" title="Вийти">${ico('out', 14)}</button></div>`;
 }
 function top() {
-  return `${S.ai ? '' : `<span class="chip amber" title="Задай ANTHROPIC_API_KEY у .env">AI-аналіз вимкнено</span>`}<div class="spacer"></div><button class="btn pri" data-a="add">${ico('plus')}Додати в інбокс <kbd style="background:none;color:inherit;border-color:#fff5">I</kbd></button>`;
+  return `${S.ai ? '' : `<span class="chip amber" title="Налаштуй AI-провайдер на сервері">AI-аналіз вимкнено</span>`}<div class="spacer"></div><button class="btn pri" data-a="add">${ico('plus')}Додати в інбокс <kbd style="background:none;color:inherit;border-color:#fff5">I</kbd></button>`;
 }
 
 /* ---------- pages ---------- */
@@ -185,9 +193,9 @@ function pDashboard() {
   return `<div class="hd"><div><h1>${hi}, ${esc(S.me.name.split(' ')[0])}</h1><div class="sub">${WDL[d.getDay()][0].toUpperCase() + WDL[d.getDay()].slice(1)}, ${d.getDate()} ${MOG[d.getMonth()]}</div></div></div>
   <div class="chips" style="margin-bottom:20px"><button class="chip big" data-a="go" data-h="inbox"><b>${rv.length}</b> чекають review</button>${proc.length ? `<span class="chip big"><span class="spin"></span> <b>${proc.length}</b> аналізується</span>` : ''}<span class="chip big" style="${over ? 'color:var(--red)' : ''}"><b>${over}</b> прострочено</span>${unr.length ? `<span class="chip big" style="color:var(--red)"><b>${unr.length}</b> з новими коментарями</span>` : ''}</div>
   <div class="grid g3">
-  <div class="col"><div class="card"><h2>Я винен <span class="seg sm" style="margin-left:auto">${[['all', 'Всі'], ['team', 'Команді'], ['ext', 'Зовнішнім']].map(([k, l]) => `<button class="${S.dash === k ? 'on' : ''}" data-a="dash" data-v="${k}">${l}</button>`).join('')}</span></h2>${mf.length ? mf.map(trow).join('') : `<div class="empty">Немає відкритих комітментів.<br><button class="btn sm" style="margin-top:10px" data-a="newTask">${ico('plus', 13)} Нова задача</button></div>`}</div>
+  <div class="col"><div class="card"><h2>${TASK_SECTION_NAMES.mine} <span class="seg sm" style="margin-left:auto">${[['all', 'Всі'], ['team', 'Команді'], ['ext', 'Зовнішнім']].map(([k, l]) => `<button class="${S.dash === k ? 'on' : ''}" data-a="dash" data-v="${k}">${l}</button>`).join('')}</span></h2>${mf.length ? mf.map(trow).join('') : `<div class="empty">Немає відкритих комітментів.<br><button class="btn sm" style="margin-top:10px" data-a="newTask">${ico('plus', 13)} Нова задача</button></div>`}</div>
   ${unr.length ? `<div class="card"><h2>Нові коментарі</h2>${unr.map((t) => { const c = t.comments.at(-1); return `<button class="trow" data-a="open" data-id="${t.id}">${av(c.author)}<span class="tt"><b>${esc(t.title)}</b><span class="mt">${esc(c.text.slice(0, 120))}</span></span></button>`; }).join('')}</div>` : ''}</div>
-  <div class="col"><div class="card"><h2>Мені винні <button class="lnk" data-a="tasksTab" data-v="delegated">Усі →</button></h2>${Object.keys(byP).length ? Object.entries(byP).map(([pid, ts]) => { const od = ts.filter((t) => t.due && diff(TODAY(), t.due) < 0).length; const nx = ts.filter((t) => t.due).sort((a, b) => (a.due < b.due ? -1 : 1))[0]; return `<button class="trow" data-a="${isExt(pid) ? 'tasksTab' : 'go'}" data-v="delegated" data-h="person-${esc(pid)}">${av(pid, 32)}<span class="tt"><b>${esc(pnx(pid))}</b><span class="mt"><span>${ts.length} відкритих</span>${od ? `<span class="chip red">${od} прострочено</span>` : ''}${nx ? `<span>найближчий: ${fd(nx.due)}</span>` : ''}</span></span>${ico('arrow', 14)}</button>`; }).join('') : '<div class="empty">Ти ще нічого не делегував.<br>Задачі з’являться після розбору мітингу.</div>'}</div>
+  <div class="col"><div class="card"><h2>${TASK_SECTION_NAMES.delegated} <button class="lnk" data-a="tasksTab" data-v="delegated">Усі →</button></h2>${Object.keys(byP).length ? Object.entries(byP).map(([pid, ts]) => { const od = ts.filter((t) => t.due && diff(TODAY(), t.due) < 0).length; const nx = ts.filter((t) => t.due).sort((a, b) => (a.due < b.due ? -1 : 1))[0]; return `<button class="trow" data-a="${isExt(pid) ? 'tasksTab' : 'go'}" data-v="delegated" data-h="person-${esc(pid)}">${av(pid, 32)}<span class="tt"><b>${esc(pnx(pid))}</b><span class="mt"><span>${ts.length} відкритих</span>${od ? `<span class="chip red">${od} прострочено</span>` : ''}${nx ? `<span>найближчий: ${fd(nx.due)}</span>` : ''}</span></span>${ico('arrow', 14)}</button>`; }).join('') : '<div class="empty">Ти ще нічого не делегував.<br>Задачі з’являться після розбору мітингу.</div>'}</div>
   <div class="card"><h2>Інбокс <button class="lnk" data-a="go" data-h="inbox">Відкрити →</button></h2>${rv.length ? rv.slice(0, 5).map((i) => `<button class="trow" data-a="go" data-h="review-${i.id}"><span class="iico">${ico(typeIco(i.type))}</span><span class="tt"><b>${esc(i.title)}</b><span class="mt">${propCount(i)} · ${esc(i.origin)}</span></span><span class="btn sm">Review</span></button>`).join('') : `<div class="empty">Інбокс розібраний.<br><button class="btn sm" style="margin-top:10px" data-a="add">${ico('plus', 13)} Кинути транскрипт</button></div>`}</div></div>
   <div class="col"><div class="card"><h2>Нещодавні знання <button class="lnk" data-a="go" data-h="knowledge">Знання →</button></h2>${dec.map((k) => `<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="ty ${k.type}">${KT[k.type]}</span> ${esc(k.text)}<div class="hint">${fds(k.date)} ${tag(k.project)}</div></div>`).join('') || '<div class="empty">Поки порожньо</div>'}</div>
   <div class="card"><h2>Активні гіпотези</h2>${act.map((h) => { const ts = tasks().filter((t) => t.hypothesis === h.id), dn = ts.filter((t) => t.status === 'done').length; return `<button class="trow" data-a="go" data-h="hyp-${h.id}"><span class="tt"><b>${hcode(h.id)} · ${esc(h.then)}</b><span class="mt">${av(h.owner, 18)}${h.to ? `<span>${diff(TODAY(), h.to) >= 0 ? 'ще ' + diff(TODAY(), h.to) + ' дн.' : 'термін минув'}</span>` : ''}<span>${dn}/${ts.length} задач</span>${tag(h.project)}</span></span></button>`; }).join('') || '<div class="empty">Немає гіпотез у статусі «Тестуємо»</div>'}</div></div>
@@ -247,7 +255,7 @@ function propCard(p, lines) {
   let b = '';
   if (p.kind === 'task') {
     b = `<input class="ttl" ${A('p.title')} value="${esc(p.title)}" placeholder="Що зробити" aria-label="Назва задачі"><div class="fields"><label>Виконавець ${selWho(A('p.owner'), p.owner)}</label><label>Постановник ${selWho(A('p.requester'), p.requester)}</label><label>Дедлайн <input type="date" ${A('p.due')} value="${p.due || ''}"></label><label>Проєкт ${selProj(A('p.project'), p.project)}</label><label>Гіпотеза ${selHyp(A('p.hypothesis'), p.hypothesis, p.project)}</label><label><input type="checkbox" ${A('p.important')} ${p.important ? 'checked' : ''}> Важливо</label></div>`;
-    if (p.owner && p.owner !== uid() && !isExt(p.owner)) b += `<div class="route">${ico('route', 13)} ${esc(pn(p.owner))} побачить задачу у своєму «Я винен»</div>`;
+    if (p.owner && p.owner !== uid() && !isExt(p.owner)) b += `<div class="route">${ico('route', 13)} ${esc(pn(p.owner))} побачить задачу в розділі «${TASK_SECTION_NAMES.mine}»</div>`;
     if (p.requester && p.requester !== uid() && !isExt(p.requester)) b += `<div class="route">${ico('lock', 13)} Статус змінюватиме ${esc(pn(p.requester))} — постановник</div>`;
     if (p.dup) { const d = tasks().find((x) => x.id === p.dup); if (d) b += `<div class="warn">${ico('warn')} Схоже на існуючу задачу «${esc(d.title)}»<span class="seg sm"><button class="${p.merge ? 'on' : ''}" data-a="pset" data-p="${p.id}" data-k="merge" data-v="1">Об’єднати</button><button class="${p.merge ? '' : 'on'}" data-a="pset" data-p="${p.id}" data-k="merge" data-v="0">Створити нову</button></span></div>`; }
   } else if (p.kind === 'status') {
@@ -277,10 +285,10 @@ function filteredTasks() {
   return ts;
 }
 function pTasks() {
-  const views = [['matrix', 'Матриця'], ['kanban', 'Канбан'], ['list', 'Список'], ['delegated', 'Делеговане']];
+  const views = [['matrix', 'Матриця'], ['kanban', 'Канбан'], ['list', 'Список'], ['delegated', TASK_SECTION_NAMES.delegated]];
   let ts = filteredTasks();
   const people = [...new Set(tasks().flatMap((t) => [t.owner, t.requester]))].filter((w) => w && w !== uid());
-  const f = `<div class="chips" style="margin-bottom:16px;align-items:center"><select class="in" data-f="dir" aria-label="Напрям"><option value="all">Усі напрями</option><option value="mine" ${S.dir === 'mine' ? 'selected' : ''}>Я винен</option><option value="owed" ${S.dir === 'owed' ? 'selected' : ''}>Мені винні</option>${isAdmin() && !personal() ? `<option value="team" ${S.dir === 'team' ? 'selected' : ''}>Між іншими (видно адмінам)</option>` : ''}</select><select class="in" data-f="fperson" aria-label="Людина"><option value="">Усі люди</option>${people.map((p) => `<option value="${esc(p)}" ${S.person === p ? 'selected' : ''}>${esc(pnx(p))}</option>`).join('')}</select><select class="in" data-f="fproj" aria-label="Проєкт"><option value="">Усі проєкти</option>${S.d.projects.map((p) => `<option value="${p.id}" ${S.proj === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>${S.tab === 'list' ? `<select class="in" data-f="fst" aria-label="Статус"><option value="open">Відкриті</option><option value="all" ${S.fst === 'all' ? 'selected' : ''}>Усі статуси</option>${Object.entries(STL).map(([k, l]) => `<option value="${k}" ${S.fst === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}${role() === 'member' ? `<span class="hint">${ico('lock', 13)} Ти бачиш лише задачі, де ти виконавець або постановник</span>` : ''}</div>`;
+  const f = `<div class="chips" style="margin-bottom:16px;align-items:center"><select class="in" data-f="dir" aria-label="Напрям"><option value="all">Усі напрями</option><option value="mine" ${S.dir === 'mine' ? 'selected' : ''}>${TASK_SECTION_NAMES.mine}</option><option value="owed" ${S.dir === 'owed' ? 'selected' : ''}>${TASK_SECTION_NAMES.delegated}</option>${isAdmin() && !personal() ? `<option value="team" ${S.dir === 'team' ? 'selected' : ''}>Між іншими (видно адмінам)</option>` : ''}</select><select class="in" data-f="fperson" aria-label="Людина"><option value="">Усі люди</option>${people.map((p) => `<option value="${esc(p)}" ${S.person === p ? 'selected' : ''}>${esc(pnx(p))}</option>`).join('')}</select><select class="in" data-f="fproj" aria-label="Проєкт"><option value="">Усі проєкти</option>${S.d.projects.map((p) => `<option value="${p.id}" ${S.proj === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>${S.tab === 'list' ? `<select class="in" data-f="fst" aria-label="Статус"><option value="open">Відкриті</option><option value="all" ${S.fst === 'all' ? 'selected' : ''}>Усі статуси</option>${Object.entries(STL).map(([k, l]) => `<option value="${k}" ${S.fst === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}${role() === 'member' ? `<span class="hint">${ico('lock', 13)} Ти бачиш лише задачі, де ти виконавець або постановник</span>` : ''}</div>`;
   let body = '';
   if (S.tab === 'matrix') {
     const o = ts.filter(isOpen), Q = [['11', 'Зробити зараз', 'Терміново і важливо'], ['01', 'Запланувати', 'Важливо, не терміново'], ['10', 'Делегувати', 'Терміново, не важливо'], ['00', 'Відкинути', 'Ні те, ні інше']];
@@ -356,7 +364,7 @@ function pPerson(id) {
   const m = M()[id]; if (!m) return '<div class="empty">Людину не знайдено</div>';
   const iOwe = tasks().filter((t) => isOpen(t) && t.owner === uid() && t.requester === id), theyOwe = tasks().filter((t) => isOpen(t) && t.owner === id && t.requester === uid());
   return `<div class="hd"><div style="display:flex;gap:14px;align-items:center">${av(id, 52)}<div><h1>${esc(m.name)}</h1><div class="sub">${ROLE[m.role]} · ${esc(m.email || '')}</div></div></div></div>
-  <div class="grid g2"><div class="card"><h2>${esc(m.name)} винен мені · ${theyOwe.length}</h2>${theyOwe.map(trow).join('') || '<div class="empty">Нічого</div>'}</div><div class="card"><h2>Я винен ${esc(m.name)} · ${iOwe.length}</h2>${iOwe.map(trow).join('') || '<div class="empty">Нічого</div>'}</div></div>`;
+  <div class="grid g2"><div class="card"><h2>${TASK_SECTION_NAMES.delegated} для ${esc(m.name)} · ${theyOwe.length}</h2>${theyOwe.map(trow).join('') || '<div class="empty">Нічого</div>'}</div><div class="card"><h2>${TASK_SECTION_NAMES.mine} від ${esc(m.name)} · ${iOwe.length}</h2>${iOwe.map(trow).join('') || '<div class="empty">Нічого</div>'}</div></div>`;
 }
 
 /* ---------- members ---------- */
@@ -377,15 +385,41 @@ function pProfile() {
   <div class="card"><h2>Де лежать дані</h2><p class="hint" style="margin-top:0">Задачі, проєкти й гіпотези — JSON, знання — Markdown. У кожного користувача своя папка з окремою підпапкою на кожну команду; спільне лежить у папці команди. Точка входу всюди — <code>index.md</code>.</p><pre class="hint" style="font-size:12.5px;white-space:pre-wrap;margin:0">data/users/${esc(S.me.id)}/index.md\ndata/users/${esc(S.me.id)}/teams/${esc(S.tid)}/  (інбокс, приватні задачі й знання)\ndata/teams/${esc(S.tid)}/index.md  (проєкти, гіпотези, спільні задачі й знання)</pre></div></div>`;
 }
 
+/* ---------- roadmap ---------- */
+function pRoadmap() {
+  if (S.roadmap == null) {
+    S.roadmap = '';
+    api('GET', '/api/roadmap').then((r) => { S.roadmap = r.markdown; render(); }).catch((e) => { S.roadmap = null; toast(e.message); });
+    return '<div class="empty"><span class="spin"></span></div>';
+  }
+  return `<div class="hd"><div><h1>Roadmap</h1><div class="sub">Що плануємо до повної реалізації TeamOS. Джерело — розділ Roadmap у README.md.</div></div></div>
+  <div class="card"><div class="doc mdv">${md(S.roadmap) || '<p class="hint">Roadmap порожній</p>'}</div></div>`;
+}
+
 /* ---------- login, onboarding, join ---------- */
+function loginAccess() {
+  const invite = S.pendingJoin ? '<p class="orbit-invite">You’ve been invited to a team. Sign in to join.</p>' : '';
+  const emailForm = S.loginSent
+    ? `<div class="orbit-sent" role="status"><strong>Check your inbox</strong><p>We sent a one-time link to <b>${esc(S.loginEmail)}</b>. It expires in 15 minutes.</p></div>
+       <button class="orbit-text-button" type="button" data-a="emailAgain">Use another email or send again</button>`
+    : `<form id="email-login" class="orbit-form"><label for="orbit-email">Sign in to your workspace</label>
+       <div class="orbit-fields"><input id="orbit-email" name="email" type="email" value="${esc(S.loginEmail)}" required maxlength="254" autocomplete="email" placeholder="Work email address" aria-label="Work email address" ${S.loginBusy ? 'disabled' : ''}>
+       <button type="submit" ${S.loginBusy ? 'disabled' : ''}>${S.loginBusy ? 'Sending…' : 'Email me a link'} ${ico('arrow', 17)}</button></div>
+       ${S.loginError ? `<p class="orbit-error" role="alert">${esc(S.loginError)}</p>` : ''}</form>`;
+  const local = S.cfg.dev ? `<details class="orbit-local" ${S.cfg.emailLink ? '' : 'open'}><summary>Local development sign-in</summary>
+    <label>Email<input id="devEmail" type="email" placeholder="name@example.com" autocomplete="email"></label>
+    <label>Name (optional)<input id="devName" autocomplete="name"></label><button type="button" data-a="devLogin">Sign in locally</button></details>` : '';
+  return invite + (S.cfg.emailLink ? emailForm : S.cfg.dev ? '' : '<p class="orbit-error" role="status">Email sign-in is temporarily unavailable.</p>') + local;
+}
 function pLogin() {
-  const ret = S.pendingJoin ? `/#join-${S.pendingJoin}` : '/';
-  return `<div class="lg"><div class="lgl"><div style="display:flex;gap:10px;align-items:center;font-weight:800"><span class="logo" style="background:var(--bg);color:var(--ink)">T</span>TeamOS</div><div class="lgm"><h1>Другий мозок команди, який наповнюється з ваших мітингів</h1><p>Кидаєш транскрипт — TeamOS витягує, хто кому що пообіцяв, які рішення прийняли і що змінилось. Ти лише підтверджуєш.</p>
-  <div class="flow"><div class="tx"><div><b>Володимир:</b> Саш, давай ти <mark>до п’ятниці зробиш сторінку з цінами</mark>.</div><div><b>Максим:</b> Вебхуки <mark>вже на проді</mark> з вівторка.</div><div><b>Володимир:</b> <mark>Фіксуємо 100 викликів</mark> на місяць безкоштовно.</div></div><div class="arrow">→</div><div class="outs"><div class="oc"><small>Комітмент · Олександр → Володимир</small>Сторінка з цінами · Пт</div><div class="oc"><small>Статус</small>Вебхуки Pipedrive → Готово</div><div class="oc"><small>Рішення · команда</small>Free tier MCP — 100 викликів/міс</div></div></div></div></div>
-  <div class="lgr"><div class="lgbox"><h2 style="font-size:24px">Увійти в TeamOS</h2>${S.pendingJoin ? `<div class="inv">${ico('users', 20)}<span>Тебе запросили в команду. Увійди, щоб приєднатися.</span></div>` : ''}
-  ${S.cfg.google ? `<a class="gbtn" style="text-decoration:none" href="/auth/google?return=${encodeURIComponent(ret)}"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.6a4.8 4.8 0 0 1-2.1 3.1v2.6h3.4c2-1.8 3.1-4.5 3.1-7.5z"/><path fill="#34A853" d="M12 22c2.8 0 5.2-.9 6.9-2.5l-3.4-2.6c-.9.6-2.1 1-3.5 1-2.7 0-5-1.8-5.8-4.3H2.7v2.7A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.2 13.6a6 6 0 0 1 0-3.8V7.1H2.7a10 10 0 0 0 0 9z"/><path fill="#EA4335" d="M12 6c1.5 0 2.9.5 4 1.5l3-3A10 10 0 0 0 2.7 7.1l3.5 2.7C7 7.8 9.3 6 12 6z"/></svg>Продовжити з Google</a><p class="hint" style="margin:0">Підійде будь-який акаунт — робочий чи особистий.</p>` : `<div class="err">Google OAuth ще не налаштовано: задай <code>GOOGLE_CLIENT_ID</code> і <code>GOOGLE_CLIENT_SECRET</code> у <code>.env</code>.</div>`}
-  ${S.cfg.dev ? `<div class="card" style="padding:14px"><h3 style="margin-bottom:8px">Локальний вхід для розробки</h3><div class="grid" style="gap:8px"><input class="in" id="devEmail" type="email" placeholder="email@example.com" autocomplete="email"><input class="in" id="devName" placeholder="Ім’я (необов’язково)"><button class="btn" data-a="devLogin">Увійти без Google</button></div><p class="hint" style="margin:8px 0 0">Працює лише на localhost, поки Google OAuth не налаштовано.</p></div>` : ''}
-  <p class="hint" style="margin:10px 0 0">Open-source · можна розгорнути у себе</p></div></div></div>`;
+  return `<main class="orbit" lang="en"><div class="orbit-frame">
+    <header class="orbit-header"><div class="orbit-brand"><span aria-hidden="true">T</span>TeamOS</div></header>
+    <div class="orbit-hero"><div class="orbit-copy">
+      <h1>A metaverse<br><em>for your business.</em></h1>
+      <p>Invite your team and bring the materials you already work with. TeamOS connects documents, goals, and hypotheses to your projects, and captures what people agreed to after each meeting.</p>
+      <div id="login-access">${loginAccess()}</div>
+    </div><team-knowledge-graph></team-knowledge-graph></div>
+  </div></main>`;
 }
 function pOnboarding() {
   return `<div class="ob"><div style="display:flex;gap:10px;align-items:center;font-weight:800;margin-bottom:28px"><span class="logo">T</span>TeamOS</div><div class="steps"><i class="on"></i><i></i></div><h1>Почнемо з команди</h1><p class="hint" style="font-size:15px">Команд може бути скільки завгодно. Особистий простір є завжди.</p>
@@ -481,15 +515,21 @@ function askRes(q) {
 /* ---------- render ---------- */
 function render() {
   const r = R(); const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop)); const sy = scrollY;
+  const app = document.getElementById('app');
+  const isLogin = !S.me || r === 'login';
+  const existingAccess = isLogin && app.querySelector('#login-access');
   let c;
-  if (!S.me || r === 'login') c = r.startsWith('join-') ? pJoin() : pLogin();
+  if (existingAccess) existingAccess.innerHTML = loginAccess();
+  else if (isLogin) c = pLogin();
   else if (r.startsWith('join-')) c = pJoin();
   else if (r === 'onboarding' || !S.d) c = pOnboarding();
   else {
-    const pg = r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r === 'vision' ? pVision() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : pDashboard();
+    const pg = r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r === 'vision' ? pVision() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
     c = `<div class="app"><aside class="side">${nav()}</aside><main class="main"><header class="top">${top()}</header><div class="page">${pg}</div></main></div>`;
   }
-  document.getElementById('app').innerHTML = c;
+  document.documentElement.lang = isLogin ? 'en' : 'uk';
+  document.title = isLogin ? 'TeamOS — Sign in' : 'TeamOS';
+  if (!existingAccess) app.innerHTML = c;
   document.querySelectorAll('[data-keep]').forEach((e) => { if (keep[e.dataset.keep]) e.scrollTop = keep[e.dataset.keep]; }); scrollTo(0, sy);
   drawer(); modal();
 }
@@ -515,6 +555,7 @@ const A = {
   newTeam: () => { S.tmenu = false; S.modal = { k: 'team' }; render(); },
   ntmGo: () => act(async () => { const name = val('ntmN').trim(); if (!name) throw new Error('Вкажи назву'); const t = await api('POST', '/api/teams', { name }); S.modal = null; await reloadMe(); await switchTeam(t.id); go('dashboard'); }, 'Команду створено'),
   logout: () => act(async () => { await api('POST', '/auth/logout'); S.me = null; S.d = null; location.hash = 'login'; render(); }),
+  emailAgain: () => { S.loginSent = false; S.loginError = ''; render(); document.querySelector('#email-login input')?.focus(); },
   devLogin: () => act(async () => { await api('POST', '/auth/dev', { email: val('devEmail'), name: val('devName') }); await boot(); }),
   obMode: (el) => { S.obMode = el.dataset.v; render(); },
   obGo: () => act(async () => {
@@ -565,7 +606,7 @@ const A = {
   ntGo: () => act(async () => {
     const t = await api('POST', T('/tasks'), { title: val('ntT'), owner: val('ntO'), requester: val('ntR'), due: val('ntD') || null, project: val('ntP') || null, hypothesis: val('ntH') || null, important: document.getElementById('ntI').checked, description: val('ntDesc') });
     S.modal = null; S.d.tasks.unshift(t); render(); return t;
-  }, (t) => (t.owner === uid() ? 'Задачу створено' : `Задачу поставлено: ${pnx(t.owner)} побачить її в «Я винен»`)),
+  }, (t) => (t.owner === uid() ? 'Задачу створено' : `Задачу поставлено: ${pnx(t.owner)} побачить її в розділі «${TASK_SECTION_NAMES.mine}»`)),
   delTask: () => { if (!confirm('Видалити задачу? Це не можна скасувати.')) return; act(async () => { await api('DELETE', T(`/tasks/${S.drawer}`)); S.d.tasks = S.d.tasks.filter((x) => x.id !== S.drawer); S.drawer = null; render(); }, 'Задачу видалено'); },
   comment: () => { const c = val('cmt').trim(); if (!c) return; const t = tasks().find((x) => x.id === S.drawer); act(async () => { const r = await api('POST', T(`/tasks/${t.id}/comments`), { text: c }); Object.assign(t, r); render(); }, t.canEdit ? 'Коментар додано' : `${pnx(t.controller)} побачить коментар на дашборді`); },
 
@@ -679,6 +720,20 @@ document.addEventListener('mouseover', (e) => {
   const f = document.getElementById('ln-' + ids[0]), box = f && f.closest('.src');
   if (f && box && box.scrollHeight > box.clientHeight) { const r = f.offsetTop - box.offsetTop; if (r < box.scrollTop || r > box.scrollTop + box.clientHeight - 40) box.scrollTo({ top: r - 60, behavior: 'smooth' }); }
 });
+document.addEventListener('submit', async (e) => {
+  if (e.target.id !== 'email-login') return;
+  e.preventDefault();
+  if (S.loginBusy) return;
+  S.loginEmail = new FormData(e.target).get('email').trim();
+  S.loginError = '';
+  S.loginBusy = true;
+  render();
+  try {
+    await api('POST', '/auth/link/request', { email: S.loginEmail, returnTo: S.pendingJoin ? `/#join-${S.pendingJoin}` : '/' });
+    S.loginSent = true;
+  } catch (error) { S.loginError = error instanceof TypeError ? 'Could not reach TeamOS. Please try again.' : error.message; }
+  finally { S.loginBusy = false; render(); }
+});
 document.addEventListener('dragstart', (e) => { const c = e.target.closest && e.target.closest('[data-drag]'); if (c) { e.dataTransfer.setData('text/plain', c.dataset.drag); c.classList.add('dragging'); } });
 document.addEventListener('dragend', () => document.querySelectorAll('.dragging,.over').forEach((x) => x.classList.remove('dragging', 'over')));
 document.addEventListener('dragover', (e) => { const z = e.target.closest && e.target.closest('[data-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });
@@ -717,5 +772,5 @@ async function backgroundSync() {
 window.addEventListener('focus', backgroundSync);
 document.addEventListener('visibilitychange', backgroundSync);
 setInterval(backgroundSync, 30000);
-boot().catch((e) => { document.getElementById('app').innerHTML = `<div class="empty">Не вдалося завантажити: ${esc(e.message)}</div>`; });
+boot().catch((e) => { document.getElementById('app').innerHTML = `<div class="empty">Could not load TeamOS. ${esc(e.message)}</div>`; });
 })();

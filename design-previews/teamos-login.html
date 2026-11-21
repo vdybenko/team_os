@@ -1,0 +1,550 @@
+<div id="teamos-login-gallery" lang="uk">
+  <div class="viz-carousel" aria-label="Варіанти сторінки входу TeamOS" data-previous-label="Попередній дизайн" data-next-label="Наступний дизайн">
+    <section data-variant="Метавсесвіт бізнесу" aria-label="Метавсесвіт бізнесу">
+      <div class="tos-stage cosmos">
+        <header class="tos-header"><div class="tos-brand"><span class="tos-mark">T</span>TeamOS</div></header>
+        <div class="cosmos-hero">
+          <div class="cosmos-intro">
+            <h1>Метавсесвіт<br><em>вашого бізнесу.</em></h1>
+            <p>Запросіть колег і додавайте матеріали, з якими вже працюєте. TeamOS сам пов’яже їх із цілями, проєктами й гіпотезами, а після кожної зустрічі збере домовленості.</p>
+            <form class="tos-form cosmos-form">
+              <label for="tos-cosmos-email">Увійти до спільного простору</label>
+              <div class="cosmos-fields">
+                <input id="tos-cosmos-email" required type="email" placeholder="Робоча пошта" autocomplete="off" aria-label="Робоча пошта">
+                <button type="submit" class="tos-submit cursor-interaction">Отримати посилання <span aria-hidden="true">↗</span></button>
+              </div>
+              <output aria-live="polite"></output>
+            </form>
+          </div>
+          <div class="cosmos-demo" aria-label="Демонстрація графа знань">
+            <div class="cosmos-mapbar"><span>Граф знань команди</span><button type="button" class="cosmos-motion cursor-interaction" aria-pressed="false"><span aria-hidden="true">▷</span> Оживити граф</button></div>
+            <div class="cosmos-map" role="group" aria-label="Зв’язки проєкту «Запуск тарифу». Оберіть вузол, щоб дізнатися більше.">
+              <svg class="cosmos-network" aria-hidden="true"></svg>
+              <div class="cosmos-hubs"></div>
+            </div>
+            <div class="cosmos-detail" aria-live="polite" aria-atomic="true"><span class="cosmos-detail-path">Проєкт · Запуск тарифу</span><p>Бриф, гіпотеза про пробний період і домовленість Олени стосуються одного запуску.</p></div>
+          </div>
+        </div>
+        <div class="cosmos-sources">
+          <h2>Додайте приклад до графа</h2>
+          <div class="cosmos-chips" role="group" aria-label="Додати приклад матеріалу">
+            <button type="button" data-source="meeting" class="cursor-interaction"><span aria-hidden="true">+</span> Зустріч</button>
+            <button type="button" data-source="document" class="cursor-interaction"><span aria-hidden="true">+</span> Документ</button>
+            <button type="button" data-source="chat" class="cursor-interaction"><span aria-hidden="true">+</span> Чат</button>
+            <button type="button" data-source="guide" class="cursor-interaction"><span aria-hidden="true">+</span> Інструкція</button>
+            <button type="button" data-source="pdf" class="cursor-interaction"><span aria-hidden="true">+</span> PDF</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section data-variant="Сигнал" aria-label="Сигнал" hidden>
+      <div class="tos-stage signal">
+        <header class="tos-header"><div class="tos-brand"><span class="tos-mark">T</span>TeamOS</div></header>
+        <div class="signal-layout">
+          <div class="signal-story">
+            <h1>З мітингу <br><em>у дію.</em></h1>
+            <p class="signal-lead">Додай транскрипт. TeamOS знайде домовленості й рішення, а ти підтвердиш деталі.</p>
+            <div class="signal-example" aria-label="Приклад розбору зустрічі">
+              <div class="signal-example-top"><span class="tos-caption">Фрагмент зустрічі</span><div class="signal-controls" aria-label="Обрати фрагмент"><button type="button" class="cursor-interaction" data-jump="-1" aria-label="Попередній фрагмент">←</button><button type="button" class="cursor-interaction" data-jump="1" aria-label="Наступний фрагмент">→</button></div></div>
+              <div class="signal-wave" aria-hidden="true"></div>
+              <div class="signal-transcription" aria-live="polite">
+                <p class="signal-quote">«Саш, давай ти до п’ятниці зробиш сторінку з цінами».</p>
+                <div class="signal-result"><span class="signal-kind">Домовленість</span><span class="signal-value">Олександр · до п’ятниці</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="signal-login">
+            <div class="signal-envelope" aria-hidden="true"><i data-lucide="mail"></i></div>
+            <h2>Увійти в TeamOS</h2>
+            <p>Надішлемо на твою пошту одноразове посилання для входу.</p>
+            <form class="tos-form">
+              <label for="tos-signal-email">Електронна пошта</label>
+              <input id="tos-signal-email" type="email" required placeholder="name@example.com" autocomplete="off">
+              <button class="tos-submit cursor-interaction" type="submit">Надіслати посилання <span aria-hidden="true">↗</span></button>
+              <output aria-live="polite"></output>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section data-variant="Протокол" aria-label="Протокол" hidden>
+      <div class="tos-stage paper">
+        <header class="tos-header"><div class="tos-brand"><span class="tos-mark">T</span>TeamOS</div></header>
+        <div class="paper-spread">
+          <div class="paper-lead">
+            <h1>Зустріч минула.<br><em>Рішення</em><br>залишились.</h1>
+            <p>TeamOS перетворює розмову на короткий протокол. Одразу видно, про що домовились і хто за що відповідає.</p>
+          </div>
+          <article class="paper-note" aria-label="Приклад протоколу зустрічі">
+            <div class="paper-note-title"><span class="paper-asterisk" aria-hidden="true">✳</span><h2>Із протоколу</h2></div>
+            <div class="paper-entry"><div class="tos-caption">Домовленість</div><p>Підготувати сторінку з цінами</p><small>Олександр · до п’ятниці</small></div>
+            <div class="paper-entry"><div class="tos-caption">Рішення</div><p>100 викликів MCP на місяць у безкоштовному тарифі</p></div>
+            <div class="paper-entry"><div class="tos-caption">Статус</div><p>Вебхуки Pipedrive вже працюють</p></div>
+          </article>
+        </div>
+        <div class="paper-login">
+          <div><h2>Увійти в TeamOS</h2><p>Одноразове посилання прийде на пошту.</p></div>
+          <form class="tos-form">
+            <label for="tos-paper-email">Електронна пошта</label>
+            <div class="paper-fields"><input id="tos-paper-email" type="email" required placeholder="name@example.com" autocomplete="off"><button type="submit" class="tos-submit cursor-interaction">Надіслати посилання <span aria-hidden="true">→</span></button></div>
+            <output aria-live="polite"></output>
+          </form>
+        </div>
+      </div>
+    </section>
+    <section data-variant="Мапа команди" aria-label="Мапа команди" hidden>
+      <div class="tos-stage atlas">
+        <header class="tos-header"><div class="tos-brand"><span class="tos-mark">T</span>TeamOS</div></header>
+        <div class="atlas-layout">
+          <article class="atlas-node atlas-meeting"><div class="atlas-node-label"><i data-lucide="audio-lines" aria-hidden="true"></i> Зустріч</div><p>«Саш, давай ти до п’ятниці зробиш сторінку з цінами».</p></article>
+          <div class="atlas-login">
+            <h1>Увійти в TeamOS</h1>
+            <p>Усі домовленості команди в одному місці. Введи пошту, щоб отримати посилання для входу.</p>
+            <form class="tos-form">
+              <label for="tos-atlas-email">Електронна пошта</label>
+              <input id="tos-atlas-email" type="email" required placeholder="name@example.com" autocomplete="off">
+              <button type="submit" class="tos-submit cursor-interaction">Надіслати посилання <span aria-hidden="true">→</span></button>
+              <output aria-live="polite"></output>
+            </form>
+          </div>
+          <div class="atlas-outputs">
+            <article class="atlas-node atlas-commit"><div class="atlas-node-label"><i data-lucide="flag" aria-hidden="true"></i> Домовленість</div><p>Сторінка з цінами</p><small>Олександр · до п’ятниці</small></article>
+            <article class="atlas-node atlas-decision"><div class="atlas-node-label"><i data-lucide="git-branch" aria-hidden="true"></i> Рішення</div><p>100 викликів MCP на місяць безкоштовно</p></article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+<style>
+  #teamos-login-gallery {container-type:inline-size;}
+  #teamos-login-gallery .tos-stage, #teamos-login-gallery .tos-stage * {box-sizing:border-box;}
+  #teamos-login-gallery .tos-stage {
+    --tos-sans:Inter,"Helvetica Neue",Arial,sans-serif;
+    --tos-serif:Georgia,"Times New Roman",serif;
+    --tos-pad:clamp(23px,4.3cqw,48px);
+    padding:24px var(--tos-pad) 32px; min-height:535px;
+    font:400 15px/1.5 var(--tos-sans); border-radius:12px; text-align:left; isolation:isolate;
+  }
+  #teamos-login-gallery .tos-stage :is(h1,h2,p,small,form,header,article) {margin:0;}
+  #teamos-login-gallery .tos-stage :is(h1,h2) {color:inherit;}
+  #teamos-login-gallery .tos-header {display:flex;align-items:center;min-height:34px;}
+  #teamos-login-gallery .tos-brand {display:inline-flex;align-items:center;gap:8px;font:750 19px/1 var(--tos-sans);letter-spacing:-1px;}
+  #teamos-login-gallery .tos-mark {width:27px;height:27px;border-radius:7px;display:grid;place-items:center;font:800 16px/1 var(--tos-sans);letter-spacing:0;}
+  #teamos-login-gallery .tos-caption {font:650 11px/1.25 var(--tos-sans);letter-spacing:.10em;text-transform:uppercase;}
+  #teamos-login-gallery .tos-form {display:grid;gap:8px;}
+  #teamos-login-gallery .tos-form label {display:block;font:600 12px/1.4 var(--tos-sans);color:inherit;margin:0;}
+  #teamos-login-gallery .tos-form input, #teamos-login-gallery .tos-submit {width:100%;min-width:0;min-height:44px;margin:0;border-radius:7px;padding:10px 12px;font:500 14px/1.35 var(--tos-sans);box-shadow:none;letter-spacing:normal;}
+  #teamos-login-gallery .tos-form input {background:var(--field);border:1px solid var(--field-line);color:var(--form-ink);}
+  #teamos-login-gallery .tos-form input::placeholder {color:var(--hint);opacity:1;}
+  #teamos-login-gallery .tos-submit {display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--submit);color:var(--submit-ink);font-weight:650;border:0;text-align:left;}
+  #teamos-login-gallery .tos-submit span {font:500 18px/1 var(--tos-sans);}
+  #teamos-login-gallery .tos-submit:hover {filter:brightness(.94);}
+  #teamos-login-gallery .tos-form output {font:500 12px/1.45 var(--tos-sans);color:var(--form-ink);}
+  #teamos-login-gallery .tos-form output:empty {display:none;}
+
+  #teamos-login-gallery .signal {
+    --acid:#d6fa75;--field:#fff;--field-line:#c8cec2;--form-ink:#19231d;--hint:#647166;--submit:#19221d;--submit-ink:#f5f7eb;
+    color:#f2f5e9;background:radial-gradient(ellipse at 12% 74%,#25332a 0%,transparent 56%),#161f1b;
+  }
+  #teamos-login-gallery .signal .tos-mark {background:var(--acid);color:#1c2720;}
+  #teamos-login-gallery .signal-layout {display:grid;grid-template-columns:minmax(0,1.36fr) minmax(233px,.83fr);gap:clamp(24px,4.5cqw,58px);align-items:center;margin-top:26px;}
+  #teamos-login-gallery .signal h1 {font:650 clamp(54px,7.4cqw,84px)/.94 var(--tos-sans);letter-spacing:-.066em;}
+  #teamos-login-gallery .signal h1 em {font:italic 500 1.08em/.95 var(--tos-serif);color:var(--acid);letter-spacing:-.066em;}
+  #teamos-login-gallery .signal-lead {margin-top:14px;max-width:420px;color:#c4cdc5;font-size:15px;line-height:1.45;}
+  #teamos-login-gallery .signal-example {max-width:480px;margin-top:19px;border-top:1px solid #506054;padding-top:9px;}
+  #teamos-login-gallery .signal-example-top, #teamos-login-gallery .signal-controls {display:flex;align-items:center;}
+  #teamos-login-gallery .signal-example-top {justify-content:space-between;color:#c0cabe;gap:6px;}
+  #teamos-login-gallery .signal-controls {gap:5px;}
+  #teamos-login-gallery .signal-controls button {display:grid;place-items:center;background:transparent;color:#dbe9d8;border:1px solid #55655a;border-radius:50%;width:26px;height:26px;padding:0;font:500 14px/1 var(--tos-sans);}
+  #teamos-login-gallery .signal-controls button:hover {background:#384c3b;}
+  #teamos-login-gallery .signal-wave {height:50px;display:flex;align-items:center;gap:3px;overflow:hidden;margin:5px 0 4px;background:linear-gradient(transparent 49%,#435845 49% 51%,transparent 51%);}
+  #teamos-login-gallery .signal-wave i {display:block;flex:1;min-width:1px;background:var(--acid);border-radius:3px;}
+  #teamos-login-gallery .signal-quote {color:#e5ece2;font-size:14px;line-height:1.38;min-height:2.76em;max-width:445px;}
+  #teamos-login-gallery .signal-result {display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:12px;line-height:1.4;}
+  #teamos-login-gallery .signal-kind {color:var(--acid);font-weight:650;}
+  #teamos-login-gallery .signal-value {color:#ced7cb;}
+  #teamos-login-gallery .signal-login {background:#f1f4e9;color:var(--form-ink);border-radius:14px;padding:clamp(20px,2.9cqw,34px);}
+  #teamos-login-gallery .signal-envelope {display:grid;place-items:center;width:39px;height:39px;background:var(--acid);color:#1c2720;border-radius:12px;margin-bottom:20px;}
+  #teamos-login-gallery .signal-envelope svg {width:20px;height:20px;}
+  #teamos-login-gallery .signal-login h2 {font:650 clamp(23px,2.8cqw,33px)/1.08 var(--tos-sans);letter-spacing:-.055em;}
+  #teamos-login-gallery .signal-login p {font-size:14px;color:#516055;margin:11px 0 22px;line-height:1.45;}
+
+  #teamos-login-gallery .paper {
+    --ink:#2b2823;--red:#a53b23;--field:#fffdf4;--field-line:#aaa594;--form-ink:#2b2823;--hint:#716d61;--submit:#aa3d25;--submit-ink:#fffaf0;
+    color:var(--ink);background:#f6f1e4;display:flex;flex-direction:column;
+  }
+  #teamos-login-gallery .paper .tos-header {border-bottom:1px solid #7f7a69;padding-bottom:13px;}
+  #teamos-login-gallery .paper .tos-mark {background:var(--ink);color:#f6f1e4;border-radius:3px;}
+  #teamos-login-gallery .paper-spread {display:grid;grid-template-columns:1.1fr .86fr;align-items:center;gap:clamp(20px,4.4cqw,56px);margin:24px 0;flex:1;}
+  #teamos-login-gallery .paper-lead h1 {font:400 clamp(43px,6.3cqw,72px)/.96 var(--tos-serif);letter-spacing:-.061em;}
+  #teamos-login-gallery .paper-lead h1 em {color:var(--red);font-weight:400;}
+  #teamos-login-gallery .paper-lead>p {max-width:405px;margin-top:15px;color:#555044;font-size:14px;line-height:1.5;}
+  #teamos-login-gallery .paper-note {border-top:3px double #8c8672;border-bottom:1px solid #aca693;padding:12px 0 10px;}
+  #teamos-login-gallery .paper-note-title {display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+  #teamos-login-gallery .paper-note-title h2 {font:400 25px/1 var(--tos-serif);letter-spacing:-.045em;}
+  #teamos-login-gallery .paper-asterisk {color:var(--red);font:500 28px/1 var(--tos-serif);}
+  #teamos-login-gallery .paper-entry {padding:8px 0;}
+  #teamos-login-gallery .paper-entry + .paper-entry {border-top:1px solid #d2cbbc;}
+  #teamos-login-gallery .paper-entry .tos-caption {font-size:11px;letter-spacing:.1em;color:var(--red);}
+  #teamos-login-gallery .paper-entry p {font:400 clamp(16px,2cqw,21px)/1.18 var(--tos-serif);letter-spacing:-.02em;margin-top:3px;}
+  #teamos-login-gallery .paper-entry small {display:block;color:#625e50;font:450 12px/1.3 var(--tos-sans);margin-top:3px;}
+  #teamos-login-gallery .paper-login {display:grid;grid-template-columns:.76fr 1.24fr;align-items:center;gap:22px;border-top:2px solid var(--ink);padding-top:14px;}
+  #teamos-login-gallery .paper-login h2 {font:400 clamp(23px,2.8cqw,32px)/1.12 var(--tos-serif);letter-spacing:-.045em;}
+  #teamos-login-gallery .paper-login p {color:#625e50;font-size:12px;margin-top:5px;}
+  #teamos-login-gallery .paper-fields {display:grid;grid-template-columns:minmax(115px,1fr) minmax(150px,.94fr);gap:6px;}
+  #teamos-login-gallery .paper-fields :is(input,button) {border-radius:3px;}
+  #teamos-login-gallery .paper-fields button {font-size:13px;}
+
+  #teamos-login-gallery .atlas {
+    --line:#829cfb;--field:#f9faff;--field-line:#c6d1ec;--form-ink:#182544;--hint:#64708c;--submit:#254bd6;--submit-ink:#fff;
+    display:flex;flex-direction:column;color:#fbfcff;background-color:#2549cf;
+    background-image:radial-gradient(circle,rgba(219,230,255,.29) 1px,transparent 1.2px);background-size:16px 16px;
+  }
+  #teamos-login-gallery .atlas .tos-mark {background:#fbfcff;color:#2347bf;}
+  #teamos-login-gallery .atlas-layout {--bridge:clamp(16px,2.4cqw,32px);display:grid;grid-template-columns:minmax(110px,.72fr) minmax(235px,1.4fr) minmax(120px,.82fr);align-items:center;gap:var(--bridge);flex:1;padding:25px 0 35px;}
+  #teamos-login-gallery .atlas-login {background:#f8faff;border:1px solid #eef4ff;border-radius:15px;box-shadow:0 12px 30px #172a7b40;color:var(--form-ink);padding:clamp(18px,2.7cqw,31px);position:relative;z-index:1;}
+  #teamos-login-gallery .atlas-login h1 {font:650 clamp(28px,3.5cqw,41px)/1.04 var(--tos-sans);letter-spacing:-.06em;}
+  #teamos-login-gallery .atlas-login>p {font-size:14px;line-height:1.5;color:#52627d;margin:12px 0 22px;}
+  #teamos-login-gallery .atlas-node {position:relative;border:1px solid #94abff;border-radius:9px;padding:13px 12px;background:#2141b3;color:#f3f6ff;}
+  #teamos-login-gallery .atlas-node-label {display:flex;align-items:center;gap:5px;color:#dbe4ff;font:650 11px/1.3 var(--tos-sans);}
+  #teamos-login-gallery .atlas-node-label svg {width:15px;height:15px;flex:none;}
+  #teamos-login-gallery .atlas-node p {margin-top:7px;font-size:14px;line-height:1.35;}
+  #teamos-login-gallery .atlas-node small {display:block;margin-top:5px;color:#e5ebff;font:400 11px/1.35 var(--tos-sans);}
+  #teamos-login-gallery .atlas-meeting {border-style:dashed;}
+  #teamos-login-gallery .atlas-outputs {display:grid;gap:22px;position:relative;}
+  #teamos-login-gallery .atlas-meeting::after, #teamos-login-gallery .atlas-outputs::before {content:"";position:absolute;top:50%;height:1px;width:var(--bridge);background:var(--line);}
+  #teamos-login-gallery .atlas-meeting::after {left:100%;}
+  #teamos-login-gallery .atlas-outputs::before {right:calc(100% + var(--bridge) / 2);width:calc(var(--bridge) / 2);}
+  #teamos-login-gallery .atlas-outputs .atlas-node::before {content:"";position:absolute;right:100%;width:calc(var(--bridge) / 2);height:calc(50% + 13px);border-left:1px solid var(--line);}
+  #teamos-login-gallery .atlas-commit::before {top:50%;border-top:1px solid var(--line);border-top-left-radius:7px;}
+  #teamos-login-gallery .atlas-decision::before {bottom:50%;border-bottom:1px solid var(--line);border-bottom-left-radius:7px;}
+  @container (min-width: 651px) {
+    #teamos-login-gallery .tos-stage {min-height:550px;}
+  }
+  @container (max-width: 650px) {
+    #teamos-login-gallery .tos-stage {min-height:660px;padding:20px;}
+    #teamos-login-gallery .signal-layout {grid-template-columns:1fr;margin-top:22px;gap:20px;}
+    #teamos-login-gallery .signal-story {display:contents;}
+    #teamos-login-gallery .signal h1 {font-size:50px;}
+    #teamos-login-gallery .signal h1 br {display:none;}
+    #teamos-login-gallery .signal-lead {margin-top:-8px;}
+    #teamos-login-gallery .signal-login {grid-row:3;}
+    #teamos-login-gallery .signal-envelope {display:none;}
+    #teamos-login-gallery .signal-example {margin-top:0;max-width:none;}
+    #teamos-login-gallery .signal-login p, #teamos-login-gallery .atlas-login>p {margin:8px 0 14px;}
+    #teamos-login-gallery .paper-spread {grid-template-columns:1fr;margin:19px 0 0;}
+    #teamos-login-gallery .paper-lead h1 {font-size:clamp(39px,8cqw,52px);}
+    #teamos-login-gallery .paper-lead h1 br:nth-of-type(2) {display:none;}
+    #teamos-login-gallery .paper-lead h1 em::after {content:" ";}
+    #teamos-login-gallery .paper {display:grid;gap:16px;}
+    #teamos-login-gallery .paper {align-content:start;}
+    #teamos-login-gallery .paper-spread {display:contents;}
+    #teamos-login-gallery .paper-login {grid-row:3;grid-template-columns:1fr;gap:12px;}
+    #teamos-login-gallery .atlas-layout {grid-template-columns:1fr;padding:24px 0 0;gap:18px;}
+    #teamos-login-gallery .atlas-login {grid-row:1;}
+    #teamos-login-gallery .atlas-node {padding:12px;}
+    #teamos-login-gallery .atlas-outputs {grid-template-columns:1fr 1fr;gap:10px;}
+    #teamos-login-gallery .atlas-node::before, #teamos-login-gallery .atlas-node::after, #teamos-login-gallery .atlas-outputs::before, #teamos-login-gallery .atlas-outputs::after {display:none;}
+  }
+  @container (max-width: 410px) {
+    #teamos-login-gallery .tos-stage {min-height:740px;}
+    #teamos-login-gallery .paper-fields {grid-template-columns:1fr;}
+    #teamos-login-gallery .tos-form input {font-size:16px;}
+  }
+  @media (pointer:coarse) {
+    #teamos-login-gallery .signal-controls button {width:44px;height:44px;}
+  }
+</style>
+<style>
+  #teamos-login-gallery .cosmos {
+    --field:#181622;--field-line:#494253;--form-ink:#f7f1ff;--hint:#b8afc5;--submit:#e2cfff;--submit-ink:#251a36;
+    display:flex;flex-direction:column;overflow:hidden;color:var(--form-ink);
+    background:radial-gradient(ellipse at 78% 36%,#39274c 0%,#211a2b 28%,transparent 59%),#15121c;
+  }
+  #teamos-login-gallery .cosmos .tos-header {border-bottom:1px solid #413948;padding-bottom:15px;}
+  #teamos-login-gallery .cosmos .tos-mark {background:#e9d7ff;color:#2d1c40;}
+  #teamos-login-gallery .cosmos-hero {display:grid;grid-template-columns:minmax(0,.89fr) minmax(0,1.11fr);gap:clamp(21px,3.5cqw,45px);align-items:center;flex:1;padding:20px 0 24px;}
+  #teamos-login-gallery .cosmos-intro h1 {font:550 clamp(37px,5.2cqw,59px)/1.02 var(--tos-sans);letter-spacing:-.068em;}
+  #teamos-login-gallery .cosmos-intro h1 em {display:inline-block;margin-top:3px;color:#dcc0fc;font:italic 400 1.07em/1.04 var(--tos-serif);letter-spacing:-.068em;}
+  #teamos-login-gallery .cosmos-intro>p {max-width:385px;margin:18px 0 29px;color:#d1c9da;font-size:15px;line-height:1.54;}
+  #teamos-login-gallery .cosmos-fields {display:flex;align-items:stretch;flex-wrap:wrap;gap:7px;}
+  #teamos-login-gallery .cosmos-fields input {flex:1 1 130px;width:0;}
+  #teamos-login-gallery .cosmos-fields .tos-submit {flex:1 0 auto;width:auto;justify-content:center;font-size:13px;gap:10px;}
+  #teamos-login-gallery .cosmos-demo {min-width:0;}
+  #teamos-login-gallery .cosmos-mapbar {display:flex;align-items:center;justify-content:space-between;gap:8px;color:#d3c5df;font:500 12px/1.35 var(--tos-sans);}
+  #teamos-login-gallery .cosmos-motion, #teamos-login-gallery .cosmos-chips button {display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#211d2c;color:#e8dff3;border:1px solid #53485f;border-radius:20px;margin:0;min-height:34px;padding:6px 12px;font:500 12px/1.25 var(--tos-sans);}
+  #teamos-login-gallery .cosmos-motion {min-height:29px;font-size:11px;padding:4px 10px;}
+  #teamos-login-gallery .cosmos-motion span {color:#dfb5ff;}
+  #teamos-login-gallery .cosmos-motion[aria-pressed="true"], #teamos-login-gallery .cosmos-chips button[aria-pressed="true"] {background:#3c2b48;color:#f5eaff;border-color:#ad8bc7;}
+  #teamos-login-gallery .cosmos-map {height:clamp(264px,30cqw,310px);position:relative;isolation:isolate;
+    background:radial-gradient(ellipse at 51% 48%,#bc83ff1f,transparent 42%),radial-gradient(ellipse at 82% 68%,#b66cba11,transparent 25%);}
+  #teamos-login-gallery .cosmos-map::before {content:"";position:absolute;inset:0;pointer-events:none;opacity:.4;background-image:radial-gradient(circle at 5px 11px,#bea3d7 .65px,transparent 1px),radial-gradient(circle at 10px 5px,#c5aedb .65px,transparent 1px);background-size:49px 37px,72px 61px;mask-image:radial-gradient(ellipse,black,transparent 78%);}
+  #teamos-login-gallery .cosmos-network, #teamos-login-gallery .cosmos-hubs {position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  #teamos-login-gallery .cosmos-hubs {pointer-events:none;}
+  #teamos-login-gallery .cosmos-hub {--node:#d2adfa;pointer-events:auto;position:absolute;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%);width:44px;height:44px;padding:0;margin:0;background:transparent;border:0;border-radius:50%;color:var(--node);}
+  #teamos-login-gallery .cosmos-orb {width:9px;height:9px;border-radius:50%;background:var(--node);box-shadow:0 0 0 4px color-mix(in srgb,var(--node) 12%,transparent),0 0 18px 1px var(--node);}
+  #teamos-login-gallery .cosmos-hub[data-key="project"] .cosmos-orb {width:16px;height:16px;background:#fff2ff;box-shadow:0 0 0 6px #ebc0ff19,0 0 0 13px #e4aeff0c,0 0 24px 5px #e1a9ff98;}
+  #teamos-login-gallery .cosmos-hub[aria-pressed="true"] .cosmos-orb {outline:1px solid var(--node);outline-offset:6px;}
+  #teamos-login-gallery .cosmos-hub-name {position:absolute;top:calc(50% + 9px);left:50%;transform:translateX(-50%);width:max-content;max-width:116px;color:#f7f0ff;text-shadow:0 1px 3px #201728,0 0 7px #191320;background:#22192bdc;border-radius:3px;padding:1px 4px;font:530 12px/1.25 var(--tos-sans);}
+  #teamos-login-gallery .cosmos-hub[data-key="project"] .cosmos-hub-name {top:calc(50% + 15px);color:#f6eaff;font-weight:650;font-size:14px;}
+  #teamos-login-gallery .cosmos-detail {border-left:2px solid #b28bc9;padding:1px 0 1px 11px;min-height:55px;}
+  #teamos-login-gallery .cosmos-detail-path {display:block;font:600 12px/1.3 var(--tos-sans);color:#e4c9f6;}
+  #teamos-login-gallery .cosmos-detail p {color:#cfc6d9;font:400 13px/1.4 var(--tos-sans);margin-top:3px;}
+  #teamos-login-gallery .cosmos-sources {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;padding-top:17px;border-top:1px solid #413948;}
+  #teamos-login-gallery .cosmos-sources h2 {font:550 15px/1.3 var(--tos-sans);letter-spacing:-.025em;}
+  #teamos-login-gallery .cosmos-chips {display:flex;flex-wrap:wrap;gap:6px;}
+  #teamos-login-gallery .cosmos-chips button span {color:#dab8f8;}
+  #teamos-login-gallery .cosmos-chips button:hover, #teamos-login-gallery .cosmos-motion:hover {border-color:#ba9bcf;}
+  @container(max-width:680px) {
+    #teamos-login-gallery .cosmos-hero {display:flex;flex-direction:column;align-items:stretch;gap:24px;}
+    #teamos-login-gallery .cosmos-intro h1 {font-size:clamp(37px,8cqw,49px);}
+    #teamos-login-gallery .cosmos-intro>p {max-width:100%;margin:12px 0 16px;}
+    #teamos-login-gallery .cosmos-map {height:255px;}
+    #teamos-login-gallery .cosmos-sources {align-items:flex-start;}
+  }
+  @container(max-width:380px) {
+    #teamos-login-gallery .cosmos-hub-name {font-size:11px;}
+    #teamos-login-gallery .cosmos-hub[data-key="project"] .cosmos-hub-name {font-size:12px;}
+  }
+  @media(pointer:coarse) {
+    #teamos-login-gallery .cosmos-chips button, #teamos-login-gallery .cosmos-motion {min-height:44px;}
+  }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('teamos-login-gallery');
+  const examples = [
+    ['«Саш, давай ти до п’ятниці зробиш сторінку з цінами».', 'Домовленість', 'Олександр · до п’ятниці'],
+    ['«Вебхуки вже на проді з вівторка».', 'Статус', 'Вебхуки Pipedrive працюють'],
+    ['«Фіксуємо 100 викликів на місяць безкоштовно».', 'Рішення', 'Тариф MCP · 100 викликів на місяць']
+  ];
+  const wave = root.querySelector('.signal-wave');
+  const bars = Array.from({length:69}, () => wave.appendChild(document.createElement('i')));
+  let index = 0;
+  function renderExample() {
+    const [quote, kind, value] = examples[index];
+    root.querySelector('.signal-quote').textContent = quote;
+    root.querySelector('.signal-kind').textContent = kind;
+    root.querySelector('.signal-value').textContent = value;
+    bars.forEach((bar, position) => {
+      const x = position + index * 9;
+      const envelope = Math.pow(Math.abs(Math.sin(x * .113 + .25) * Math.cos(x * .059 - 1)), .75);
+      const detail = .22 + .78 * Math.abs(Math.sin(x * 1.38 + 3));
+      bar.style.height = (6 + 88 * envelope * detail) + '%';
+      bar.style.opacity = position > 55 ? '.36' : '1';
+    });
+  }
+  root.querySelectorAll('[data-jump]').forEach(button => button.addEventListener('click', () => {
+    index = (index + Number(button.dataset.jump) + examples.length) % examples.length;
+    renderExample();
+  }));
+  renderExample();
+  root.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      form.querySelector('output').textContent = 'Це макет. На сайті тут з’явиться підтвердження відправлення.';
+    });
+    form.addEventListener('input', () => { form.querySelector('output').textContent = ''; });
+  });
+  if (globalThis.Tweak) {
+    const signal = root.querySelector('.signal');
+    const state = {accent:'#d6fa75'};
+    const tweak = new Tweak({container:signal,onChange:() => signal.style.setProperty('--acid',state.accent)});
+    tweak.addColorPicker(state,'accent',{label:'Колір сигналу',reference:'--acid'});
+  }
+})();
+</script>
+<script>
+(() => {
+  const root = document.getElementById('teamos-login-gallery');
+  const section = root.querySelector('.cosmos');
+  const map = section.querySelector('.cosmos-map');
+  const svg = section.querySelector('.cosmos-network');
+  const hubLayer = section.querySelector('.cosmos-hubs');
+  const motion = section.querySelector('.cosmos-motion');
+  const sourceButtons = [...section.querySelectorAll('[data-source]')];
+  const detailPath = section.querySelector('.cosmos-detail-path');
+  const detailBody = section.querySelector('.cosmos-detail p');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const hubs = [
+    {key:'project', label:'Запуск тарифу', x:.5, y:.45, color:'#eac3ff', type:'Проєкт', detail:'Тут зібрані ціль запуску, гіпотези про ціну й домовленості команди.'},
+    {key:'hypothesis', label:'Гіпотези', x:.26, y:.19, color:'#bbabff', type:'Гіпотеза', detail:'Команда перевіряє, чи допоможе пробний період залучити перших клієнтів.'},
+    {key:'goal', label:'Цілі', x:.79, y:.21, color:'#95d4d9', type:'Ціль', detail:'Перші 50 команд на новому тарифі. Ціль пов’язана з проєктом запуску.'},
+    {key:'docs', label:'Документи', x:.14, y:.57, color:'#c3a0ee', type:'Документ', detail:'Бриф запуску описує, для кого команда створює тариф і що до нього входить.'},
+    {key:'commit', label:'Домовленості', x:.82, y:.63, color:'#edacd3', type:'Домовленість', detail:'Олена готує сторінку з цінами. Домовленість пов’язана із зустріччю команди.'},
+    {key:'team', label:'Команда', x:.43, y:.82, color:'#efc19c', type:'Команда', detail:'Продуктова команда готує запуск. Тут видно, хто відповідає за кожну домовленість.'}
+  ];
+  const samples = {
+    meeting:{label:'Зустріч про запуск', target:'commit', via:'team', type:'Домовленість', detail:'Олена пообіцяла опублікувати ціни до п’ятниці. TeamOS пов’язав домовленість із проєктом і командою.',x:.68,y:.83,rx:.72,ry:.69},
+    document:{label:'План запуску', target:'goal', via:'docs', type:'Ціль', detail:'У плані є ціль на квартал — залучити 50 команд. Тепер із цілі можна повернутися до документа.',x:.53,y:.09,rx:.66,ry:.24},
+    chat:{label:'Чат із продажами', target:'hypothesis', via:'team', type:'Гіпотеза', detail:'У чаті запропонували тестувати 14 днів без оплати. Гіпотеза зберегла зв’язок із розмовою і запуском.',x:.12,y:.34,rx:.32,ry:.32},
+    guide:{label:'Інструкція запуску', target:'team', via:'docs', type:'Документ', detail:'У чеклісті зазначено, що ціни перевіряє команда продажів. Інструкція тепер пов’язана з командою й брифом.',x:.22,y:.85,rx:.29,ry:.71},
+    pdf:{label:'Дослідження цін.pdf', target:'hypothesis', via:'docs', type:'Гіпотеза', detail:'У PDF клієнти порівнюють умови пробного періоду. Дослідження стало джерелом для гіпотези про тариф.',x:.40,y:.06,rx:.40,ry:.25}
+  };
+  const vertices = new Map();
+  const edges = [];
+  const added = new Set();
+  let selected = 'project';
+  let activeSource = '';
+  let moving = false;
+  let onScreen = true;
+  let frame = 0;
+  let phase = 0;
+  let previous = 0;
+  let growth = null;
+  const lineLayer = createMark('g',svg);
+  const dotLayer = createMark('g',svg);
+  function createMark(tag,parent,attributes = {}) {
+    const item = document.createElementNS('http://www.w3.org/2000/svg',tag);
+    for (const [name,value] of Object.entries(attributes)) item.setAttribute(name,value);
+    parent.appendChild(item);
+    return item;
+  }
+  function addPoint(key,x,y,group,radius,color,opacity) {
+    const circle = radius ? createMark('circle',dotLayer,{r:radius,fill:color,opacity}) : null;
+    const vertex = {key,x,y,group,circle,phase:vertices.size * 1.87,radius};
+    vertices.set(key,vertex);
+    return vertex;
+  }
+  function connect(a,b,group,kind = 'local') {
+    const line = createMark('line',lineLayer,{'stroke-width':kind === 'local' ? .8 : 1.15});
+    edges.push({a:vertices.get(a),b:vertices.get(b),group,kind,line});
+  }
+  function showDetails(title,body) {
+    detailPath.textContent = title;
+    detailBody.textContent = body;
+  }
+  function highlight() {
+    for (const edge of edges) {
+      const isSource = edge.kind === 'source';
+      const bright = isSource ? edge.group === activeSource : edge.group === selected;
+      edge.line.setAttribute('stroke',isSource ? '#f4d5ff' : bright ? '#d5b5e7' : '#b19ac3');
+      edge.line.setAttribute('opacity',isSource ? (bright ? .94 : .39) : bright ? .60 : edge.kind === 'bridge' ? .35 : .20);
+    }
+    for (const hub of hubs) {
+      vertices.get(hub.key).button.setAttribute('aria-pressed',String(selected === hub.key));
+    }
+    for (const button of sourceButtons) {
+      button.setAttribute('aria-pressed',String(button.dataset.source === activeSource));
+      button.querySelector('span').textContent = added.has(button.dataset.source) ? '✓' : '+';
+    }
+  }
+  for (const [i,hub] of hubs.entries()) {
+    const point = addPoint(hub.key,hub.x,hub.y,hub.key,0);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cosmos-hub cursor-interaction';
+    button.dataset.key = hub.key;
+    button.setAttribute('aria-label',hub.type + ' · ' + hub.label);
+    button.style.setProperty('--node',hub.color);
+    const orb = document.createElement('span');
+    orb.className = 'cosmos-orb';
+    const label = document.createElement('span');
+    label.className = 'cosmos-hub-name';
+    label.textContent = hub.label;
+    button.append(orb,label);
+    hubLayer.appendChild(button);
+    point.button = button;
+    button.addEventListener('click',() => {
+      activeSource = '';
+      selected = hub.key;
+      showDetails(hub.type + ' · ' + hub.label,hub.detail);
+      highlight();
+    });
+    const count = i === 0 ? 17 : 12;
+    for (let n = 0; n < count; n++) {
+      const angle = n * 2.4 + i * 1.6;
+      const radius = Math.sqrt((n + 1) / count);
+      const x = hub.x + Math.cos(angle) * radius * (.106 + .022 * Math.sin(n));
+      const y = hub.y + Math.sin(angle) * radius * (.115 + .04 * Math.cos(n * 1.4));
+      const key = hub.key + '-' + n;
+      addPoint(key,x,y,hub.key,n % 4 === 0 ? 2.9 : 1.85,hub.color,.6 + (n % 3) * .13);
+      connect(n < 5 || n % 4 === 0 ? hub.key : hub.key + '-' + (n - 5),key,hub.key);
+      if (n >= 4 && n % 3 === 0) connect(hub.key + '-' + (n - 3),key,hub.key);
+    }
+  }
+  for (const hub of hubs.slice(1)) connect('project',hub.key,hub.key,'bridge');
+  for (const [a,b] of [['docs','hypothesis'],['team','commit'],['goal','hypothesis'],['docs','team'],['commit','goal']]) {
+    connect(a + '-7',b + '-3',a,'bridge');
+  }
+  function draw(now = performance.now()) {
+    const progress = growth ? Math.min(1,(now - growth.start) / 800) : 1;
+    const ease = 1 - Math.pow(1 - progress,3);
+    for (const v of vertices.values()) {
+      const origin = v.source && growth && v.source === growth.key ? vertices.get(growth.target) : v;
+      const x = origin.x + (v.x - origin.x) * ease;
+      const y = origin.y + (v.y - origin.y) * ease;
+      v.left = (100 * x + .95 * (Math.sin(phase + v.phase) - Math.sin(v.phase))) + '%';
+      v.top = (100 * y + 1.65 * (Math.cos(phase * .75 + v.phase) - Math.cos(v.phase))) + '%';
+      if (v.button) {
+        v.button.style.left = v.left;
+        v.button.style.top = v.top;
+      } else {
+        v.circle.setAttribute('cx',v.left);
+        v.circle.setAttribute('cy',v.top);
+      }
+    }
+    for (const {a,b,line} of edges) {
+      line.setAttribute('x1',a.left); line.setAttribute('y1',a.top);
+      line.setAttribute('x2',b.left); line.setAttribute('y2',b.top);
+    }
+    if (progress === 1) growth = null;
+  }
+  function tick(now) {
+    frame = 0;
+    if (!onScreen || document.hidden || (!moving && !growth)) { previous = 0; return; }
+    if (!previous || now - previous >= 32) {
+      if (moving && previous) phase += Math.min(now - previous,64) * .00075;
+      previous = now;
+      draw(now);
+    }
+    if (moving || growth) frame = requestAnimationFrame(tick);
+  }
+  function wake() {
+    if (!frame && onScreen && !document.hidden && (moving || growth)) {
+      previous = 0;
+      frame = requestAnimationFrame(tick);
+    }
+  }
+  function setMotion(value) {
+    moving = value;
+    motion.setAttribute('aria-pressed',String(moving));
+    motion.textContent = moving ? 'Ⅱ  Зупинити рух' : '▷  Оживити граф';
+    wake();
+  }
+  motion.addEventListener('click',() => setMotion(!moving));
+  reduced.addEventListener('change',event => {
+    if (event.matches) { setMotion(false); growth = null; draw(); }
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => { onScreen = entries[0].isIntersecting; wake(); }).observe(map);
+  }
+  document.addEventListener('visibilitychange',wake);
+  for (const button of sourceButtons) button.addEventListener('click',() => {
+    const key = button.dataset.source;
+    const sample = samples[key];
+    if (!added.has(key)) {
+      added.add(key);
+      const record = key + '-result';
+      const sourcePoint = addPoint(key,sample.x,sample.y,key,4.5,'#fff0ff',1);
+      const resultPoint = addPoint(record,sample.rx,sample.ry,key,3.8,'#ebbdff',1);
+      sourcePoint.source = resultPoint.source = key;
+      createMark('title',sourcePoint.circle).textContent = sample.label;
+      createMark('title',resultPoint.circle).textContent = sample.type;
+      connect(key,record,key,'source');
+      connect(record,sample.target,key,'source');
+      connect(key,sample.via,key,'source');
+      growth = reduced.matches ? null : {key,target:sample.target,start:performance.now()};
+    }
+    selected = sample.target;
+    activeSource = key;
+    highlight();
+    showDetails(sample.label + ' → ' + sample.type,sample.detail);
+    draw();
+    wake();
+  });
+  highlight();
+  draw();
+})();
+</script>

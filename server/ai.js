@@ -2,14 +2,30 @@
 // Nothing is written to the team space here — proposals wait for a person to approve them.
 import Anthropic from '@anthropic-ai/sdk';
 
-export const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5-5';
-export const aiConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+const BEDROCK_REGION = process.env.AWS_REGION || 'eu-central-1';
+const BEDROCK_TOKEN = process.env.AWS_BEARER_TOKEN_BEDROCK;
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
+export const AI_PROVIDER = process.env.AI_PROVIDER || (BEDROCK_TOKEN ? 'bedrock' : 'anthropic');
+export const MODEL = {
+  bedrock: process.env.BEDROCK_MODEL_ID || 'eu.amazon.nova-2-lite-v1:0',
+  openai: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+}[AI_PROVIDER] || process.env.ANTHROPIC_MODEL || 'claude-opus-5-5';
+const IS_NOVA = AI_PROVIDER === 'bedrock' && /(?:^|[./])amazon\.nova-2-lite-v1:0$/.test(MODEL);
+const MAX_TOKENS = 32000;
+export function aiConfigured() {
+  if (AI_PROVIDER === 'bedrock') return Boolean(BEDROCK_TOKEN);
+  if (AI_PROVIDER === 'openai') return Boolean(OPENAI_KEY);
+  return AI_PROVIDER === 'anthropic' && Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+}
 
 let client;
 const getClient = () => (client ||= new Anthropic());
 
 const S = (t = 'string') => ({ type: t });
-const N = (t = 'string') => ({ type: [t, 'null'] });
+// Bedrock limits the number of union-typed properties per schema.
+const N = () => AI_PROVIDER === 'bedrock'
+  ? { type: 'string', description: 'Use an empty string if the value is absent.' }
+  : { type: ['string', 'null'] };
 const CONF = { type: 'string', enum: ['high', 'medium'] };
 const obj = (properties) => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
 const arr = (items) => ({ type: 'array', items });
@@ -45,15 +61,15 @@ const SYSTEM = `You are the analyzer inside TeamOS, a team's "second brain" that
 You read one source (a meeting transcript, an email, a chat excerpt or a note) together with the team context, and you propose what should be saved. A person reviews every proposal before anything is stored, so propose what is genuinely there and nothing else.
 
 What to extract:
-- commitments: someone promised or was asked to do something. Owner = who must do it, requester = who asked for it / to whom it was promised. Either side may be an external person (client, partner) - then fill the *_external_name field and leave the member id null. If a person says "I will…" with no one asking, requester = owner. Normalize deadlines to YYYY-MM-DD relative to the source date ("до п'ятниці" = the next Friday after the source date). Link a project or hypothesis only when the source clearly points to it. If a commitment repeats an existing open task, set duplicate_of_task_id.
+- commitments: someone promised or was asked to do something. Owner = who must do it, requester = who asked for it / to whom it was promised. Either side may be an external person (client, partner) - then fill the *_external_name field and use the schema's missing-value format for the member id. If a person says "I will…" with no one asking, requester = owner. Normalize deadlines to YYYY-MM-DD relative to the source date ("до п'ятниці" = the next Friday after the source date). Link a project or hypothesis only when the source clearly points to it. If a commitment repeats an existing open task, set duplicate_of_task_id.
 - status_updates: only for tasks listed in the context as open, when the source clearly says their status changed (done, started, blocked/waiting, cancelled).
-- knowledge: decisions, agreements, facts, processes and important context. Use scope "private" for information about external parties or anything personal, "team" otherwise. If it contradicts an existing decision in the context, set conflicts_with_id.
+- knowledge: look for reusable knowledge independently of commitments. Extract a separate, self-contained chunk for each durable decision, agreement, fact, process or piece of context, including explicitly demonstrated product capabilities, workflow rules and restrictions. Treat proposed plans as proposals. Each text should be one short paragraph that makes sense on its own: name the relevant people, project or subject when the source identifies them. Keep the reasoning in why. Split unrelated points and avoid duplicate chunks, including paraphrases of existing knowledge. Use scope "private" for information about external parties or anything personal, "team" otherwise. If it contradicts an existing decision in the context, set conflicts_with_id.
 - new_projects / new_hypotheses: only when the source explicitly proposes them. Hypotheses follow "If <action>, then <result>, because <assumption>".
 - participants: map names used in the source (including diminutives like "Саш", "Вова") to member ids when you can.
 - summary: 3–5 short bullet points.
 
 Rules:
-- Every item needs evidence_quote: a short verbatim fragment copied exactly from the source (one or two sentences, no paraphrase), plus its timestamp if the source has one. Leave out anything you cannot support with a quote.
+- Every item needs evidence_quote: copy a short, contiguous fragment of the original source, ideally 6–20 consecutive words from a single speaker turn, plus its actual timestamp if the source has one. Keep the original wording and language, including code-switching and transcription errors. Do not translate, paraphrase, insert ellipses or stitch together separate passages. Leave out anything you cannot support with a quote.
 - confidence "high" when the source is explicit, "medium" when you are inferring.
 - Use only ids that appear in the team context. Never invent ids.
 - Write titles, texts and the summary in the language of the source (Ukrainian sources produce Ukrainian text). Keep task titles short and start them with a verb.`;
@@ -61,22 +77,139 @@ Rules:
 export async function analyze({ text, title, type, date, uploader, context }) {
   const ctx = JSON.stringify(context, null, 1);
   const user = `Source date: ${date}\nSource type: ${type}\nSource title: ${title}\nUploaded by member: ${uploader.id} (${uploader.name})\n\n<team_context>\n${ctx}\n</team_context>\n\n<source>\n${text}\n</source>`;
+  const provider = { openai: invokeOpenAI, bedrock: IS_NOVA ? invokeNova : analyzeWithClaude };
+  const result = await (provider[AI_PROVIDER] || analyzeWithClaude)(user);
+  if (matchesSchema(result, SCHEMA)) return result;
+  throw new Error('Модель повернула результат, який не відповідає формату аналізу.');
+}
 
-  const stream = getClient().beta.messages.stream({
-    model: MODEL,
-    max_tokens: 32000,
+async function analyzeWithClaude(user) {
+  const request = {
+    max_tokens: MAX_TOKENS,
     system: SYSTEM,
+    output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
+    messages: [{ role: 'user', content: user }],
+  };
+  const message = AI_PROVIDER === 'bedrock'
+    ? await requestBedrock('invoke', { anthropic_version: 'bedrock-2023-05-31', ...request })
+    : await invokeAnthropic(request);
+  checkStopReason(message.stop_reason);
+  try {
+    const out = message.content?.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    return JSON.parse(out);
+  } catch {
+    throw new Error('Модель повернула некоректний JSON.');
+  }
+}
+
+async function invokeNova(user) {
+  const name = 'submit_analysis';
+  const response = await requestBedrock('converse', {
+    system: [{ text: `${SYSTEM}\nSend the full analysis using the submit_analysis tool.` }],
+    messages: [{ role: 'user', content: [{ text: user }] }],
+    inferenceConfig: { maxTokens: MAX_TOKENS, temperature: 0.1 },
+    toolConfig: {
+      tools: [{ toolSpec: { name, description: 'Submit the transcript analysis for human review.', inputSchema: { json: SCHEMA } } }],
+      toolChoice: { tool: { name } },
+    },
+  });
+  checkStopReason(response.stopReason);
+  const tool = response.output?.message?.content?.find((block) => block.toolUse?.name === name);
+  return tool?.toolUse.input;
+}
+
+async function invokeOpenAI(user) {
+  let response;
+  try {
+    response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
+      redirect: 'error',
+      signal: AbortSignal.timeout(180_000),
+      body: JSON.stringify({
+        model: MODEL,
+        instructions: SYSTEM,
+        input: user,
+        max_output_tokens: 16000,
+        store: false,
+        text: { format: { type: 'json_schema', name: 'teamos_analysis', strict: true, schema: SCHEMA } },
+      }),
+    });
+  } catch {
+    throw new Error('OpenAI недоступний або не відповів вчасно. Спробуй пізніше.');
+  }
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (data?.error?.code === 'insufficient_quota') throw new Error('OpenAI: у проєкті вичерпано квоту або немає доступного балансу.');
+    if (response.status === 429) throw new Error('OpenAI: перевищено ліміт запитів. Спробуй пізніше.');
+    if ([401, 403, 404].includes(response.status)) throw new Error('OpenAI: перевір ключ і доступ до моделі.');
+    throw new Error(`OpenAI: помилка запиту (${response.status}).`);
+  }
+  const content = (data?.output || []).filter((item) => item.type === 'message').flatMap((item) => item.content || []);
+  if (content.some((part) => part.type === 'refusal') || data?.incomplete_details?.reason === 'content_filter') {
+    throw new Error('Модель відмовилася аналізувати це джерело.');
+  }
+  if (data?.incomplete_details?.reason === 'max_output_tokens') {
+    throw new Error('Аналіз обірвався. Розділи джерело на коротші частини.');
+  }
+  if (data?.status !== 'completed') throw new Error('OpenAI не завершив аналіз. Спробуй ще раз.');
+  try {
+    return JSON.parse(content.filter((part) => part.type === 'output_text').map((part) => part.text).join(''));
+  } catch {
+    throw new Error('Модель повернула некоректний JSON.');
+  }
+}
+
+function checkStopReason(reason) {
+  if (['refusal', 'guardrail_intervened', 'content_filtered'].includes(reason)) throw new Error('Модель відмовилася аналізувати це джерело.');
+  if (reason === 'max_tokens') throw new Error('Аналіз обірвався. Розділи джерело на коротші частини.');
+}
+
+function matchesSchema(value, schema) {
+  if (schema.enum) return schema.enum.includes(value);
+  if (Array.isArray(schema.type)) return schema.type.some((type) => matchesSchema(value, { type }));
+  if (schema.type === 'array') return Array.isArray(value) && value.every((item) => matchesSchema(item, schema.items));
+  if (schema.type === 'object') {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      && Object.keys(value).length === schema.required.length
+      && Object.entries(schema.properties).every(([key, property]) => Object.hasOwn(value, key) && matchesSchema(value[key], property));
+  }
+  return schema.type === 'null' ? value === null : typeof value === schema.type;
+}
+
+async function invokeAnthropic(request) {
+  const stream = getClient().beta.messages.stream({
+    ...request,
+    model: MODEL,
     // If the model declines a request, the API retries it on a fallback model chosen per refusal category.
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
-    output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
-    messages: [{ role: 'user', content: user }],
   });
-  const msg = await stream.finalMessage();
-  if (msg.stop_reason === 'refusal') throw new Error('The model declined to analyze this source.');
-  if (msg.stop_reason === 'max_tokens') throw new Error('The analysis was cut off (source too long). Split the source into parts.');
-  const out = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  return JSON.parse(out);
+  return stream.finalMessage();
+}
+
+async function requestBedrock(operation, request) {
+  if (!/^[a-z]{2}(-[a-z]+)+-\d+$/.test(BEDROCK_REGION)) throw new Error('Некоректний AWS_REGION для Bedrock.');
+  const url = `https://bedrock-runtime.${BEDROCK_REGION}.amazonaws.com/model/${encodeURIComponent(MODEL)}/${operation}`;
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${BEDROCK_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(request),
+      redirect: 'error',
+      signal: AbortSignal.timeout(180_000),
+    });
+  } catch {
+    throw new Error('Bedrock недоступний або не відповів вчасно. Спробуй пізніше.');
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    if (response.status === 429) throw new Error('Bedrock: перевищено ліміт запитів. Спробуй пізніше.');
+    if ([401, 403].includes(response.status)) throw new Error('Bedrock: перевір ключ і доступ до моделі.');
+    throw new Error(`Bedrock: помилка запиту (${response.status}).`);
+  }
+  return response.json();
 }
 
 export function errorMessage(e) {

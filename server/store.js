@@ -27,8 +27,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import * as s3 from './s3-records.js';
 
 export const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
+export const S3_RECORDS = s3.enabled;
 
 /* ---------------- low-level helpers ---------------- */
 
@@ -164,11 +166,11 @@ export function taskHolder(task) {
 const sharedTaskDir = (tid) => path.join(P.team(tid), 'tasks');
 const privateTaskDir = (uid, tid) => path.join(P.userTeam(uid, tid), 'tasks');
 
-export function listSharedTasks(tid) {
+function localSharedTasks(tid) {
   const d = sharedTaskDir(tid);
   return listFiles(d, '.json').map((f) => readJson(path.join(d, f))).filter(Boolean);
 }
-export function listPrivateTasks(uid, tid) {
+function localPrivateTasks(uid, tid) {
   const d = privateTaskDir(uid, tid);
   return listFiles(d, '.json').map((f) => readJson(path.join(d, f))).filter(Boolean);
 }
@@ -176,14 +178,27 @@ function taskFile(tid, task) {
   const h = taskHolder(task);
   return path.join(h.shared ? sharedTaskDir(tid) : privateTaskDir(h.userId, tid), `${assertId(task.id)}.json`);
 }
-export function findTask(tid, id, uid) {
+function taskInScope(t, uid) {
+  const h = taskHolder(t);
+  return h.shared || h.userId === uid;
+}
+export async function listTasksFor(tid, uid) {
+  if (S3_RECORDS) return (await s3.list(assertId(tid), 'tasks', '.json', JSON.parse)).filter((t) => taskInScope(t, uid));
+  return [...localSharedTasks(tid), ...localPrivateTasks(uid, tid)];
+}
+export async function findTask(tid, id, uid) {
   assertId(id);
+  if (S3_RECORDS) {
+    const t = await s3.get(assertId(tid), 'tasks', `${id}.json`, JSON.parse);
+    return t && taskInScope(t, uid) ? t : null;
+  }
   const shared = readJson(path.join(sharedTaskDir(tid), `${id}.json`));
   if (shared) return shared;
   return uid ? readJson(path.join(privateTaskDir(uid, tid), `${id}.json`)) : null;
 }
-export function saveTask(tid, task, previous) {
+export async function saveTask(tid, task, previous) {
   task.updatedAt = now();
+  if (S3_RECORDS) return s3.put(assertId(tid), 'tasks', `${assertId(task.id)}.json`, task, JSON.stringify(task, null, 2) + '\n', 'application/json');
   const file = taskFile(tid, task);
   if (previous) {
     const old = taskFile(tid, previous);
@@ -193,7 +208,10 @@ export function saveTask(tid, task, previous) {
   touchIndexesFor(tid, task);
   return task;
 }
-export function removeTask(tid, task) { rm(taskFile(tid, task)); touchIndexesFor(tid, task); }
+export async function removeTask(tid, task) {
+  if (S3_RECORDS) return s3.remove(assertId(tid), 'tasks', `${assertId(task.id)}.json`, task);
+  rm(taskFile(tid, task)); touchIndexesFor(tid, task);
+}
 function touchIndexesFor(tid, task) {
   const h = taskHolder(task);
   if (h.shared) rebuildTeamIndex(tid); else rebuildUserTeamIndex(h.userId, tid);
@@ -217,23 +235,67 @@ function knFromMd(text) {
   return { ...meta, text: title ? title[1].trim() : body.split('\n')[0] };
 }
 function listKnIn(dir) { return listFiles(dir, '.md').map((f) => knFromMd(readText(path.join(dir, f)))).filter((k) => k.id); }
-export function listSharedKnowledge(tid) { return listKnIn(sharedKnDir(tid)); }
-export function listPrivateKnowledge(uid, tid) { return listKnIn(privateKnDir(uid, tid)); }
+function localSharedKnowledge(tid) { return listKnIn(sharedKnDir(tid)); }
+function localPrivateKnowledge(uid, tid) { return listKnIn(privateKnDir(uid, tid)); }
 function knFile(tid, k) { return path.join(k.scope === 'private' ? privateKnDir(k.author, tid) : sharedKnDir(tid), `${assertId(k.id)}.md`); }
-export function findKnowledge(tid, id, uid) {
+const knowledgeInScope = (k, uid) => k.scope === 'team' || k.author === uid;
+export async function listKnowledgeFor(tid, uid) {
+  if (S3_RECORDS) return (await s3.list(assertId(tid), 'knowledge', '.md', knFromMd)).filter((k) => knowledgeInScope(k, uid));
+  return [...localSharedKnowledge(tid), ...localPrivateKnowledge(uid, tid)];
+}
+export async function findKnowledge(tid, id, uid) {
   assertId(id);
+  if (S3_RECORDS) {
+    const k = await s3.get(assertId(tid), 'knowledge', `${id}.md`, knFromMd);
+    return k && knowledgeInScope(k, uid) ? k : null;
+  }
   const t = readText(path.join(sharedKnDir(tid), `${id}.md`)) ?? (uid ? readText(path.join(privateKnDir(uid, tid), `${id}.md`)) : null);
   return t ? knFromMd(t) : null;
 }
-export function saveKnowledge(tid, k, previous) {
+export async function saveKnowledge(tid, k, previous) {
   k.updatedAt = now();
+  if (S3_RECORDS) return s3.put(assertId(tid), 'knowledge', `${assertId(k.id)}.md`, k, knToMd(k), 'text/markdown; charset=utf-8');
   const file = knFile(tid, k);
   if (previous && knFile(tid, previous) !== file) { rm(knFile(tid, previous)); }
   writeAtomic(file, knToMd(k));
   rebuildTeamIndex(tid); rebuildUserTeamIndex(k.author, tid);
   return k;
 }
-export function removeKnowledge(tid, k) { rm(knFile(tid, k)); rebuildTeamIndex(tid); rebuildUserTeamIndex(k.author, tid); }
+export async function removeKnowledge(tid, k) {
+  if (S3_RECORDS) return s3.remove(assertId(tid), 'knowledge', `${assertId(k.id)}.md`, k);
+  rm(knFile(tid, k)); rebuildTeamIndex(tid); rebuildUserTeamIndex(k.author, tid);
+}
+
+export async function migrateRecordsToS3() {
+  if (!S3_RECORDS) throw new Error('S3_BUCKET must be set to migrate records.');
+  let copied = 0;
+  async function migrate(tid, dir, name, extension, contentType) {
+    for (const file of listFiles(dir, extension)) {
+      assertId(file.slice(0, -extension.length));
+      if (file === 'index.md') continue;
+      const body = fs.readFileSync(path.join(dir, file), 'utf8');
+      try {
+        await s3.put(tid, name, file, {}, body, contentType);
+        copied++;
+      } catch (error) {
+        if (error.status !== 409) throw error;
+        const existing = await s3.get(tid, name, file, (body) => ({ body }));
+        if (existing?.body !== body) throw new Error('A destination record already exists with different data. Migration stopped.');
+      }
+    }
+  }
+  for (const team of listTeams()) {
+    const migrateTeam = async (taskDir, knowledgeDir) => {
+      await migrate(team.id, taskDir, 'tasks', '.json', 'application/json');
+      await migrate(team.id, knowledgeDir, 'knowledge', '.md', 'text/markdown; charset=utf-8');
+    };
+    await migrateTeam(sharedTaskDir(team.id), sharedKnDir(team.id));
+    for (const user of listDirs(path.join(DATA_DIR, 'users'))) {
+      await migrateTeam(privateTaskDir(user, team.id), privateKnDir(user, team.id));
+    }
+  }
+  return copied;
+}
 
 /* ---------------- inbox (user folder, per team) ---------------- */
 
@@ -286,7 +348,7 @@ function knLine(file, dir, k) {
 export function rebuildTeamIndex(tid) {
   const team = getTeam(tid); if (!team) return;
   const dir = P.team(tid), file = path.join(dir, 'index.md'), users = userMap();
-  const prj = projects.list(tid), hyp = hypotheses.list(tid), tasks = listSharedTasks(tid), kn = listSharedKnowledge(tid);
+  const prj = projects.list(tid), hyp = hypotheses.list(tid);
   const L = [];
   L.push(`# ${team.name}`, '', `> Точка входу в спільний простір команди. Згенеровано автоматично ${now()} — не редагуйте вручну.`, '');
   L.push(`- [team.json](team.json) — налаштування, учасники, ролі`, `- [vision.md](vision.md) — Team vision`, '');
@@ -299,30 +361,49 @@ export function rebuildTeamIndex(tid) {
   }
   const orphan = hyp.filter((h) => !prj.some((p) => p.id === h.project));
   if (orphan.length) { L.push('', '### Гіпотези без проєкту', ''); for (const h of orphan) L.push(`- [${mdEsc(h.statement || h.if)}](hypotheses/${h.id}.json) — ${HSTATUS[h.status]}`); }
-  L.push('', `## Спільні задачі (${tasks.length})`, '');
-  for (const s of Object.keys(STATUS)) {
-    const ts = tasks.filter((t) => t.status === s); if (!ts.length) continue;
-    L.push(`### ${STATUS[s]}`, ''); for (const t of ts) L.push(taskLine(file, path.join(dir, 'tasks'), t, users)); L.push('');
+  if (S3_RECORDS) {
+    L.push('', 'Спільні задачі та знання доступні у просторі команди в TeamOS.');
+  } else {
+    const tasks = localSharedTasks(tid), kn = localSharedKnowledge(tid);
+    L.push('', `## Спільні задачі (${tasks.length})`, '');
+    for (const s of Object.keys(STATUS)) {
+      const ts = tasks.filter((t) => t.status === s); if (!ts.length) continue;
+      L.push(`### ${STATUS[s]}`, ''); for (const t of ts) L.push(taskLine(file, path.join(dir, 'tasks'), t, users)); L.push('');
+    }
+    L.push(`## Спільна база знань (${kn.length})`, '');
+    for (const k of kn.sort((a, b) => (a.date < b.date ? 1 : -1))) L.push(knLine(file, path.join(dir, 'knowledge'), k));
   }
-  L.push(`## Спільна база знань (${kn.length})`, '');
-  for (const k of kn.sort((a, b) => (a.date < b.date ? 1 : -1))) L.push(knLine(file, path.join(dir, 'knowledge'), k));
   writeAtomic(file, L.join('\n') + '\n');
 }
 
 export function rebuildUserTeamIndex(uid, tid) {
   const team = getTeam(tid); if (!team || !getUser(uid)) return;
   const dir = P.userTeam(uid, tid), file = path.join(dir, 'index.md'), users = userMap();
-  const inbox = listInbox(uid, tid), tasks = listPrivateTasks(uid, tid), kn = listPrivateKnowledge(uid, tid);
+  const inbox = listInbox(uid, tid);
   const L = [];
   L.push(`# ${users[uid]?.name || uid} · ${team.name}`, '', `> Особиста папка в команді. Бачить лише власник. Згенеровано автоматично ${now()}.`, '');
   L.push(`- Спільний простір команди: [${mdEsc(team.name)}](${rel(file, path.join(P.team(tid), 'index.md'))})`, '');
   L.push(`## Інбокс (${inbox.length})`, '');
   for (const i of inbox) L.push(`- [${mdEsc(i.title)}](inbox/${i.id}.json) — ${i.status} · ${i.date || ''}${fs.existsSync(path.join(dir, 'inbox', i.id + '.md')) ? ` · [джерело](inbox/${i.id}.md)` : ''}`);
-  L.push('', `## Приватні задачі (${tasks.length})`, '');
-  for (const t of tasks) L.push(taskLine(file, path.join(dir, 'tasks'), t, users));
-  L.push('', `## Приватні знання (${kn.length})`, '');
-  for (const k of kn) L.push(knLine(file, path.join(dir, 'knowledge'), k));
+  if (S3_RECORDS) {
+    L.push('', 'Приватні задачі та знання доступні у твоєму просторі в TeamOS.');
+  } else {
+    const tasks = localPrivateTasks(uid, tid), kn = localPrivateKnowledge(uid, tid);
+    L.push('', `## Приватні задачі (${tasks.length})`, '');
+    for (const t of tasks) L.push(taskLine(file, path.join(dir, 'tasks'), t, users));
+    L.push('', `## Приватні знання (${kn.length})`, '');
+    for (const k of kn) L.push(knLine(file, path.join(dir, 'knowledge'), k));
+  }
   writeAtomic(file, L.join('\n') + '\n');
+}
+
+export function rebuildRecordIndexes() {
+  for (const team of listTeams()) {
+    rebuildTeamIndex(team.id);
+    for (const user of listDirs(path.join(DATA_DIR, 'users'))) {
+      if (fs.existsSync(P.userTeam(user, team.id))) rebuildUserTeamIndex(user, team.id);
+    }
+  }
 }
 
 export function rebuildUserIndex(uid) {
