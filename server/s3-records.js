@@ -36,6 +36,13 @@ export async function raw(key) {
   return { key, etag: response.ETag, body: await response.Body.transformToString(), metadata: response.Metadata || {} };
 }
 
+// Binary objects (PDF files) are read as bytes, never decoded as text.
+export async function bytes(key) {
+  const response = await readObject(GetObjectCommand, key);
+  if (!response) return null;
+  return { key, etag: response.ETag, body: Buffer.from(await response.Body.transformToByteArray()), metadata: response.Metadata || {} };
+}
+
 export async function get(key, decode) {
   const object = await raw(key);
   if (!object || object.metadata.to) return null;
