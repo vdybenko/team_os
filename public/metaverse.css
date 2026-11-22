@@ -70,6 +70,11 @@ team-knowledge-graph { display: block; min-width: 0; }
   .kg-main-label { font-size: 25px; }
   .kg-record-label { font-size: 22px; }
   .kg-caption { min-height: 78px; }
+  .orbit input { font-size: 16px; }
+  .orbit-hero { padding-top: 26px; }
+  .orbit-fields button { flex: 1 1 100%; }
+  .orbit-local > button { width: 100%; }
+  .orbit-header { padding-top: max(18px, env(safe-area-inset-top)); }
 }
 @media (pointer: coarse) { .kg-motion, .kg-queue button { min-height: 44px; } }
 .orbit-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }

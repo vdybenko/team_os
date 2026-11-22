@@ -18,6 +18,8 @@ window.TEAMOS_I18N = {
     'you': 'ти',
     'Create a team': 'Створити команду',
     'Search': 'Пошук',
+    'Menu': 'Меню',
+    'Navigation': 'Навігація',
     'Dashboard': 'Дашборд',
     'Inbox': 'Інбокс',
     'Tasks': 'Задачі',
