@@ -209,7 +209,6 @@ function nav() {
   ${personal() ? '' : `<button class="nv ${on('members')}" data-a="go" data-h="members">${ico('users')}<span class="lbl">${$t('Members')}</span></button>`}
   <button class="nv ${on('profile')}" data-a="go" data-h="profile">${ico('gear')}<span class="lbl">${$t('Profile')}</span></button>
   <button class="nv ${on('roadmap')}" data-a="go" data-h="roadmap">${ico('route')}<span class="lbl">Roadmap</span></button>
-  <div class="langrow lbl">${langSwitch()}</div>
   <div class="me">${av(uid(), 28)}<span class="lbl"><b>${esc(S.me.name)}</b><br><span class="hint">${ROLE[role()]}</span></span><button class="btn ghost sm lbl" style="margin-left:auto" data-a="logout" title="${$t('Sign out')}">${ico('out', 14)}</button></div>`;
 }
 function top() {

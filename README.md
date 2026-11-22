@@ -11,7 +11,7 @@ A team's second brain that fills itself from meetings. Specification: [docs/01-v
 - **Projects** (status: active / paused / done / archived, vision, goals) and **hypotheses** ("If… then… because…", status: draft / testing / validated / invalidated, metric, learnings, verdict).
 - **Knowledge** (decisions, agreements, facts, processes, context; private or team-wide; a new decision can replace an old one) and **Team vision**.
 - **Assistant**: ask questions about your workspace's tasks, knowledge, goals and hypotheses, with links to the records it used.
-- **Interface in English and Ukrainian**: switch the language in the sidebar or on the sign-in screen.
+- **Interface in English and Ukrainian**: switch the language in Profile or on the sign-in screen.
 
 Not done yet (see §10 of the specification): calendar, Gmail/Drive, Meeting mode, daily digest, sending invite emails.
 
