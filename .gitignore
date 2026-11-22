@@ -3,4 +3,5 @@ data/
 /storage/
 /.storage-migration-*/
 .env
+/agent.md
 .DS_Store
