@@ -18,6 +18,10 @@
     link.hash = location.hash;
   }
 
+  fetch('/.well-known/oauth-authorization-server', { credentials: 'omit' })
+    .then((response) => { if (response.status === 404) document.getElementById('mcp-availability').hidden = false; })
+    .catch(() => {});
+
   const views = document.querySelector('.views');
   const buttons = views.querySelectorAll('button');
   views.hidden = false;
