@@ -140,11 +140,43 @@ const STATUS_SCHEMA = obj({ ...ASSISTANT_SCHEMA.properties,
 const ROW_ANSWER_SCHEMA = obj({ ...ASSISTANT_SCHEMA.properties, qualification: S(), assignment_rows: arr(obj({
   key: S(), line: S('integer'), activity: S(), assigned_to: S(),
 })) });
+const PLAN_SCHEMA = obj({ ...ASSISTANT_SCHEMA.properties, copy_full_list: { type: 'boolean',
+  description: 'True only if the user wants the complete listed plan, the source is already in the requested language, and one numbered list answers the whole question.' } });
+const TARGET_SCHEMA = obj({ ...ASSISTANT_SCHEMA.properties, benchmarks: arr(obj({
+  phase_or_measure: S(), quantity_with_unit: S(), condition: S(),
+})) });
 
 function hasOwnerTable(record) {
   return record.data.text?.split('\n').some((line) => line.length < 120 &&
     /^(?:функція|завдання|діяльність|напрям|function|task|activity|workstream)\s/i.test(line) &&
     /відповідальн|виконавець|responsib|owner|assignee|lead/i.test(line));
+}
+
+function listedSteps(text) {
+  const lines = text.trim().split(/\n+/);
+  if (!/^(наступні кроки|next steps)$/i.test(lines[0])) return null;
+  const steps = [];
+  for (const line of lines.slice(1)) {
+    const heading = /^(\d{1,2}[.)]|\d{2})\s+(.+)$/.exec(line);
+    if (heading) {
+      if (parseInt(heading[1], 10) !== steps.length + 1) return null;
+      steps.push([heading[2]]);
+    } else if (steps.length) steps.at(-1).push(line.trim());
+    else return null;
+  }
+  return steps.length ? steps.map(([title, ...body], i) => (i + 1) + '. **' + title + '** ' + body.join(' ')).join('\n\n') : null;
+}
+
+function printedCoverDate(records) {
+  const covers = records.filter((r) => r.data.page === 1 && r.key.endsWith(':0'));
+  if (covers.length !== 1) return null;
+  // Only a date standing alone or clearly labelled on the cover (never a due date).
+  const datePattern = /^(?:[^\n]*?[·|]\s*|(?:дата(?: документа)?|(?:document )?date)\s*:\s*)?(\d{4}-\d{2}-\d{2}|\d{1,2}\s+[\p{L}.]{3,12}\s+\d{4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4})(?:\s+року)?\.?$/iu;
+  for (const line of covers[0].data.text.split('\n').slice(0, 5)) {
+    const match = datePattern.exec(line.trim());
+    if (match) return { key: covers[0].key, date: match[1] };
+  }
+  return null;
 }
 
 export async function answerWorkspace(input) {
@@ -178,7 +210,8 @@ export async function answerWorkspace(input) {
   const lines = new Map(records.filter(isDocument).map((r) => [r.key, r.data.text.split(/\n+/)]));
   const evidence = records.map((r) => lines.has(r.key) ? { key: r.key, title: r.title, page: r.data.page,
     lines: lines.get(r.key).map((line, i) => (i + 1) + ' | ' + line).join('\n') } : r);
-  const review = { ...request, model: MODEL, schema: rowsRequested ? ROW_ANSWER_SCHEMA : draft.focus === 'current_status' ? STATUS_SCHEMA : ASSISTANT_SCHEMA,
+  const schemas = { responsibilities: ROW_ANSWER_SCHEMA, current_status: STATUS_SCHEMA, next_steps: PLAN_SCHEMA, targets: TARGET_SCHEMA };
+  const review = { ...request, model: MODEL, schema: schemas[draft.focus] || ASSISTANT_SCHEMA,
     instructions: ASSISTANT_INSTRUCTIONS + '\n' + REVIEW_RULES[draft.focus] };
   const result = await structuredAnswer(JSON.stringify({ question: input.question, history: input.history.map((h) => h.question),
     totals: input.totals, partial: input.partial, evidence }), review);
@@ -200,10 +233,24 @@ export async function answerWorkspace(input) {
     rows.add('- ' + label + ' — ' + row.slice(label.length).trim());
   }
   if (!sources.size) throw new Error('The assistant could not verify its document citations. Try again.');
+  if (result.copy_full_list && primaryPages.length === 1 && records.length === 1) {
+    const plan = listedSteps(primaryPages[0].data.text);
+    if (plan) return { answer: plan, sources: [primaryPages[0].key] };
+  }
+  if (result.benchmarks?.length) {
+    const bullets = result.benchmarks.map(({ phase_or_measure, quantity_with_unit, condition }) => {
+      const value = quantity_with_unit.trim().replace(/\.$/, '');
+      const when = condition.trim().replace(/\.$/, '');
+      return '- ' + phase_or_measure.trim() + ' — ' + value + (when ? ' (' + when + ')' : '');
+    });
+    return { answer: bullets.join('\n'), sources: [...sources] };
+  }
   if (draft.focus === 'current_status') {
     const printed = result.printed_date.trim().replace(/\s+(?:року|р\.)$/i, '');
-    const date = printed && lines.get(result.date_key)?.some((line) => line.toLowerCase().includes(printed.toLowerCase())) ? (result.language === 'uk' ? printed.toLowerCase() : printed) : '';
-    if (date) sources.add(result.date_key);
+    const located = printed && lines.get(result.date_key)?.some((line) => line.toLowerCase().includes(printed.toLowerCase()))
+      ? { date: printed, key: result.date_key } : citedDocuments.size === 1 ? printedCoverDate(records) : null;
+    const date = result.language === 'uk' ? located?.date.toLowerCase() : located?.date;
+    if (located) sources.add(located.key);
     if (result.status_basis === 'proposal_only' && ['uk', 'en'].includes(result.language)) {
       const intro = date ? tr(result.language, 'The document dated {date} describes a proposal under discussion.', { date })
         : tr(result.language, 'The document describes a proposal under discussion.');

@@ -106,3 +106,49 @@ test('responsibility rows preserve leads, contributors and joint owners verbatim
   assert.equal(reply.answer, 'Proposed roles\n\n- Outreach — Jo, supported by Ari\n- Planning — Jo and Ari');
   assert.deepEqual(reply.sources.map((s) => s.page), [1]);
 });
+
+test('a dated proposal supplies a cutoff, not evidence of a later launch', async (t) => {
+  const document = { id: 'club', kind: 'source', pdf: true, date: '2027-01-10',
+    text: '[p. 1]\nProposal · 5 November 2026\n\n[p. 3]\nDiscuss the venue and budget.' };
+  model(t, ({ input }) => {
+    const { records, evidence } = JSON.parse(input);
+    if (records) return { focus: 'current_status', sources: [records.find((r) => r.data.page === 3).key], answer: '' };
+    return { status_basis: 'proposal_only', language: 'en', date_key: '', printed_date: '', open_items: ['venue and budget'],
+      answer: 'The club has already launched.', sources: [evidence.find((r) => r.page === 3).key] };
+  });
+  const reply = await askAssistant({ question: 'What is the current status?', turns: [], tasks: [], knowledge: [], projects: [], hypotheses: [], documents: [document] });
+  assert.match(reply.answer, /5 November 2026/);
+  assert.match(reply.answer, /current status is unknown/);
+  assert.doesNotMatch(reply.answer, /launched|2027/);
+  assert.deepEqual(reply.sources.map((s) => s.page), [3, 1]);
+});
+
+test('the complete numbered plan preserves original actions, owners, numbers and timing', async (t) => {
+  const document = { id: 'plan', kind: 'inbox', pdf: true,
+    text: '[p. 3]\nNext steps\n01 Prepare a draft\nLee and Kai · this week\n02 Review\nThree to five readers · after the pilot' };
+  model(t, ({ input }) => {
+    const { records, evidence } = JSON.parse(input);
+    if (records) return { focus: 'next_steps', sources: [records[0].key], answer: '' };
+    return { copy_full_list: true, answer: 'Sign it tomorrow.', sources: [evidence[0].key] };
+  });
+  const reply = await askAssistant({ question: 'What are the next steps?', turns: [], tasks: [], knowledge: [], projects: [], hypotheses: [], documents: [document] });
+  assert.equal(reply.answer, '1. **Prepare a draft** Lee and Kai · this week\n\n2. **Review** Three to five readers · after the pilot');
+  assert.deepEqual(reply.sources.map((s) => s.page), [3]);
+});
+
+test('ordinary document lookups make one call on the configured lookup model', async (t) => {
+  const previous = process.env.OPENAI_LOOKUP_MODEL;
+  process.env.OPENAI_LOOKUP_MODEL = 'test-lookup-mini';
+  t.after(() => { if (previous === undefined) delete process.env.OPENAI_LOOKUP_MODEL; else process.env.OPENAI_LOOKUP_MODEL = previous; });
+  let calls = 0;
+  model(t, (request) => {
+    calls++;
+    assert.equal(request.model, 'test-lookup-mini');
+    const [record] = JSON.parse(request.input).records;
+    return { focus: 'ordinary', sources: [record.key], answer: 'Reading groups.' };
+  });
+  const reply = await askAssistant({ question: 'What does the library offer?', turns: [], tasks: [], knowledge: [], projects: [], hypotheses: [],
+    documents: [{ id: 'library', kind: 'source', text: 'The library offers reading groups.' }] });
+  assert.equal(reply.answer, 'Reading groups.');
+  assert.equal(calls, 1);
+});
