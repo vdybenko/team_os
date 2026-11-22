@@ -294,6 +294,43 @@ export async function cleanupSigninLinks(now) {
   }
 }
 
+/* ---------------- OAuth records (MCP connectors) ---------------- */
+// settings/oauth/<kind>/<id>.json — clients, grants, codes and pending authorization requests.
+
+function settingsRecords(kind) {
+  const prefix = `settings/oauth/${kind}/`;
+  const file = (id) => path.join(DATA_DIR, prefix, assertId(id) + '.json');
+  return {
+    get: (id) => S3_RECORDS ? getJson(prefix + assertId(id) + '.json') : readJson(file(id)),
+    async list() {
+      if (S3_RECORDS) return listJson(prefix);
+      const dir = path.join(DATA_DIR, prefix);
+      return listFiles(dir, '.json').map((f) => readJson(path.join(dir, f))).filter(Boolean);
+    },
+    async save(record) {
+      record.updatedAt = now();
+      if (S3_RECORDS) return putJson(prefix + assertId(record.id) + '.json', record);
+      writeJson(file(record.id), record);
+      return record;
+    },
+    // Single-use consumption: true only for the caller that actually removed the record.
+    async remove(record) {
+      try {
+        if (S3_RECORDS) await s3.remove(record);
+        else fs.unlinkSync(file(record.id));
+        return true;
+      } catch (error) {
+        if (error.status === 409 || error.code === 'ENOENT') return false;
+        throw error;
+      }
+    },
+  };
+}
+export const oauthClients = settingsRecords('clients');
+export const oauthGrants = settingsRecords('grants');
+export const oauthCodes = settingsRecords('codes');
+export const oauthRequests = settingsRecords('requests');
+
 /* ---------------- projects & hypotheses (team folder) ---------------- */
 
 function collection(name) {

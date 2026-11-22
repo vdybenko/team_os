@@ -440,7 +440,7 @@ const assistantTopics = () => [
   ['vision', $t('Goal progress'), $t('What is the current progress on project goals?')],
   ['spark', $t('Hypotheses in progress'), $t('Which hypotheses are being tested right now, and what are their metrics?')],
 ];
-const assistantSourceNames = translated({ task: 'Task', knowledge: 'Knowledge', goal: 'Goal', hypothesis: 'Hypothesis' });
+const assistantSourceNames = translated({ task: 'Task', knowledge: 'Knowledge', goal: 'Goal', hypothesis: 'Hypothesis', source: 'Source', inbox: 'Inbox' });
 const assistantPath = (tid, suffix = '') => `/api/teams/${encodeURIComponent(tid)}/assistant/chats${suffix}`;
 function assistantState() {
   if (!S.assistant.has(S.tid)) {
@@ -478,7 +478,14 @@ function pAssistant() {
   const pending = state.pending?.cid === state.selected ? state.pending : null;
   const turns = state.chat?.turns || [];
   const loading = !state.error && (!state.chats || (state.selected && !state.chat && !pending && state.chats.some((c) => c.id === state.selected)));
-  const sources = (items) => items.length ? `<div class="assistant-sources" aria-label="${$t('Sources')}">${items.map((s) => `<button type="button" class="assistant-source" data-a="assistantSource" data-kind="${esc(s.kind)}" data-id="${esc(s.target)}" title="${esc(s.title)}">${esc(assistantSourceNames[s.kind] || $t('Source'))}<span>${esc(s.title)}</span>${ico('arrow', 13)}</button>`).join('')}</div>` : '';
+  const sources = (items) => items.length ? `<div class="assistant-sources" aria-label="${$t('Sources')}">${items.map((s) => {
+    const label = `${esc(assistantSourceNames[s.kind] || $t('Source'))}<span>${esc(s.title)}</span>`;
+    if (['source', 'inbox'].includes(s.kind) && Number.isInteger(s.page) && s.page > 0) {
+      const base = '/' + (s.kind === 'source' ? 'sources' : 'inbox') + '/' + encodeURIComponent(s.target);
+      return `<a class="assistant-source" href="${fileUrl(base)}#page=${s.page}" title="${esc(s.title)}" target="_blank" rel="noopener">${label} · ${$t('Page {n}', { n: s.page })}${ico('arrow', 13)}</a>`;
+    }
+    return `<button type="button" class="assistant-source" data-a="assistantSource" data-kind="${esc(s.kind)}" data-id="${esc(s.target)}" title="${esc(s.title)}">${label}${ico('arrow', 13)}</button>`;
+  }).join('')}</div>` : '';
   return `<section class="assistant">
     <header class="assistant-heading"><div><h1>${$t('Assistant')}</h1><p class="hint">${esc(teamName(S.d.team))}</p></div></header>
     <div class="assistant-workspace">
@@ -489,7 +496,7 @@ function pAssistant() {
       <div class="assistant-main">
         <div class="assistant-thread" data-keep="assistant-thread" role="log" aria-label="${$t('Messages')}">
           ${loading ? `<div class="assistant-loading" role="status"><span class="spin"></span> ${$t('Loading the chat…')}</div>` : ''}
-          ${!loading && !turns.length && !pending && !state.error ? `<div class="assistant-welcome"><span class="assistant-mark">${ico('spark', 26)}</span><h2>${$t('What would you like to know about your space?')}</h2><p>${$t('Ask about tasks, knowledge, goals or hypotheses.')}</p><div class="assistant-prompts">${assistantTopics().map(([icon, title, question]) => `<button type="button" data-a="assistantPrompt" data-question="${esc(question)}">${ico(icon, 17)}${title}${ico('arrow', 15)}</button>`).join('')}</div></div>` : ''}
+          ${!loading && !turns.length && !pending && !state.error ? `<div class="assistant-welcome"><span class="assistant-mark">${ico('spark', 26)}</span><h2>${$t('What would you like to know about your space?')}</h2><p>${$t('Ask about your documents, tasks, knowledge, goals or hypotheses.')}</p><div class="assistant-prompts">${assistantTopics().map(([icon, title, question]) => `<button type="button" data-a="assistantPrompt" data-question="${esc(question)}">${ico(icon, 17)}${title}${ico('arrow', 15)}</button>`).join('')}</div></div>` : ''}
           ${turns.map((turn) => `<article class="assistant-turn"><div class="assistant-question">${esc(turn.question)}</div><div class="assistant-answer"><span class="assistant-mark small" aria-hidden="true">${ico('spark', 17)}</span><div class="assistant-answer-body mdv">${md(turn.answer)}${sources(turn.sources || [])}</div></div></article>`).join('')}
           ${pending ? `<article class="assistant-turn"><div class="assistant-question">${esc(pending.question)}</div><div class="assistant-loading" role="status"><span class="spin"></span> ${$t('Preparing an answer…')}</div></article>` : ''}
         </div>
@@ -586,6 +593,7 @@ function pProfile() {
   return `<div class="hd"><div><h1>${$t('Profile')}</h1><div class="sub">${esc(S.me.email)}</div></div></div>
   <div class="grid g2"><div class="card"><h2>${$t('About me')}</h2><div class="grid" style="gap:12px"><label class="fl">${$t('Name')}<input class="in" id="pfName" value="${esc(S.me.name)}"></label><label class="fl">${$t('What transcripts call me (comma-separated)')}<input class="in" id="pfAliases" value="${esc((S.me.aliases || []).join(', '))}" placeholder="${$t('Vova, Volodya, Volodymyr')}"></label><p class="hint" style="margin:0">${$t('AI uses these names to understand who promised what.')}</p><div class="fl">${$t('Interface language')}<div>${langSwitch('seg')}</div></div><div><button class="btn pri" data-a="saveProfile">${$t('Save')}</button></div></div></div>
   ${isAdmin() && !personal() ? `<div class="card"><h2>${$t('Team')}</h2><div class="grid" style="gap:12px"><label class="fl">${$t('Team name')}<input class="in" id="tmName" value="${esc(S.d.team.name)}" ${role() === 'owner' ? '' : 'disabled'}></label><label class="fl">${$t('Urgent if the deadline is within (days)')}<input class="in" type="number" min="0" max="14" id="tmUrg" value="${urgentDays()}"></label><div><button class="btn pri" data-a="saveTeam">${$t('Save')}</button></div></div></div>` : ''}
+  <div class="card"><h2>${$t('Claude, Codex and other AI apps')}</h2><p class="hint" style="margin-top:0">${$t('Connect TeamOS as an MCP server: the app signs in with your account and sees and changes only what you can.')}</p><pre class="hint" style="font-size:12.5px;white-space:pre-wrap;margin:0 0 12px">${esc(location.origin)}/mcp</pre><a class="btn" href="/oauth/connections">${$t('Connected apps')}</a></div>
   <div class="card"><h2>${$t('Where the data lives')}</h2><p class="hint" style="margin-top:0">${$t('Tasks, projects and hypotheses are JSON; knowledge is Markdown. Each user has their own folder with a subfolder for each team; shared items live in the team folder. The entry point everywhere is <code>index.md</code>.')}</p><pre class="hint" style="font-size:12.5px;white-space:pre-wrap;margin:0">data/users/${esc(S.me.id)}/index.md\ndata/users/${esc(S.me.id)}/teams/${esc(S.tid)}/  (${$t('inbox, private tasks and knowledge')})\ndata/teams/${esc(S.tid)}/index.md  (${$t('projects, hypotheses, shared tasks and knowledge')})</pre></div></div>`;
 }
 
@@ -899,6 +907,8 @@ const A = {
     }
     S.drawer = null;
     if (kind === 'knowledge') return go('knowledge-' + id);
+    if (kind === 'source') return go('source-' + id);
+    if (kind === 'inbox') return go('review-' + id);
     if (kind === 'goal') { S.ptab = 'overview'; return go('project-' + id); }
     if (kind === 'hypothesis') go('hyp-' + id);
   },

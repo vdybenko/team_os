@@ -476,7 +476,7 @@ export async function runAnalysis(c, iid) {
     }
     const context = await analysisContext(c);
     const text = await store.getInboxSource(c.uid, c.tid, iid);
-    const out = await analyze({ text, title: item.title, type: item.type, date: item.date, uploader: { id: c.uid, name: c.me.name }, context });
+    const out = await analyze({ text, title: item.title, type: item.type, pdf: Boolean(item.file), date: item.date, uploader: { id: c.uid, name: c.me.name }, context });
     const fresh = await store.getInboxItem(c.uid, c.tid, iid); if (!fresh) return;
     Object.assign(fresh, { status: 'review', error: null, errorMsg: null, summary: out.summary || [], participants: out.participants || [], proposals: toProposals(c, out, context, text), analyzedAt: store.now() });
     await store.saveInboxItem(c.uid, c.tid, fresh);
@@ -673,6 +673,21 @@ async function recordDerived(c, src, item) {
 }
 
 export const listSources = (c) => store.listSourcesFor(c.tid, c.uid);
+export async function* assistantDocuments(c) {
+  const [sources, inbox] = await Promise.all([listSources(c), store.listInbox(c.uid, c.tid)]);
+  const savedItems = new Set(sources.filter((s) => s.author === c.uid).map((s) => s.inboxItem));
+  const pending = inbox.filter((i) => keepsSource(i) && i.owner === c.uid && !i.sourceId && !savedItems.has(i.id)
+    && ['processing', 'review', 'partial', 'failed'].includes(i.status));
+  const documents = [
+    ...sources.map((s) => ({ record: s, kind: 'source', read: () => store.getSourceText(c.tid, s) })),
+    ...pending.map((i) => ({ record: i, kind: 'inbox', read: () => store.getInboxSource(c.uid, c.tid, i.id) })),
+  ];
+  for (let i = 0; i < documents.length; i += 6) {
+    yield* await Promise.all(documents.slice(i, i + 6).map(async ({ record, kind, read }) => ({
+      id: record.id, kind, title: record.title, date: record.date, pdf: Boolean(record.file), text: await read(),
+    })));
+  }
+}
 export async function getSource(c, sid) {
   return await store.findSource(c.tid, store.assertId(sid, 'source id'), c.uid) || fail(404, 'Source not found');
 }

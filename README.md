@@ -12,6 +12,7 @@ A team's second brain that fills itself from meetings. Specification: [docs/01-v
 - **Knowledge** (decisions, agreements, facts, processes, context; private or team-wide; a new decision can replace an old one) and **Team vision**.
 - **Assistant**: ask questions about your workspace's tasks, knowledge, goals and hypotheses, with links to the records it used.
 - **Interface in English and Ukrainian**: switch the language in Profile or on the sign-in screen.
+- **MCP server with OAuth**: connect your knowledge base to Claude, Codex or any MCP client — search and read it, add tasks, knowledge, projects, goals and hypotheses, add to the inbox, create teams and manage members. See [Connecting Claude and Codex (MCP)](#connecting-claude-and-codex-mcp).
 
 Not done yet (see §10 of the specification): calendar, Gmail/Drive, Meeting mode, daily digest, sending invite emails.
 
@@ -85,9 +86,53 @@ Pause application writes while running a migration.
 
 The migration verifies copied records and stops if a destination contains different data. It can be repeated while writes are paused.
 
+## Connecting Claude and Codex (MCP)
+
+TeamOS is a remote MCP server (Streamable HTTP) at `<BASE_URL>/mcp`, protected with OAuth 2.1. The app opens a TeamOS page in the browser; you sign in with your usual account and choose:
+
+- **Access**: *Read only*, *Read and write*, or *Full, including team management*.
+- **Workspaces**: all of yours (including teams you join later), or a single team.
+
+The app then sees and changes only what you can in the UI: only the requester changes a task's status, private knowledge and the inbox stay personal, and team management needs the Owner or Admin role. See and disconnect apps at `<BASE_URL>/oauth/connections` (also linked from Profile).
+
+claude.ai and Claude Desktop need a public HTTPS `BASE_URL`; Claude Code and Codex also work with `http://localhost:3000`.
+
+- **claude.ai / Claude Desktop**: Settings → Connectors → Add custom connector → URL `https://sb.uselinxa.com/mcp`.
+- **Claude Code**:
+
+```bash
+claude mcp add --transport http teamos https://sb.uselinxa.com/mcp
+```
+
+  then run `/mcp` in Claude Code and choose *Authenticate*.
+- **Codex CLI**:
+
+```bash
+codex mcp add teamos --url https://sb.uselinxa.com/mcp
+```
+
+```bash
+codex mcp login teamos
+```
+
+**Tools** (shown according to the access level):
+
+| Access | Tools |
+| --- | --- |
+| Read | `list_workspaces`, `get_workspace_overview`, `search`, `list_tasks` (*i owe* / *owed to me*), `get_task`, `list_knowledge`, `list_projects`, `list_hypotheses`, `list_members`, `list_inbox`, `get_inbox_item` |
+| Write | `add_to_inbox`, `create_task`, `update_task`, `comment_on_task`, `delete_task`, `add_knowledge` (can replace an older decision), `update_knowledge`, `delete_knowledge`, `create_project`, `update_project`, `save_goal`, `remove_goal`, `create_hypothesis`, `update_hypothesis`, `add_hypothesis_learning`, `update_team_vision` |
+| Manage | `create_team`, `invite_member` (returns a join link), `revoke_invite`, `change_member_role`, `remove_member` |
+
+Each team's vision is also available as an MCP resource (`teamos://teams/<id>/vision`). Text added with `add_to_inbox` is analyzed like any other inbox item and waits for your confirmation in Review.
+
+Under the hood: dynamic client registration (RFC 7591), authorization code with PKCE S256, protected resource and authorization server metadata (RFC 9728, RFC 8414), one-hour access tokens, rotating 90-day refresh tokens and token revocation (RFC 7009). Clients, connections and one-time codes are stored under `settings/oauth/` in the same storage backend (files or S3), with only hashes of secrets.
+
 ## Code structure
 
-- [server/index.js](server/index.js) — HTTP API, access rules, applying proposals from Review.
+- [server/index.js](server/index.js) — HTTP API routes.
+- [server/domain.js](server/domain.js) — access rules and operations on tasks, knowledge, projects, goals, hypotheses, teams and the inbox, shared by the HTTP API and MCP.
+- [server/oauth.js](server/oauth.js) — OAuth 2.1 authorization server for MCP clients: consent page, tokens, connected apps.
+- [server/mcp.js](server/mcp.js) — the MCP server (Streamable HTTP) and its tools.
 - [server/store.js](server/store.js) — file storage and `index.md` generation.
 - [server/auth.js](server/auth.js) — one-time email link sign-in and the signed session cookie.
 - [server/ai.js](server/ai.js) — the inbox analyzer via Bedrock, the Claude API or OpenAI with structured JSON.
@@ -116,15 +161,12 @@ What's left for a full implementation of the [specification](docs/01-vision-and-
 
 ### v0.3 — Second Brain via MCP
 
-A **TeamOS MCP server** so you can talk to your Second Brain from Claude (claude.ai, Claude Desktop, Claude Code) or Codex without opening TeamOS.
+Done: the remote MCP server with OAuth (see [Connecting Claude and Codex (MCP)](#connecting-claude-and-codex-mcp)) — all of my workspaces or one team, read / write / manage access, the same permissions as the UI. Still to do:
 
-- **Two access levels**:
-  - *My Second Brain* — one connector for all my teams and my personal workspace; the agent sees what I see in the UI and can answer "what do I owe all my teams by Friday".
-  - *Team Second Brain* — a connector limited to one team, for the team's shared agents and automations.
-- **Tools**: search and questions across knowledge, tasks, projects and hypotheses; "what I owe / what I'm owed"; preparing for a meeting with a person; adding a transcript, note or email to the inbox; creating a task, knowledge item or hypothesis; proposing a status change; adding a learning to a hypothesis.
+- **Meeting prep tool**: open commitments between the attendees and recent decisions on related projects.
+- **Proposals instead of direct writes** as an option per connection: an agent's changes go to the inbox for review (human-in-the-loop).
 - **Resources**: the user's and teams' `index.md` files as entry points — the agent follows links to the JSON and Markdown it needs, like a person in Obsidian.
-- **The same permissions as the UI**: only the requester changes a status, raw transcripts are visible only to their author, a Member doesn't see other people's tasks. By default an agent's write goes to the inbox as a proposal (human-in-the-loop); applying directly is optional for your own tasks.
-- **Authorization**: a remote MCP server (Streamable HTTP) with OAuth through the same sign-in; scoped tokens (one team / all of mine / read-only).
+- **Client ID Metadata Documents** as an alternative to dynamic client registration.
 - **Local mode**: since the data is files with `index.md`, a self-hosted install can simply give Claude Code or Codex read-only access to the `data/` folder.
 - Also an MCP client in the other direction: pulling transcripts from Omi, Fireflies, Zoom.
 

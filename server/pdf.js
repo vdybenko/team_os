@@ -15,6 +15,14 @@ const load = async () => (pdfjs ||= await import('pdfjs-dist/legacy/build/pdf.mj
 const fail = (key) => Object.assign(new Error(key), { status: 400 });
 export const isPdf = (buf) => Buffer.isBuffer(buf) && buf.subarray(0, 1024).includes('%PDF-');
 
+// Only the standalone markers inserted by pdfToText identify physical pages.
+export function pdfPages(text) {
+  const parts = text.split(/^\[p\. (\d+)\][ \t]*\r?$/m);
+  const pages = [];
+  for (let i = 1; i < parts.length; i += 2) pages.push({ page: Number(parts[i]), text: parts[i + 1].trim() });
+  return pages;
+}
+
 // Lines are rebuilt from text items by their vertical position; pages are separated by a "[p. N]" marker,
 // which the analyzer uses as the evidence location.
 export async function pdfToText(buf) {

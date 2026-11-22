@@ -1,5 +1,6 @@
 import { answerWorkspace } from './ai.js';
 import { tr } from './i18n.js';
+import { pdfPages } from './pdf.js';
 
 const excerpt = (value, length = 1200) => String(value ?? '').trim().slice(0, length);
 const terms = (text) => new Set((String(text).normalize('NFKC').toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []).map((word) => word.slice(0, 5)));
@@ -10,7 +11,20 @@ const topicTerms = {
   hypothesis: terms('гіпотеза гіпотези експеримент тестування висновки hypothesis experiment testing'),
 };
 
-export async function askAssistant({ question, turns, team, lang = 'en', viewerId, today, tasks, knowledge, projects, hypotheses, nameOf }) {
+function* passages(document) {
+  const pages = document.pdf ? pdfPages(document.text) : [];
+  for (const { page, text } of pages.length ? pages : [{ page: null, text: document.text }]) {
+    // Keep tables and headings together on ordinary slides. Overlap long pages
+    // and plain text so an answer can span the edge of two passages.
+    for (let start = 0; start < text.length; start += 2150) {
+      const passage = text.slice(start, start + 2400).trim();
+      if (passage) yield { page, start, passage };
+      if (start + 2400 >= text.length) break;
+    }
+  }
+}
+
+export async function askAssistant({ question, turns, team, lang = 'en', viewerId, today, tasks, knowledge, projects, hypotheses, nameOf, documents = [] }) {
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const records = [];
   function add(kind, id, title, data, target = id) {
@@ -34,7 +48,13 @@ export async function askAssistant({ question, turns, team, lang = 'en', viewerI
     target: h.target, current: h.current, from: h.from, until: h.to, verdict: excerpt(h.verdict, 500),
     learnings: (h.learnings || []).slice(-3).map((l) => excerpt(l.text, 300)),
   });
-  if (!records.length) return { answer: tr(lang, 'There are no tasks, knowledge, goals or hypotheses in this space yet that I could rely on.'), sources: [] };
+  for await (const document of documents) {
+    for (const { page, start, passage } of passages(document)) {
+      add(document.kind, `${document.id}:${page ?? 0}:${start}`, document.title,
+        { page, date: document.date, text: passage }, document.id);
+    }
+  }
+  if (!records.length) return { answer: tr(lang, 'There are no records or documents in this space yet that I could rely on.'), sources: [] };
 
   const all = new Map(records.map((r) => [r.key, r]));
   const history = turns.slice(-6).map((turn) => ({
@@ -43,12 +63,14 @@ export async function askAssistant({ question, turns, team, lang = 'en', viewerI
   }));
   const query = terms(question);
   const previous = terms(history.at(-1)?.question || '');
+  const previousDocuments = new Set((turns.at(-1)?.sources || []).filter((s) => ['source', 'inbox'].includes(s.kind)).map((s) => s.target));
   const ranked = records.map((record) => {
     const title = terms(record.title);
     const body = terms(JSON.stringify(record.data));
-    const score = [...query].reduce((sum, word) => sum + (title.has(word) ? 5 : body.has(word) ? 2 : 0)
-      + (topicTerms[record.kind].has(word) ? 3 : 0), 0)
+    const score = [...query].reduce((sum, word) => sum + (title.has(word) ? 5 : 0) + (body.has(word) ? 2 : 0)
+      + (topicTerms[record.kind]?.has(word) ? 3 : 0), 0)
       + [...previous].filter((word) => title.has(word) || body.has(word)).length * 0.5
+      + (previousDocuments.has(record.target) ? 1 : 0)
       - (record.data.superseded ? 1 : 0);
     return { record, score };
   }).sort((a, b) => b.score - a.score);
@@ -79,7 +101,7 @@ export async function askAssistant({ question, turns, team, lang = 'en', viewerI
     records: [...selected.values()],
   });
   const sources = [...new Set(output.sources)].filter((key) => selected.has(key)).slice(0, 8)
-    .map((key) => { const { kind, title, target } = all.get(key); return { key, kind, title, target }; });
+    .map((key) => { const { kind, title, target, data } = all.get(key); return { key, kind, title, target, ...(data.page ? { page: data.page } : {}) }; });
   const answer = excerpt(output.answer, 10000);
   if (!answer) throw new Error('The assistant returned an empty answer. Try again.');
   return { answer, sources };

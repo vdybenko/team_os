@@ -3,7 +3,7 @@ import * as store from './store.js';
 import { configured, normalizeEmail, reserveSend, sendLink, redeemLink } from './magic-link.js';
 import { langOf, tr } from './i18n.js';
 
-const origin = new URL(process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`).origin;
+export const origin = new URL(process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`).origin;
 const SESSION_DAYS = 30;
 const SECURE = origin.startsWith('https://');
 const production = process.env.NODE_ENV === 'production';
@@ -65,7 +65,8 @@ export function requireUser(req, res, next) {
 async function startSession(res, uid) {
   setCookie(res, 'sid', await makeToken({ uid, exp: Date.now() + SESSION_DAYS * 864e5 }), { maxAge: SESSION_DAYS * 86400 });
 }
-const safeReturn = (r) => (typeof r === 'string' && /^\/#join-[A-Za-z0-9_-]{1,80}$/.test(r) ? r : '/');
+// After sign-in: back to a team invite, or to a pending MCP connector authorization (server/oauth.js).
+const safeReturn = (r) => (typeof r === 'string' && (/^\/#join-[A-Za-z0-9_-]{1,80}$/.test(r) || /^\/oauth\/consent\?rid=[A-Za-z0-9_-]{20,80}$/.test(r)) ? r : '/');
 
 /* ---------- user upsert ---------- */
 

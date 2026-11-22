@@ -10,6 +10,8 @@ import { askAssistant } from './assistant.js';
 import { langOf, tr, render, msg, LANGS } from './i18n.js';
 import * as D from './domain.js';
 import { transcribeConfigured } from './transcribe.js';
+import { mountOAuth } from './oauth.js';
+import { mountMcp } from './mcp.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -20,6 +22,8 @@ const jsonSmall = express.json({ limit: '5mb' }), jsonInbox = express.json({ lim
 app.use((req, res, next) => (req.method === 'POST' && /^\/api\/teams\/[^/]+\/inbox(\/audio)?\/?$/.test(req.path) ? jsonInbox : jsonSmall)(req, res, next));
 app.use(sessionMiddleware);
 mountAuthRoutes(app);
+mountOAuth(app);
+mountMcp(app);
 
 /* ================= helpers ================= */
 
@@ -111,7 +115,7 @@ app.post(chatRoute + '/:cid/messages', requireUser, route(async (req) => {
     try {
       reply = await askAssistant({
         question, turns: chat.turns, team: c.team.name, lang: c.lang, viewerId: c.uid, today: today(), tasks, knowledge,
-        projects, hypotheses, nameOf: (who) => isExternal(who) ? who.slice(4) : names.get(who) || '—',
+        projects, hypotheses, documents: D.assistantDocuments(c), nameOf: (who) => isExternal(who) ? who.slice(4) : names.get(who) || '—',
       });
     } catch (error) { failWith(502, errorMessage(error)); }
     await ctx(req);
@@ -339,4 +343,5 @@ app.listen(PORT, HOST, () => {
   console.log(`  data:   ${store.S3_RECORDS ? 'Amazon S3' : store.DATA_DIR}`);
   console.log(`  email sign-in: ${magicLinkConfigured() ? 'SendGrid' : 'not configured'}`);
   console.log(`  ai:     ${aiConfigured() ? `${AI_PROVIDER} / ${MODEL}` : 'not configured (manual review)'}`);
+  console.log(`  mcp:    ${new URL('/mcp', process.env.BASE_URL || `http://localhost:${PORT}`).href} (OAuth)`);
 });
