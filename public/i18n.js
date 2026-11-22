@@ -12,6 +12,7 @@ window.TEAMOS_I18N = {
     // shell & navigation
     'Language': 'Мова',
     'Interface language': 'Мова інтерфейсу',
+    'Compare with OpenAI': 'Порівняти з OpenAI',
     'Personal': 'Особистий',
     'Me': 'Я',
     'me': 'я',

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-en="TeamOS (T-MOS) vs OpenAI · A team second brain">TeamOS (T-MOS) і OpenAI · Другий мозок команди</title>
+  <meta name="description" content="Порівняйте TeamOS із ChatGPT та Codex. Зберігайте домовленості зі зустрічей в одному просторі й працюйте з ними в Claude, Codex або своєму MCP-клієнті.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/metaverse.css">
+  <link rel="stylesheet" href="comparison.css">
+  <script defer src="comparison.js"></script>
+</head>
+<body>
+  <header class="cover">
+    <div class="frame">
+      <div class="orbit-header">
+        <a href="/" class="orbit-brand"><span aria-hidden="true">T</span>TeamOS</a>
+        <div class="header-links">
+          <a class="home-link" href="/" data-en="Open TeamOS">Відкрити TeamOS</a>
+          <nav class="language" aria-label="Мова / Language">
+            <a href="?lang=en" lang="en" hreflang="en" aria-label="English">EN</a>
+            <a href="?lang=uk" lang="uk" hreflang="uk" aria-label="Українська" aria-current="true">UK</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="cover">
+      <section class="frame hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p class="kicker">TeamOS <span aria-hidden="true">/</span> OpenAI</p>
+            <h1 id="hero-title"><span data-en="Your team’s memory">Пам’ять команди</span> <em data-en="in Codex and Claude.">у Codex і Claude.</em></h1>
+            <p class="lead" data-en="Save a meeting decision once in TeamOS. Codex, Claude and your own MCP-compatible assistant can read the same record, down to the quote from the meeting.">Збережи домовленість зі зустрічі в TeamOS один раз. Codex, Claude і твій власний асистент із підтримкою MCP зможуть прочитати той самий запис і знайти точну цитату.</p>
+            <div class="actions">
+              <a class="primary" href="/" data-en="Start with your team">Почати з командою</a>
+              <a class="text-link" href="#comparison" data-en="Compare with OpenAI">Порівняти з OpenAI</a>
+            </div>
+          </div>
+          <figure class="example">
+            <figcaption><span class="sample-mark" aria-hidden="true"></span><strong data-en="Pilot launch">Запуск пілоту</strong><span class="sample-label" data-en="Example">Приклад</span></figcaption>
+            <div class="example-body">
+              <div class="paper">
+                <div class="paper-label"><span class="wave" aria-hidden="true">▂▅▃▇▅▂</span><span data-en="Meeting transcript">Стенограма зустрічі</span></div>
+                <blockquote data-en="“Let’s give the pilot two weeks. I’ll update the pricing page by Friday.”">«Даймо на пілот два тижні. Я оновлю сторінку тарифів до п’ятниці».</blockquote>
+                <p data-en="Marta, product lead">Марта, керівниця продукту</p>
+              </div>
+              <div class="views" role="group" aria-label="Приклад у застосунку / Example by app" hidden>
+                <button type="button" data-view="team" aria-pressed="true">TeamOS</button>
+                <button type="button" data-view="codex" aria-pressed="false">Codex</button>
+                <button type="button" data-view="claude" aria-pressed="false">Claude</button>
+              </div>
+              <div class="readout" aria-live="polite">
+                <div id="team">
+                  <p class="readout-label" data-en="Saved after review">Збережено після перевірки</p>
+                  <dl><div><dt data-en="Decision">Рішення</dt><dd data-en="The pilot runs for 14 days.">Пілот триває 14 днів.</dd></div>
+                    <div><dt data-en="Task">Задача</dt><dd data-en="Pricing page · Marta · Friday">Сторінка тарифів · Марта · п’ятниця</dd></div></dl>
+                </div>
+                <div id="codex" hidden>
+                  <p class="readout-label" data-en="Example question via MCP">Приклад запиту через MCP</p>
+                  <p class="question" data-en="How long should the pilot run?">Яку тривалість закласти для пілоту?</p>
+                  <p class="answer" data-en="14 days, according to the decision saved from the launch meeting.">14 днів, згідно з рішенням, яке команда зберегла після зустрічі.</p>
+                </div>
+                <div id="claude" hidden>
+                  <p class="readout-label" data-en="Example question via MCP">Приклад запиту через MCP</p>
+                  <p class="question" data-en="Who’s updating the pricing page?">Хто оновлює сторінку тарифів?</p>
+                  <p class="answer" data-en="Marta took the task. The team’s deadline is Friday.">Задачу взяла Марта. Команда домовилася про п’ятницю.</p>
+                </div>
+              </div>
+            </div>
+          </figure>
+      </section>
+    </div>
+  <section class="comparison section" id="comparison" aria-labelledby="compare-title">
+    <div class="frame">
+      <h2 id="compare-title" data-en="Where does the team’s knowledge live?">Де живуть знання команди?</h2>
+      <p class="intro" data-en="Both services give your team a place to keep shared context. Here’s how each handles the same work, from capturing a conversation to using it in another assistant.">Обидва сервіси дають команді місце для спільних знань. Ось як у кожному з них пройти шлях від розмови до відповіді в асистенті.</p>
+      <table aria-labelledby="compare-title">
+        <thead><tr><th scope="col" data-en="Team need">Потреба команди</th><th scope="col">OpenAI <small>ChatGPT · Codex</small></th><th scope="col">TeamOS</th></tr></thead>
+        <tbody>
+          <tr><th scope="row" data-en="Keep context together">Зібрати контекст</th>
+            <td><p data-en="Projects keep chats, files and instructions together. Space lets teammates edit shared pages. When enabled, Memory can also recall relevant personal context.">У проєкті ChatGPT зібрані чати, файли й інструкції. У Space колеги разом редагують сторінки. Якщо ввімкнути пам’ять, ChatGPT може враховувати деталі з попередніх розмов.</p>
+              <div class="refs"><a href="https://help.openai.com/en/articles/10169521-projects-in-chatgpt">Projects</a><a href="https://learn.chatgpt.com/docs/space">Space</a><a href="https://help.openai.com/en/articles/8590148-memory-in-chatgpt">Memory</a></div></td>
+            <td data-en="Open a project to see its goals, hypotheses, decisions and commitments. Keep personal notes private and share the decisions your team will need again.">Відкрий проєкт, щоб побачити його цілі, гіпотези, рішення й зобов’язання. Особисті нотатки можна залишити приватними, а важливі для команди рішення зробити спільними.</td></tr>
+          <tr><th scope="row" data-en="Follow up on a meeting">Зберегти домовленість</th>
+            <td><p data-en="ChatGPT Meetings can turn a transcript into a summary and suggest follow-up actions. You can review them and ask ChatGPT to start the work.">ChatGPT Meetings створює підсумок зі стенограми та пропонує подальші дії. Їх можна переглянути й доручити ChatGPT.</p><div class="refs"><a href="https://help.openai.com/en/articles/20001546-the-meetings-plugin-in-chatgpt">Meetings</a></div></td>
+            <td data-en="Add a transcript to your inbox. Check the proposed decision or task against the original quote, confirm the owner and due date, then save it to the workspace.">Додай стенограму в інбокс. Звір запропоноване рішення або задачу з цитатою, перевір виконавця й термін та збережи запис у просторі.</td></tr>
+          <tr><th scope="row" data-en="Change assistants">Змінити асистента</th>
+            <td><p data-en="ChatGPT uses project sources in its chats. Codex can connect to remote MCP servers for tools and data, including a TeamOS workspace.">ChatGPT використовує джерела проєкту у своїх чатах. Codex через MCP може звертатися до зовнішніх даних та інструментів, зокрема й до TeamOS.</p><div class="refs"><a href="https://help.openai.com/en/articles/10169521-projects-in-chatgpt">Projects</a><a href="https://developers.openai.com/codex/mcp">Codex MCP</a></div></td>
+            <td data-en="TeamOS is the MCP server. Connect Codex, Claude or your own LLM through a compatible MCP client to search the same records. Grant write access to add a task from either assistant.">TeamOS сам є MCP-сервером. Підключи Codex, Claude або свою LLM через сумісний MCP-клієнт і шукай ті самі записи. Якщо дозволиш запис, то зможеш додати задачу з будь-якого з цих асистентів.</td></tr>
+          <tr><th scope="row" data-en="Choose who has access">Обмежити доступ</th>
+            <td><p data-en="A shared project can grant chat or edit access. Linked files in Space retain their original permissions. Availability depends on the plan and workspace settings.">У спільному проєкті можна дати доступ до чату або редагування. Файли, на які посилається Space, зберігають початкові дозволи. Доступність функцій залежить від тарифу й налаштувань.</p><div class="refs"><a href="https://help.openai.com/en/articles/10169521-projects-in-chatgpt">Projects</a><a href="https://learn.chatgpt.com/docs/space">Space</a></div></td>
+            <td data-en="For each connected app, choose one workspace or all your workspaces, then allow reading, writing or team management within your own permissions. Revoke the connection from your profile at any time.">Для кожного застосунку вибери один простір або всі свої, а потім дозволь читання, запис чи керування командою в межах власних прав. Підключення можна відкликати у профілі.</td></tr>
+          <tr><th scope="row" data-en="Get started together">Почати з командою</th>
+            <td><p data-en="Sign in to ChatGPT, create a project in the browser and invite collaborators. The team can get started without Git or a virtual machine.">Увійди в ChatGPT, створи проєкт у браузері та запроси колег. Для такого старту Git і віртуальна машина теж не потрібні.</p><div class="refs"><a href="https://help.openai.com/en/articles/10169521-projects-in-chatgpt">Projects</a></div></td>
+            <td data-en="Sign in with a one-time email link, create a team and share its invitation link. The inbox, tasks, knowledge base and MCP address are ready to use.">Увійди за одноразовим посиланням із листа, створи команду й надішли колегам запрошення. Інбокс, задачі, база знань та адреса MCP уже готові до роботи.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="start section" aria-labelledby="start-title">
+    <div class="frame start-grid">
+      <div>
+        <h2 id="start-title"><span data-en="Start your second brain">Твій Second Brain</span> <em data-en="in minutes.">за кілька хвилин.</em></h2>
+        <p class="intro" data-en="All you need is an email address and a browser. You can start without Git, a virtual machine or access to your entire drive.">Для старту вистачить пошти й браузера. Можна почати без Git, віртуальної машини й доступу до всього диска.</p>
+        <a class="primary" href="/" data-en="Sign in to TeamOS">Увійти в TeamOS</a>
+      </div>
+      <ol class="steps">
+        <li><strong data-en="Open the email link">Відкрий посилання з листа</strong><p data-en="Enter your email in TeamOS and confirm your sign-in. Your personal workspace is ready.">Введи свою адресу в TeamOS і підтвердь вхід. Особистий простір уже готовий.</p></li>
+        <li><strong data-en="Invite your team">Запроси команду</strong><p data-en="Create a team, share its invitation link and add the notes from your first meeting to the inbox.">Створи команду, поділися посиланням-запрошенням і додай нотатки з першої зустрічі в інбокс.</p></li>
+        <li><strong data-en="Connect your assistant">Підключи свого асистента</strong><p data-en="Copy the MCP URL from your TeamOS profile into your client. Sign in, choose the team and allow the actions you need.">Скопіюй адресу MCP із профілю TeamOS у свій клієнт. Увійди, вибери команду й дозволь потрібні дії.</p></li>
+      </ol>
+    </div>
+  </section>
+  </main>
+</body>
+</html>

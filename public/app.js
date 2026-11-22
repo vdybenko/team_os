@@ -20,6 +20,7 @@ const $p = (n, key) => {
 };
 const translated = (o) => new Proxy(o, { get: (x, k) => (typeof x[k] === 'string' ? $t(x[k]) : x[k]) });
 const langSwitch = (cls = 'seg sm') => `<span class="${cls}" role="group" aria-label="${$t('Language')}">${LANGS.map((l) => `<button type="button" class="${LANG === l ? 'on' : ''}" data-a="lang" data-v="${l}" aria-pressed="${LANG === l}" lang="${l}" title="${l === 'en' ? 'English' : 'Українська'}">${l === 'en' ? 'EN' : 'UK'}</button>`).join('')}</span>`;
+const comparisonLink = () => `<a class="comparison-link" href="/compare/openai/?lang=${LANG}">${$t('Compare with OpenAI')}</a>`;
 
 /* ---------- helpers ---------- */
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -244,7 +245,7 @@ function pDashboard() {
   <div class="card"><h2>${$t('Inbox')} <button class="lnk" data-a="go" data-h="inbox">${$t('Open →')}</button></h2>${rv.length ? rv.slice(0, 5).map((i) => `<button class="trow" data-a="go" data-h="review-${i.id}"><span class="iico">${ico(typeIco(i.type))}</span><span class="tt"><b>${esc(i.title)}</b><span class="mt">${propCount(i)} · ${esc(i.origin)}</span></span><span class="btn sm">Review</span></button>`).join('') : `<div class="empty">${$t('The inbox is clear.')}<br><button class="btn sm" style="margin-top:10px" data-a="add">${ico('plus', 13)} ${$t('Drop a transcript')}</button></div>`}</div></div>
   <div class="col"><div class="card"><h2>${$t('Recent knowledge')} <button class="lnk" data-a="go" data-h="knowledge">${$t('Knowledge →')}</button></h2>${dec.map((k) => `<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="ty ${k.type}">${KT[k.type]}</span> ${esc(k.text)}<div class="hint">${fds(k.date)} ${tag(k.project)}</div></div>`).join('') || `<div class="empty">${$t('Nothing here yet')}</div>`}</div>
   <div class="card"><h2>${$t('Active hypotheses')}</h2>${act.map((h) => { const ts = tasks().filter((t) => t.hypothesis === h.id), dn = ts.filter((t) => t.status === 'done').length; return `<button class="trow" data-a="go" data-h="hyp-${h.id}"><span class="tt"><b>${hcode(h.id)} · ${esc(h.then)}</b><span class="mt">${av(h.owner, 18)}${h.to ? `<span>${diff(TODAY(), h.to) >= 0 ? $t('{n} d left', { n: diff(TODAY(), h.to) }) : $t('past the deadline')}</span>` : ''}<span>${$t('{done}/{total} tasks', { done: dn, total: ts.length })}</span>${tag(h.project)}</span></span></button>`; }).join('') || `<div class="empty">${$t('No hypotheses in “Testing”')}</div>`}</div></div>
-  </div>`;
+  </div><footer class="dashboard-comparison">${comparisonLink()}</footer>`;
 }
 const propCount = (i) => { const c = i.counts || {}; const parts = [['task', 'task'], ['status', 'status'], ['kn', 'knowledge'], ['hyp', 'hypothesis'], ['project', 'project']].filter(([k]) => c[k]).map(([k, l]) => $p(c[k], l)); return parts.join(' · ') || $t('no proposals'); };
 
@@ -556,7 +557,7 @@ function loginAccess() {
 }
 function pLogin() {
   return `<main class="orbit"><div class="orbit-frame">
-    <header class="orbit-header"><div class="orbit-brand"><span aria-hidden="true">T</span>TeamOS</div>${langSwitch('orbit-lang')}</header>
+    <header class="orbit-header"><div class="orbit-brand"><span aria-hidden="true">T</span>TeamOS</div><div class="orbit-links">${comparisonLink()}${langSwitch('orbit-lang')}</div></header>
     <div class="orbit-hero"><div class="orbit-copy">
       <h1>${$t('A metaverse<br><em>for your business.</em>')}</h1>
       <p>${$t('Invite your team and bring the materials you already work with. TeamOS connects documents, goals, and hypotheses to your projects, and captures what people agreed to after each meeting.')}</p>

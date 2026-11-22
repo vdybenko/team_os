@@ -81,3 +81,9 @@ team-knowledge-graph { display: block; min-width: 0; }
 .orbit-lang { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid #ffffff2e; border-radius: 9px; }
 .orbit-lang button { min-height: 30px; border: 0; border-radius: 6px; background: none; color: #cac2d2; padding: 4px 11px; font: 650 12.5px Archivo, "Helvetica Neue", sans-serif; cursor: pointer; }
 .orbit-lang button.on { background: #e3ccfa; color: #271936; }
+.orbit-links { display: flex; align-items: center; gap: clamp(12px, 2vw, 26px); }
+.comparison-link { font-size: .9375rem; text-underline-offset: .24em; }
+.orbit-links .comparison-link { color: #e3ccfa; }
+.orbit-header:has(.orbit-links) { flex-wrap: wrap; }
+.orbit-links { flex-wrap: wrap; }
+.dashboard-comparison { margin-top: 20px; color: var(--mut); }
