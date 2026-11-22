@@ -208,6 +208,8 @@ window.TEAMOS_I18N = {
     'Knowledge text': 'Текст знання',
     'Why (optional)': 'Чому (необов’язково)',
     'Contradicts the entry from {date}: “{text}”': 'Суперечить запису від {date}: «{text}»',
+    'Possible conflict with an earlier agreement': 'Можливий конфлікт із попередньою домовленістю',
+    'Possible conflict with the vision': 'Можливий конфлікт із візією',
     'Replace the old one': 'Замінити старе',
     'Keep both': 'Зберегти обидва',
     'requires the Admin role': 'потрібна роль Admin',

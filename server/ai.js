@@ -35,7 +35,8 @@ const arr = (items) => ({ type: 'array', items });
 const knowledgeFields = {
   type: { type: 'string', enum: ['decision', 'agreement', 'fact', 'process', 'context'] },
   text: S(), why: N(), scope: { type: 'string', enum: ['team', 'private'] },
-  project_id: N(), conflicts_with_id: N(), confidence: CONF,
+  project_id: N(), hypothesis_id: N(),
+  conflicts_with_id: N(), conflict_note: N(), vision_conflict: N(), confidence: CONF,
 };
 const SCHEMA = obj({
   summary: arr(S()),
@@ -76,7 +77,9 @@ You read one source (a meeting transcript, an email, a chat excerpt or a note) t
 What to extract:
 - commitments: someone promised or was asked to do something. Owner = who must do it, requester = who asked for it / to whom it was promised. Either side may be an external person (client, partner) - then fill the *_external_name field and use the schema's missing-value format for the member id. If a person says "I will…" with no one asking, requester = owner. Normalize deadlines to YYYY-MM-DD relative to the source date ("до п'ятниці" = the next Friday after the source date). Link a project or hypothesis only when the source clearly points to it. If a commitment repeats an existing open task, set duplicate_of_task_id.
 - status_updates: only for tasks listed in the context as open, when the source clearly says their status changed (done, started, blocked/waiting, cancelled).
-- knowledge: look for reusable knowledge independently of commitments. Extract a separate, self-contained chunk for each durable decision, agreement, fact, process or piece of context, including explicitly demonstrated product capabilities, workflow rules and restrictions. Treat proposed plans as proposals. Each text should be one short paragraph that makes sense on its own: name the relevant people, project or subject when the source identifies them. Keep the reasoning in why. Split unrelated points and avoid duplicate chunks, including paraphrases of existing knowledge. Use scope "private" for information about external parties or anything personal, "team" otherwise. If it contradicts an existing decision in the context, set conflicts_with_id.
+- knowledge: look for reusable knowledge independently of commitments. Extract a separate, self-contained chunk for each durable decision, agreement, fact, process or piece of context, including explicitly demonstrated product capabilities, workflow rules and restrictions. Treat proposed plans as proposals. Each text should be one short paragraph that makes sense on its own: name the relevant people, project or subject when the source identifies them. Keep the reasoning in why. Split unrelated points and avoid duplicate chunks, including paraphrases of existing knowledge. Use scope "private" for information about external parties or anything personal, "team" otherwise.
+  Placement: set project_id to the project this knowledge belongs to, and hypothesis_id to the hypothesis it supports, refutes or informs (the hypothesis must belong to that project). Use the source, project names, project visions and hypothesis statements to decide; leave them empty only when nothing in the context fits.
+  Conflicts: compare every entry with existing_knowledge (earlier decisions and agreements). If it contradicts, reverses or is inconsistent with one, set conflicts_with_id to that entry and explain in conflict_note, in one short sentence in the language of the source, what exactly differs. Also compare it with team_vision and with the vision of its project: if it goes against the stated mission, principles, ways of working or direction, explain the tension in vision_conflict in one short sentence in the language of the source. Flag only real tensions, not mere differences in topic; leave these fields empty otherwise.
 - new_projects / new_hypotheses: only when the source explicitly proposes them. Hypotheses follow "If <action>, then <result>, because <assumption>".
 - participants: map names used in the source (including diminutives like "Саш", "Вова") to member ids when you can.
 - summary: 3–5 short bullet points.

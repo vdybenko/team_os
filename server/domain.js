@@ -160,12 +160,19 @@ export async function commentOnTask(c, id, text) {
 export const canSeeKn = (c, k) => k.scope === 'team' || k.author === c.uid;
 export const canEditKn = (c, k) => k.author === c.uid || (c.admin && k.scope === 'team');
 export const visibleKnowledge = (c) => store.listKnowledgeFor(c.tid, c.uid);
+// A knowledge entry sits in a project and, optionally, one of its hypotheses.
+async function knPlacement(c, project, hypothesis) {
+  const h = hypothesis && await store.hypotheses.get(c.tid, hypothesis);
+  if (!h) return { project, hypothesis: null };
+  if (!project) return { project: await validProject(c, h.project), hypothesis: h.id };
+  return { project, hypothesis: h.project === project ? h.id : null };
+}
 export async function createKnowledge(c, input, extra = {}) {
   const k = {
     id: extra.id || store.newId('k'), type: KN_TYPES.includes(input.type) ? input.type : 'fact',
     text: str(input.text, 1000) || fail(400, 'Write the text'), why: str(input.why, 2000) || null,
     scope: input.scope === 'private' || c.team.kind === 'personal' ? 'private' : 'team',
-    project: await validProject(c, input.project), author: c.uid, date: dateOrNull(input.date) || today(),
+    ...await knPlacement(c, await validProject(c, input.project), await validHyp(c, input.hypothesis)), author: c.uid, date: dateOrNull(input.date) || today(),
     source: extra.source || 'Added manually', sourceItem: extra.sourceItem || null, sourceId: extra.sourceId || null, quote: extra.quote || null,
     supersedes: null, supersededBy: null, createdAt: store.now(),
   };
@@ -199,6 +206,8 @@ export async function updateKnowledge(c, id, body) {
   if (body.type !== undefined && KN_TYPES.includes(body.type)) k.type = body.type;
   if (body.scope !== undefined && c.team.kind !== 'personal') k.scope = body.scope === 'private' ? 'private' : 'team';
   if (body.project !== undefined) k.project = await validProject(c, body.project);
+  if (body.hypothesis !== undefined) k.hypothesis = await validHyp(c, body.hypothesis);
+  Object.assign(k, await knPlacement(c, k.project, k.hypothesis));
   return store.saveKnowledge(c.tid, k, prev);
 }
 export async function deleteKnowledge(c, id) {
@@ -447,17 +456,18 @@ async function transcribeItem(c, iid) {
 /* ---------- analysis ---------- */
 
 async function analysisContext(c) {
-  const [people, prj, hypotheses, tasks, knowledge] = await Promise.all([
-    teamMembers(c.team), store.projects.list(c.tid), store.hypotheses.list(c.tid), visibleTasks(c), visibleKnowledge(c),
+  const [people, prj, hypotheses, tasks, knowledge, vision] = await Promise.all([
+    teamMembers(c.team), store.projects.list(c.tid), store.hypotheses.list(c.tid), visibleTasks(c), visibleKnowledge(c), store.getVision(c.tid),
   ]);
   return {
+    team_vision: (vision || '').slice(0, 6000),
     members: people.map(({ userId, role, profile }) => ({ id: userId, name: profile?.name || userId, emails: profile?.emails, aliases: profile?.aliases || [], role })),
-    projects: prj.map((p) => ({ id: p.id, name: p.name, vision: p.vision?.slice(0, 300), status: p.status })),
-    hypotheses: hypotheses.map((h) => ({ id: h.id, project_id: h.project, statement: h.statement, status: h.status })),
+    projects: prj.map((p) => ({ id: p.id, name: p.name, vision: p.vision?.slice(0, 600), status: p.status })),
+    hypotheses: hypotheses.map((h) => ({ id: h.id, project_id: h.project, statement: h.statement || [h.if, h.then, h.because].filter(Boolean).join(' → '), status: h.status })),
     open_tasks: tasks.filter((t) => !['done', 'cancelled'].includes(t.status)).slice(0, 200)
       .map((t) => ({ id: t.id, title: t.title, owner: t.owner, requester: t.requester, status: t.status, due: t.due })),
     existing_knowledge: knowledge.filter((k) => !k.supersededBy).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 60)
-      .map((k) => ({ id: k.id, type: k.type, text: k.text, date: k.date })),
+      .map((k) => ({ id: k.id, type: k.type, text: k.text, date: k.date, project_id: k.project || null })),
   };
 }
 
@@ -525,14 +535,17 @@ function toProposals(c, out, context, source) {
     if (!quote) continue;
     seenChunks.add(signature);
     const conflict = kn.has(x.conflicts_with_id) ? x.conflicts_with_id : null;
-    P.push({ id: pid(), kind: 'kn', on: x.confidence === 'high', ...evidence, quote, type: KN_TYPES.includes(x.type) ? x.type : 'fact', text, why: str(x.why, 2000), scope: c.team.kind === 'personal' ? 'private' : x.scope === 'private' ? 'private' : 'team', project: prj.has(x.project_id) ? x.project_id : null, conflict, res: conflict ? 'replace' : null });
+    const h = hyp.get(x.hypothesis_id);
+    const project = prj.has(x.project_id) ? x.project_id : h && prj.has(h.project_id) ? h.project_id : null;
+    const hypothesis = h && (!project || h.project_id === project) ? h.id : null;
+    P.push({ id: pid(), kind: 'kn', on: x.confidence === 'high', ...evidence, quote, type: KN_TYPES.includes(x.type) ? x.type : 'fact', text, why: str(x.why, 2000), scope: c.team.kind === 'personal' ? 'private' : x.scope === 'private' ? 'private' : 'team', project, hypothesis, conflict, conflictNote: conflict ? str(x.conflict_note, 500) || null : null, visionConflict: str(x.vision_conflict, 500) || null, res: conflict ? 'replace' : null });
   }
   for (const x of out.new_projects || []) P.push({ id: pid(), kind: 'project', on: false, ...ev(x), name: str(x.name, 120), vision: str(x.vision, 2000) });
   for (const x of out.new_hypotheses || []) P.push({ id: pid(), kind: 'hyp', on: false, ...ev(x), project: prj.has(x.project_id) ? x.project_id : null, if: str(x.if, 1000), then: str(x.then, 1000), because: str(x.because, 1000), metric: str(x.metric, 300), owner: x.owner_member_id && mem.has(x.owner_member_id) ? x.owner_member_id : c.uid });
   return P.filter((p) => p.quote);
 }
 
-const PROP_KEYS = ['id', 'kind', 'on', 'quote', 'ts', 'conf', 'title', 'owner', 'requester', 'due', 'project', 'hypothesis', 'important', 'dup', 'merge', 'task', 'to', 'type', 'text', 'why', 'scope', 'conflict', 'res', 'name', 'vision', 'if', 'then', 'because', 'metric', 'from', 'manual'];
+const PROP_KEYS = ['id', 'kind', 'on', 'quote', 'ts', 'conf', 'title', 'owner', 'requester', 'due', 'project', 'hypothesis', 'important', 'dup', 'merge', 'task', 'to', 'type', 'text', 'why', 'scope', 'conflict', 'conflictNote', 'visionConflict', 'res', 'name', 'vision', 'if', 'then', 'because', 'metric', 'from', 'manual'];
 function sanitizeProposals(ps) {
   const used = new Set();
   return ps.slice(0, 300).filter((p) => p && ['task', 'status', 'kn', 'project', 'hyp'].includes(p.kind)).map((p) => {
@@ -540,7 +553,7 @@ function sanitizeProposals(ps) {
     o.id = typeof o.id === 'string' && /^[\w-]{1,80}$/.test(o.id) && !used.has(o.id) ? o.id : store.newId('pr');
     used.add(o.id);
     o.on = Boolean(o.on);
-    for (const k of ['title', 'text', 'why', 'name', 'vision', 'if', 'then', 'because', 'metric', 'quote']) if (o[k] != null) o[k] = str(o[k], 2000);
+    for (const k of ['title', 'text', 'why', 'name', 'vision', 'if', 'then', 'because', 'metric', 'quote', 'conflictNote', 'visionConflict']) if (o[k] != null) o[k] = str(o[k], 2000);
     return o;
   });
 }

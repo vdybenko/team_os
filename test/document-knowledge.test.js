@@ -9,7 +9,7 @@ Object.assign(process.env, { DATA_DIR: directory, S3_BUCKET: '', AI_PROVIDER: 'o
 const store = await import('../server/store.js');
 const { analyze } = await import('../server/ai.js');
 const { askAssistant } = await import('../server/assistant.js');
-const { applyProposals, assistantDocuments } = await import('../server/domain.js');
+const { applyProposals, assistantDocuments, runAnalysis } = await import('../server/domain.js');
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 function model(t, respond) {
@@ -22,7 +22,7 @@ function model(t, respond) {
 test('PDF knowledge uses the supporting lines on the original physical page', async (t) => {
   const text = '[p. 1]\nLibrary proposal\n\n[p. 4]\nBudget\nFiction 60%\nPoetry 40%\nVote pending.';
   const entry = { type: 'agreement', preliminary: true, text: 'The proposed budget assigns 60% to fiction and 40% to poetry.', why: null,
-    scope: 'team', project_id: null, conflicts_with_id: null, confidence: 'high', first_line: 2, last_line: 4 };
+    scope: 'team', project_id: null, hypothesis_id: null, conflicts_with_id: null, conflict_note: null, vision_conflict: null, confidence: 'high', first_line: 2, last_line: 4 };
   model(t, (request) => {
     assert.ok(request.input.includes('[p. 4]\n1 | Budget\n2 | Fiction 60%'));
     return { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [],
@@ -151,4 +151,31 @@ test('ordinary document lookups make one call on the configured lookup model', a
     documents: [{ id: 'library', kind: 'source', text: 'The library offers reading groups.' }] });
   assert.equal(reply.answer, 'Reading groups.');
   assert.equal(calls, 1);
+});
+
+test('knowledge proposals carry placement, earlier-agreement conflicts and vision tensions', async (t) => {
+  const team = { id: 'studio', kind: 'team', name: 'Studio', members: [{ userId: 'lead', role: 'owner' }] };
+  const c = { tid: team.id, uid: 'lead', me: { name: 'Lead' }, team, admin: true };
+  await store.saveVision(team.id, '# Studio\n\nWe never sell user data.');
+  await store.projects.save(team.id, { id: 'p_app', name: 'App', vision: 'Privacy-first notes' });
+  await store.hypotheses.save(team.id, { id: 'h_ads', project: 'p_app', if: 'we add ads', then: 'revenue grows' });
+  await store.saveKnowledge(team.id, { id: 'k_old', type: 'decision', text: 'The app stays ad-free.', scope: 'team', author: 'lead', date: '2026-01-01' });
+  const text = 'Lead: we agreed to share usage data with advertisers starting next month.';
+  await store.saveInboxItem(c.uid, team.id, { id: 'meet', owner: c.uid, type: 'transcript', title: 'Sync', status: 'analyzing', date: '2026-11-20' }, text);
+  model(t, ({ input }) => {
+    assert.ok(input.includes('We never sell user data.'));
+    assert.ok(input.includes('"project_id": "p_app"') && input.includes('we add ads'));
+    const entry = { type: 'agreement', text: 'Usage data will be shared with advertisers from next month.', why: null, scope: 'team',
+      project_id: null, hypothesis_id: 'h_ads', conflicts_with_id: 'k_old', conflict_note: 'Earlier the app was to stay ad-free.',
+      vision_conflict: 'The vision says the team never sells user data.', confidence: 'high',
+      evidence_quote: 'we agreed to share usage data with advertisers', evidence_timestamp: null };
+    return { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [],
+      knowledge: [entry, { ...entry, text: 'Unrelated note.', hypothesis_id: 'invented', conflicts_with_id: 'invented', conflict_note: 'x', vision_conflict: '' }] };
+  });
+  await runAnalysis(c, 'meet');
+  const [kn, other] = (await store.getInboxItem(c.uid, team.id, 'meet')).proposals;
+  assert.deepEqual([kn.project, kn.hypothesis, kn.conflict, kn.res], ['p_app', 'h_ads', 'k_old', 'replace']);
+  assert.equal(kn.conflictNote, 'Earlier the app was to stay ad-free.');
+  assert.equal(kn.visionConflict, 'The vision says the team never sells user data.');
+  assert.deepEqual([other.project, other.hypothesis, other.conflict, other.conflictNote, other.visionConflict], [null, null, null, null, null]);
 });
