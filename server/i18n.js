@@ -172,6 +172,7 @@ const UK = {
   'There are no records or documents in this space yet that I could rely on.': 'У цьому просторі поки немає записів або документів, на які я міг би спиратися.',
   'The assistant returned an empty answer. Try again.': 'Асистент повернув порожню відповідь. Спробуй ще раз.',
   'The assistant could not verify its document citations. Try again.': 'Асистент не зміг звірити цитати з документом. Спробуй ще раз.',
+  'The assistant could not separate contributions from financial terms. Try again.': 'Асистент не зміг виокремити внесок учасників із фінансових умов. Спробуй ще раз.',
   'The document dated {date} describes a proposal under discussion.': 'Документ від {date} фіксує пропозицію на етапі обговорення.',
   'The document describes a proposal under discussion.': 'Документ фіксує пропозицію на етапі обговорення.',
   'Open questions included {items}.': 'Відкритими залишалися такі питання: {items}.',

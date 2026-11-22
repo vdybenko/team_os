@@ -107,6 +107,72 @@ test('responsibility rows preserve leads, contributors and joint owners verbatim
   assert.deepEqual(reply.sources.map((s) => s.page), [1]);
 });
 
+test('a contribution follow-up can use a mixed table without repeating the previous profit split', async (t) => {
+  const document = { id: 'studio', kind: 'inbox', pdf: true, text:
+    '[p. 1]\nProposed partnership\n\n[p. 2]\nPartner | Contribution | Proposed share of profit\nAri | equipment | 50%\nJo | training | 30%\nSam | distribution | 20%\nThis profit split is a proposal.' };
+  const split = 'This profit split is a proposal.\n\n- Ari — 50%\n- Jo — 30%\n- Sam — 20%';
+  const contributions = 'Proposed contributions\n- Ari supplies equipment.\n- Jo provides training.\n- Sam handles distribution.';
+  const shareQuestion = 'What profit split did we decide on?';
+  const contributionQuestion = 'What does each partner bring?';
+  const models = [];
+  model(t, (request) => {
+    models.push(request.model);
+    const { records, question, history, evidence } = JSON.parse(request.input);
+    if (records) {
+      const key = records.find((r) => r.data.page === 2).key;
+      if (question === shareQuestion) return { focus: 'decision', sources: [key], answer: '' };
+      assert.equal(history[0].answer, split);
+      return { focus: 'contributions', sources: [key], answer: contributions + '\n' + split };
+    }
+    if (question === shareQuestion) {
+      const key = evidence.find((r) => r.page === 2).key;
+      return { answer: 'The board approved the split.', sources: [key], allocation_tables: [{ key, status_line: 5, recipients: [
+        { line: 2, name: 'Ari', percentage: '50%' }, { line: 3, name: 'Jo', percentage: '30%' }, { line: 4, name: 'Sam', percentage: '20%' },
+      ] }] };
+    }
+    assert.deepEqual(history, [shareQuestion]);
+    assert.equal(evidence.length, 1);
+    assert.match(evidence[0].lines, /Jo \| training \| 30%/);
+    return { answer: contributions, sources: [evidence[0].key], qualification: '', profiles: [] };
+  });
+  const ask = (question, turns = []) => askAssistant({ question, turns, tasks: [], knowledge: [], projects: [], hypotheses: [], documents: [document] });
+  const first = await ask(shareQuestion);
+  assert.equal(first.answer, split);
+  const followup = await ask(contributionQuestion, [{ question: shareQuestion, ...first }]);
+  assert.equal(followup.answer, contributions);
+  assert.deepEqual(followup.sources.map((s) => s.page), [2]);
+  assert.equal(models.length, 4);
+  assert.equal(models[3], models[2]);
+});
+
+test('individual profiles preserve original contributions and end before shared responsibilities', async (t) => {
+  const document = { id: 'library', kind: 'source', pdf: true,
+    text: '[p. 2]\nЗапропоновані внески\nІрина\nНадає підтримку 24/7.\nОлег\nНадає каталог.\nСофія\nНавчає учасників.\nСтратегія спільна.' };
+  model(t, ({ input }) => {
+    const { records, evidence } = JSON.parse(input);
+    if (records) return { focus: 'contributions', sources: [records[0].key], answer: '' };
+    const key = evidence[0].key;
+    return { answer: 'Олег відповідає за стратегію.', sources: [key], qualification: 'Затверджено на засіданні.', profiles: [
+      { key, name: 'Ірина', name_line: 2, last_line: 3 }, { key, name: 'Олег', name_line: 4, last_line: 5 },
+      { key, name: 'Софія', name_line: 6, last_line: 7 },
+    ] };
+  });
+  const reply = await askAssistant({ question: 'Що кожен із трьох партнерів привносить у партнерство?', turns: [], tasks: [], knowledge: [], projects: [], hypotheses: [], documents: [document] });
+  assert.equal(reply.answer, '- **Ірина** — Надає підтримку 24/7.\n- **Олег** — Надає каталог.\n- **Софія** — Навчає учасників.');
+  assert.deepEqual(reply.sources.map((s) => s.page), [2]);
+});
+
+test('a combined request includes both contributions and the proposed shares', async (t) => {
+  const answer = 'Jo contributes equipment. The proposed profit split is Jo 60%, Ari 40%.';
+  model(t, ({ input }) => {
+    const [record] = JSON.parse(input).records;
+    return { focus: 'ordinary', sources: [record.key], answer };
+  });
+  const reply = await askAssistant({ question: 'What does Jo bring and how would profits be split?', turns: [], tasks: [], knowledge: [], projects: [], hypotheses: [],
+    documents: [{ id: 'studio', kind: 'source', text: 'Jo brings equipment. Proposed profit share: Jo 60%, Ari 40%.' }] });
+  assert.equal(reply.answer, answer);
+});
+
 test('a dated proposal supplies a cutoff, not evidence of a later launch', async (t) => {
   const document = { id: 'club', kind: 'source', pdf: true, date: '2027-01-10',
     text: '[p. 1]\nProposal · 5 November 2026\n\n[p. 3]\nDiscuss the venue and budget.' };
