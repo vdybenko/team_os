@@ -154,6 +154,7 @@ export async function answerWorkspace(input) {
     instructions: ASSISTANT_INSTRUCTIONS + (hasDocuments ? DOCUMENT_ANSWER_RULES : ''),
     schema: hasDocuments ? DOCUMENT_ANSWER_SCHEMA : ASSISTANT_SCHEMA, name: 'teamos_assistant',
     toolName: 'submit_answer', maxTokens: 2400, openAIMaxTokens: 2400,
+    model: process.env.OPENAI_LOOKUP_MODEL || (/(?:mini|nano)/i.test(MODEL) ? MODEL : 'gpt-4.1-mini'),
   };
   const draft = await structuredAnswer(JSON.stringify(input), request);
   if (!hasDocuments || draft.focus === 'ordinary') return draft;
@@ -177,7 +178,7 @@ export async function answerWorkspace(input) {
   const lines = new Map(records.filter(isDocument).map((r) => [r.key, r.data.text.split(/\n+/)]));
   const evidence = records.map((r) => lines.has(r.key) ? { key: r.key, title: r.title, page: r.data.page,
     lines: lines.get(r.key).map((line, i) => (i + 1) + ' | ' + line).join('\n') } : r);
-  const review = { ...request, schema: rowsRequested ? ROW_ANSWER_SCHEMA : draft.focus === 'current_status' ? STATUS_SCHEMA : ASSISTANT_SCHEMA,
+  const review = { ...request, model: MODEL, schema: rowsRequested ? ROW_ANSWER_SCHEMA : draft.focus === 'current_status' ? STATUS_SCHEMA : ASSISTANT_SCHEMA,
     instructions: ASSISTANT_INSTRUCTIONS + '\n' + REVIEW_RULES[draft.focus] };
   const result = await structuredAnswer(JSON.stringify({ question: input.question, history: input.history.map((h) => h.question),
     totals: input.totals, partial: input.partial, evidence }), review);
@@ -256,7 +257,7 @@ async function invokeNova(user, { instructions, schema, toolName: name, maxToken
   return tool?.toolUse.input;
 }
 
-async function invokeOpenAI(user, { instructions, schema, name, openAIMaxTokens }) {
+async function invokeOpenAI(user, { instructions, schema, name, openAIMaxTokens, model = MODEL }) {
   let response;
   try {
     response = await fetch('https://api.openai.com/v1/responses', {
@@ -265,7 +266,7 @@ async function invokeOpenAI(user, { instructions, schema, name, openAIMaxTokens 
       redirect: 'error',
       signal: AbortSignal.timeout(180_000),
       body: JSON.stringify({
-        model: MODEL,
+        model,
         instructions,
         input: user,
         max_output_tokens: openAIMaxTokens,

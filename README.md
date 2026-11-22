@@ -46,6 +46,8 @@ For the Claude API directly, set `AI_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`
 
 For OpenAI, set `AI_PROVIDER=openai`, `OPENAI_API_KEY` and, if needed, `OPENAI_MODEL` (default `gpt-4.1-mini`). TeamOS sends the text and team context to the Responses API with `store: false`. Without a configured provider, items can be processed manually in Review.
 
+Ordinary assistant lookups use one call. Set `OPENAI_LOOKUP_MODEL` to choose their model. By default they reuse a configured mini or nano model, or use `gpt-4.1-mini`. Document questions about decisions, assignments, progress, targets and next steps get a focused reading of the relevant evidence using `OPENAI_MODEL`.
+
 ## How data is stored
 
 Leave `S3_BUCKET` empty to use local storage. The default is `storage/` in the project root, which is ignored by Git. Set `DATA_DIR` to use a different directory. On first use, TeamOS copies an existing default `data/` store into `storage/`, preserving IDs and the session signing key. An explicitly configured directory with the previous layout remains readable.
