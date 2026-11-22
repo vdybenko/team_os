@@ -481,16 +481,31 @@ export async function saveInboxItem(uid, tid, item, sourceText) {
   rebuildUserTeamIndex(uid, tid);
   return item;
 }
+// Original audio of a dictated item, kept next to its transcript (<id>.audio). Its type is stored on the item.
+export async function saveInboxAudio(uid, tid, id, buf) {
+  const file = assertId(id) + '.audio';
+  if (S3_RECORDS) return void await s3.write(inboxPrefix(uid, tid) + file, buf, 'application/octet-stream');
+  writeAtomic(path.join(inboxDir(uid, tid), file), buf);
+}
+export async function getInboxAudio(uid, tid, id) {
+  const file = assertId(id) + '.audio';
+  if (S3_RECORDS) return (await s3.bytes(inboxPrefix(uid, tid) + file))?.body || null;
+  try { return fs.readFileSync(path.join(inboxDir(uid, tid), file)); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
+}
 export async function removeInboxItem(uid, tid, item) {
   const id = assertId(item.id);
   if (S3_RECORDS) {
-    const source = await s3.raw(inboxPrefix(uid, tid) + id + '.md');
+    const prefix = inboxPrefix(uid, tid);
+    const source = await s3.raw(prefix + id + '.md');
+    const audio = item.audio ? await s3.bytes(prefix + id + '.audio') : null;
     await s3.remove(item);
     if (source) await s3.erase(source);
+    if (audio) await s3.erase(audio);
     return;
   }
   rm(path.join(inboxDir(uid, tid), id + '.json'));
   rm(path.join(inboxDir(uid, tid), id + '.md'));
+  rm(path.join(inboxDir(uid, tid), id + '.audio'));
   rebuildUserTeamIndex(uid, tid);
 }
 
