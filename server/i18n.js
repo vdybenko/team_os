@@ -112,6 +112,13 @@ const UK = {
   'Knowledge entry not found': 'Не знайдено',
   'The author or Owner/Admin can edit': 'Редагує автор або Owner/Admin',
   'The author or Owner/Admin can delete': 'Видаляє автор або Owner/Admin',
+  'Source not found': 'Джерело не знайдено',
+  'The source has no file': 'У джерела немає файлу',
+  'The file is not a PDF.': 'Файл не є PDF.',
+  'The PDF is password-protected.': 'PDF захищений паролем.',
+  'Couldn’t read the PDF.': 'Не вдалося прочитати PDF.',
+  'The PDF has no text layer (it may be a scan). Run OCR on it first.': 'У PDF немає текстового шару (можливо, це скан). Спершу розпізнайте текст (OCR).',
+  'The file is too large (max 20 MB)': 'Файл завеликий (максимум 20 МБ)',
 
   // projects & hypotheses
   'Project name is required': 'Назва проєкту обов’язкова',
@@ -190,4 +197,11 @@ const UK = {
   'A different TeamOS account is signed in to this browser. Sign out and open this link again.': 'У цьому браузері вже виконано вхід в інший акаунт TeamOS. Вийди й відкрий посилання ще раз.',
   'We couldn’t complete sign-in. Request a new link.': 'Не вдалося завершити вхід. Отримай нове посилання.',
   'Dev login is disabled': 'Вхід для розробки вимкнено',
+
+  // goals & knowledge (shared with MCP)
+  'The entry to replace was not found': 'Запис, який треба замінити, не знайдено',
+  'Goal not found': 'Ціль не знайдено',
+  'Write the goal': 'Напиши ціль',
+  'A project can have up to 20 goals': 'У проєкту може бути до 20 цілей',
+
 };

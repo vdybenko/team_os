@@ -46,6 +46,12 @@ const KT = translated({ decision: 'Decision', agreement: 'Agreement', fact: 'Fac
 const TASK_SECTION_NAMES = translated({ mine: 'My tasks', delegated: 'Delegated' });
 const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 const ITYPE = translated({ transcript: 'Transcript', email: 'Email', chat: 'Chat', doc: 'Document', note: 'Note', routed: 'Proposal' });
+const SRCKIND = translated({ pdf: 'PDF', transcript: 'Transcript', doc: 'Document' });
+const srcIco = (k) => (k === 'pdf' ? 'file' : k === 'transcript' ? 'mic' : 'drive');
+const keepsSource = (i) => i.type !== 'routed' && Boolean(i.file || ['transcript', 'doc'].includes(i.type));
+const srcOf = (id) => (id && S.d?.sources ? S.d.sources.find((s) => s.id === id) : null);
+const fsize = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+const fileUrl = (base, download) => `${T(base)}/file${download ? '?download=1' : ''}`;
 const typeIco = (t) => ({ transcript: 'mic', email: 'mail', doc: 'drive', chat: 'chat', note: 'note', routed: 'route' })[t] || 'file';
 const teamName = (team) => (team?.kind === 'personal' ? $t('Personal') : team?.name || '');
 const teamLogo = (team) => (team.kind === 'personal' ? $t('Me') : team.name.slice(0, 2).toUpperCase());
@@ -263,7 +269,7 @@ async function openReview(id, quiet) {
   try {
     const item = await api('GET', T(`/inbox/${encodeURIComponent(id)}`));
     if (quiet && S.review?.item.id === id && S.review.dirty) return;
-    S.review = { item, props: structuredClone(item.proposals || []), dirty: false };
+    S.review = { item, props: structuredClone(item.proposals || []), dirty: false, sourceScope: item.sourceScope || (personal() ? 'private' : 'team') };
     render();
   } catch (e) { if (!quiet) { toast(e.message); location.hash = 'inbox'; } }
 }
@@ -278,11 +284,11 @@ function pReview() {
   const id = R().slice(7);
   if (!S.review || S.review.item.id !== id) { openReview(id); return '<div class="empty"><span class="spin"></span></div>'; }
   const { item, props } = S.review;
-  if (S.applied?.id === item.id) { const a = S.applied; return `<div class="done-box"><div class="big">${$t('Done')}</div><p style="font-size:17px;margin:14px 0 4px">${esc(a.lines.join(' · ') || $t('Nothing was saved'))}</p><p class="hint">${a.notified.length ? $t('Notifications go to: {names}', { names: esc(a.notified.join(', ')) }) : $t('Everything is saved')}</p>${a.notes.map((n) => `<p class="hint danger">${esc(n)}</p>`).join('')}<div class="chips" style="justify-content:center;margin-top:18px"><button class="btn pri" data-a="go" data-h="tasks">${$t('Go to tasks')}</button><button class="btn" data-a="go" data-h="knowledge">${$t('Go to knowledge')}</button><button class="btn" data-a="go" data-h="inbox">${$t('Go to inbox')}</button></div></div>`; }
+  if (S.applied?.id === item.id) { const a = S.applied; return `<div class="done-box"><div class="big">${$t('Done')}</div><p style="font-size:17px;margin:14px 0 4px">${esc(a.lines.join(' · ') || $t('Nothing was saved'))}</p><p class="hint">${a.notified.length ? $t('Notifications go to: {names}', { names: esc(a.notified.join(', ')) }) : $t('Everything is saved')}</p>${a.notes.map((n) => `<p class="hint danger">${esc(n)}</p>`).join('')}<div class="chips" style="justify-content:center;margin-top:18px"><button class="btn pri" data-a="go" data-h="tasks">${$t('Go to tasks')}</button><button class="btn" data-a="go" data-h="knowledge">${$t('Go to knowledge')}</button>${a.sourceId ? `<button class="btn" data-a="go" data-h="source-${a.sourceId}">${ico('file', 14)} ${$t('Open source')}</button>` : ''}<button class="btn" data-a="go" data-h="inbox">${$t('Go to inbox')}</button></div></div>`; }
   const lines = (item.source || '').split('\n');
   const tsRe = /^\s*\[?((?:\d{1,2}:)?\d{1,2}:\d{2})\]?\s*/;
-  const head = `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="inbox">${ico('back', 14)} ${$t('Inbox')}</button><h1 style="margin-top:8px">${esc(item.title)}</h1><div class="sub inl">${ITYPE[item.type] || ''} · ${esc(item.origin)} · ${fd(item.date)}${(item.participants || []).filter((p) => p.member_id).map((p) => `<span class="alias">${esc(p.name_in_source)} → ${esc(pn(p.member_id))} ✓</span>`).join('')}</div></div><div class="act">${item.type !== 'routed' && item.status !== 'processing' ? `<button class="btn" data-a="reanalyze">${ico('spark')}${$t('Analyze again')}</button>` : ''}${['review', 'ignored'].includes(item.status) ? `<button class="btn" data-a="ignoreItem">${item.status === 'ignored' ? $t('Back to review') : $t('Skip')}</button>` : ''}<button class="btn ghost" data-a="delItem" title="${$t('Delete item')}">${ico('trash')}</button></div></div>`;
-  const src = `<div class="card src" data-keep="src">${(item.summary || []).length ? `<div class="sum"><b>${$t('Summary')}</b><ul>${item.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}${lines.map((l, i) => { const m = tsRe.exec(l); return `<div class="ln ${m ? '' : 'plain'}" id="ln-${i}">${m ? `<span class="ts">${esc(m[1])}</span>` : ''}<span>${esc(m ? l.slice(m[0].length) : l) || '&nbsp;'}</span></div>`; }).join('')}<p class="hint" style="margin:10px 8px 0">${ico('lock', 13)} ${$t('Only you see the raw text.')}</p></div>`;
+  const head = `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="inbox">${ico('back', 14)} ${$t('Inbox')}</button><h1 style="margin-top:8px">${esc(item.title)}</h1><div class="sub inl">${ITYPE[item.type] || ''} · ${esc(item.origin)} · ${fd(item.date)}${(item.participants || []).filter((p) => p.member_id).map((p) => `<span class="alias">${esc(p.name_in_source)} → ${esc(pn(p.member_id))} ✓</span>`).join('')}</div></div><div class="act">${item.file ? `<a class="btn" href="${fileUrl(`/inbox/${item.id}`)}" target="_blank" rel="noopener">${ico('file')}${$t('Open PDF')}</a>` : ''}${item.type !== 'routed' && item.status !== 'processing' ? `<button class="btn" data-a="reanalyze">${ico('spark')}${$t('Analyze again')}</button>` : ''}${['review', 'ignored'].includes(item.status) ? `<button class="btn" data-a="ignoreItem">${item.status === 'ignored' ? $t('Back to review') : $t('Skip')}</button>` : ''}<button class="btn ghost" data-a="delItem" title="${$t('Delete item')}">${ico('trash')}</button></div></div>`;
+  const src = `<div class="card src" data-keep="src">${(item.summary || []).length ? `<div class="sum"><b>${$t('Summary')}</b><ul>${item.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}${lines.map((l, i) => { const pg = /^\[p\. (\d+)\]$/.exec(l.trim()); if (pg) return `<div class="pg" id="ln-${i}">${$t('Page {n}', { n: pg[1] })}</div>`; const m = tsRe.exec(l); return `<div class="ln ${m ? '' : 'plain'}" id="ln-${i}">${m ? `<span class="ts">${esc(m[1])}</span>` : ''}<span>${esc(m ? l.slice(m[0].length) : l) || '&nbsp;'}</span></div>`; }).join('')}${srcNote(item)}</div>`;
   if (item.status === 'processing') return head + `<div class="rv">${src}<div class="card"><div class="empty"><span class="spin"></span><br><br>${$t('AI is analyzing the source… usually 20–60 seconds.')}<br>${$t('You can leave — the item will wait in the inbox.')}</div></div></div>`;
   const sec = (k, l) => { const ps = props.filter((p) => p.kind === k); return ps.length ? `<div class="sec"><h2>${l}</h2><span class="n">${ps.length}</span></div>${ps.map((p) => propCard(p, lines)).join('')}` : ''; };
   const on = props.filter((p) => p.on).length;
@@ -293,6 +299,15 @@ function pReview() {
   ${closed ? '' : `<div class="chips" style="margin:12px 0"><button class="btn sm" data-a="addProp" data-v="task">${ico('plus', 13)} ${$t('Task')}</button><button class="btn sm" data-a="addProp" data-v="kn">${ico('plus', 13)} ${$t('Knowledge')}</button><button class="btn sm" data-a="addProp" data-v="hyp">${ico('plus', 13)} ${$t('Hypothesis')}</button></div>
   <div class="bar"><b>${$t('Selected {on} of {total}', { on, total: props.length })}</b><span class="hint">${$t('Hover a card to highlight its quote on the left')}</span><button class="btn" data-a="saveDraft">${$t('Save draft')}</button><button class="btn pri" data-a="apply" ${on ? '' : 'disabled'}>${$t('Apply selected')} <kbd style="background:none;color:inherit;border-color:#fff5">⌘↵</kbd></button></div>`}`;
   return head + `<div class="rv">${src}<div>${body}</div></div>`;
+}
+// Where the original goes when the item is applied: into the knowledge base as a source.
+function srcNote(item) {
+  const lockNote = `<p class="hint" style="margin:10px 8px 0">${ico('lock', 13)} ${$t('Only you see the raw text.')}</p>`;
+  if (!keepsSource(item)) return lockNote;
+  const src = srcOf(item.sourceId);
+  if (item.status === 'done') return src ? `<p class="hint" style="margin:10px 8px 0">${ico(srcIco(src.kind), 13)} ${$t('Saved to the knowledge base as a source.')} <button class="lnk" data-a="go" data-h="source-${src.id}">${$t('Open source')}</button></p>` : lockNote;
+  const sc = S.review.sourceScope;
+  return `<div class="src-scope"><span>${ico('kn', 13)} ${item.file ? $t('On apply, the PDF and its text are saved to the knowledge base as a source.') : $t('On apply, the transcript is saved to the knowledge base as a source.')}</span>${personal() ? '' : `<span class="seg sm"><button class="${sc === 'team' ? 'on' : ''}" data-a="srcScope" data-v="team">${ico('users', 12)} ${$t('Team')}</button><button class="${sc === 'private' ? 'on' : ''}" data-a="srcScope" data-v="private">${ico('lock', 12)} ${$t('Only me')}</button></span>`}</div>`;
 }
 function propCard(p, lines) {
   const hl = quoteLines(lines, p.quote).join(',');
@@ -357,7 +372,43 @@ function pTasks() {
 function knCard(k) {
   const sup = k.supersedes && S.d.knowledge.find((x) => x.id === k.supersedes), supBy = k.supersededBy && S.d.knowledge.find((x) => x.id === k.supersededBy);
   const canEdit = k.author === uid() || (isAdmin() && k.scope === 'team');
-  return `<div class="kn ${k.supersededBy ? 'sup' : ''}"><div class="km"><span class="ty ${k.type}">${KT[k.type]}</span>${k.scope === 'private' ? `<span>${ico('lock', 12)} ${$t('Only me')}</span>` : `<span>${ico('users', 12)} ${$t('Team')}</span>`}${tag(k.project)}${canEdit ? `<span style="margin-left:auto" class="inl"><button class="btn ghost sm" data-a="editKn" data-id="${k.id}">${$t('Edit')}</button><button class="btn ghost sm" data-a="delKn" data-id="${k.id}" title="${$t('Delete')}">${ico('trash', 13)}</button></span>` : ''}</div><div class="ktx">${esc(k.text)}</div>${k.why ? `<div class="hint">${$t('Why:')} ${esc(k.why)}</div>` : ''}${k.quote ? `<div class="ev">“${esc(k.quote)}”</div>` : ''}<div class="km" style="margin-top:6px">${av(k.author, 18)}<span>${esc(pn(k.author))} · ${fds(k.date)}</span><span>${$t('Source:')} ${esc(knSource(k.source))}</span>${sup ? `<span>${$t('replaces “{text}”', { text: esc(sup.text) })}</span>` : ''}${supBy ? `<span class="chip red">${$t('replaced {date}', { date: fds(supBy.date) })}</span>` : ''}</div></div>`;
+  return `<div class="kn ${k.supersededBy ? 'sup' : ''}"><div class="km"><span class="ty ${k.type}">${KT[k.type]}</span>${k.scope === 'private' ? `<span>${ico('lock', 12)} ${$t('Only me')}</span>` : `<span>${ico('users', 12)} ${$t('Team')}</span>`}${tag(k.project)}${canEdit ? `<span style="margin-left:auto" class="inl"><button class="btn ghost sm" data-a="editKn" data-id="${k.id}">${$t('Edit')}</button><button class="btn ghost sm" data-a="delKn" data-id="${k.id}" title="${$t('Delete')}">${ico('trash', 13)}</button></span>` : ''}</div><div class="ktx">${esc(k.text)}</div>${k.why ? `<div class="hint">${$t('Why:')} ${esc(k.why)}</div>` : ''}${k.quote ? `<div class="ev">“${esc(k.quote)}”</div>` : ''}<div class="km" style="margin-top:6px">${av(k.author, 18)}<span>${esc(pn(k.author))} · ${fds(k.date)}</span><span>${$t('Source:')} ${srcOf(k.sourceId) ? `<button class="lnk" data-a="go" data-h="source-${k.sourceId}">${ico(srcIco(srcOf(k.sourceId).kind), 12)} ${esc(knSource(k.source))}</button>` : esc(knSource(k.source))}</span>${sup ? `<span>${$t('replaces “{text}”', { text: esc(sup.text) })}</span>` : ''}${supBy ? `<span class="chip red">${$t('replaced {date}', { date: fds(supBy.date) })}</span>` : ''}</div></div>`;
+}
+function derivedOf(src) {
+  const find = { task: (id) => tasks().find((t) => t.id === id), knowledge: (id) => S.d.knowledge.find((k) => k.id === id), hypothesis: (id) => S.d.hypotheses.find((h) => h.id === id), project: (id) => prj(id) };
+  const seen = new Set();
+  return (src.derived || []).filter((d) => find[d.kind] && !seen.has(d.kind + d.id) && seen.add(d.kind + d.id)).map((d) => ({ ...d, item: find[d.kind](d.id) }));
+}
+function derivedCounts(src) {
+  const ds = derivedOf(src).filter((d) => d.item), c = (k) => ds.filter((d) => d.kind === k).length;
+  return [['task', 'task'], ['knowledge', 'knowledge'], ['hypothesis', 'hypothesis'], ['project', 'project']].filter(([k]) => c(k)).map(([k, l]) => $p(c(k), l)).join(' · ') || $t('nothing you can see');
+}
+function srcCard(x) {
+  return `<div class="kn src-card" data-a="go" data-h="source-${x.id}" style="cursor:pointer"><div class="km"><span class="iico">${ico(srcIco(x.kind), 16)}</span><span class="ty context">${SRCKIND[x.kind] || x.kind}</span>${x.scope === 'private' ? `<span>${ico('lock', 12)} ${$t('Only me')}</span>` : `<span>${ico('users', 12)} ${$t('Team')}</span>`}${x.file ? `<span>${esc(x.file.name)} · ${fsize(x.file.size)}${x.file.pages ? ' · ' + $p(x.file.pages, 'page') : ''}</span>` : ''}</div><div class="ktx">${esc(x.title)}</div><div class="km" style="margin-top:6px">${av(x.author, 18)}<span>${esc(pn(x.author))} · ${fds(x.date)}</span><span>${$t('Created from it:')} ${derivedCounts(x)}</span></div></div>`;
+}
+async function loadSource(id) {
+  try { S.srcView = await api('GET', T(`/sources/${encodeURIComponent(id)}`)); }
+  catch (e) { S.srcView = { id, error: e.message }; }
+  render();
+}
+function pSource(id) {
+  const meta = srcOf(id);
+  if (!S.srcView || S.srcView.id !== id) { S.srcView = { id, loading: true }; loadSource(id); }
+  const v = S.srcView, x = v.loading || v.error ? meta : v;
+  const back = `<button class="btn ghost sm" data-a="go" data-h="knowledge">${ico('back', 14)} ${$t('Knowledge')}</button>`;
+  if (!x) return `<div class="hd"><div>${back}</div></div><div class="empty">${v.loading ? '<span class="spin"></span>' : $t('This source is not available.')}</div>`;
+  const base = `/sources/${x.id}`;
+  const ds = derivedOf(meta || x), hidden = ((meta || x).derived || []).length - ds.filter((d) => d.item).length;
+  const row = (d) => d.kind === 'task' ? `<button class="trow" data-a="open" data-id="${d.id}"><span class="iico">${ico('tasks')}</span><span class="tt"><b>${esc(d.item.title)}</b><span class="mt">${esc(pnx(d.item.owner))} · ${STL[d.item.status]}</span></span></button>`
+    : d.kind === 'knowledge' ? `<button class="trow" data-a="go" data-h="knowledge-${d.id}"><span class="iico">${ico('kn')}</span><span class="tt"><b>${esc(d.item.text)}</b><span class="mt">${KT[d.item.type]}${d.item.supersededBy ? ' · ' + $t('replaced') : ''}</span></span></button>`
+    : d.kind === 'hypothesis' ? `<button class="trow" data-a="go" data-h="hyp-${d.id}"><span class="iico">${ico('spark')}</span><span class="tt"><b>${esc(d.item.statement || d.item.if)}</b></span></button>`
+    : `<button class="trow" data-a="go" data-h="project-${d.id}"><span class="iico">${ico('dash')}</span><span class="tt"><b>${esc(d.item.name)}</b></span></button>`;
+  const lines = String(v.text || '').split('\n');
+  const pageRe = /^\[p\. (\d+)\]$/, tsRe = /^\s*\[?((?:\d{1,2}:)?\d{1,2}:\d{2})\]?\s*/;
+  const text = v.loading ? '<div class="empty"><span class="spin"></span></div>' : v.error ? `<div class="err">${esc(v.error)}</div>` : lines.map((l) => { const pg = pageRe.exec(l.trim()); if (pg) return `<div class="pg">${$t('Page {n}', { n: pg[1] })}</div>`; const m = tsRe.exec(l); return `<div class="ln ${m ? '' : 'plain'}">${m ? `<span class="ts">${esc(m[1])}</span>` : ''}<span>${esc(m ? l.slice(m[0].length) : l) || '&nbsp;'}</span></div>`; }).join('');
+  return `<div class="hd"><div>${back}<h1 style="margin-top:8px;display:flex;gap:10px;align-items:center">${ico(srcIco(x.kind), 22)} ${esc(x.title)}</h1><div class="sub inl">${SRCKIND[x.kind] || ''} · ${esc(x.file ? x.file.name : x.origin || '')}${x.file?.pages ? ' · ' + $p(x.file.pages, 'page') : ''} · ${fd(x.date)} · ${esc(pn(x.author))} · ${x.scope === 'private' ? `${ico('lock', 12)} ${$t('Only me')}` : `${ico('users', 12)} ${$t('Team')}`}</div></div><div class="act">${x.file ? `<a class="btn pri" href="${fileUrl(base)}" target="_blank" rel="noopener">${ico('file')}${$t('Open PDF')}</a><a class="btn" href="${fileUrl(base, true)}">${$t('Download')}</a>` : ''}${meta?.canDelete ? `<button class="btn ghost" data-a="delSrc" data-id="${x.id}" title="${$t('Delete source')}">${ico('trash')}</button>` : ''}</div></div>
+  <div class="rv"><div class="card src">${(x.summary || []).length ? `<div class="sum"><b>${$t('Summary')}</b><ul>${x.summary.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}${text}</div>
+  <div><div class="card"><h2>${$t('Created from this source')}</h2>${ds.filter((d) => d.item).map(row).join('') || `<div class="empty">${$t('Nothing you can see')}</div>`}${hidden > 0 ? `<p class="hint">${ico('lock', 12)} ${$t('{n} more are private to other people or were deleted', { n: hidden })}</p>` : ''}</div></div></div>`;
 }
 function pKnowledge(id) {
   if (id) {
@@ -367,7 +418,13 @@ function pKnowledge(id) {
   let ks = S.d.knowledge;
   if (S.kscope !== 'all') ks = ks.filter((k) => k.scope === S.kscope); if (S.kproj) ks = ks.filter((k) => k.project === S.kproj);
   const head = `<div class="hd"><div><h1>${$t('Knowledge')}</h1><div class="sub">${$t('Agreements, decisions and facts, each linked to its source. Team knowledge is stored as Markdown in the team folder.')}</div></div><div class="act"><button class="btn pri" data-a="newKn">${ico('plus')}${$t('Add')}</button></div></div>
-  <div class="chips" style="margin-bottom:16px;align-items:center"><span class="seg">${[['all', $t('All')], ...Object.entries(KT)].map(([k, l]) => `<button class="${S.knt === k && !S.klog ? 'on' : ''}" data-a="knt" data-v="${k}">${l}</button>`).join('')}</span><span class="seg"><button class="${S.klog ? 'on' : ''}" data-a="klog">Decision log</button></span>${personal() ? '' : `<select class="in" data-f="kscope" aria-label="${$t('Visibility')}"><option value="all">${$t('Team and mine')}</option><option value="team" ${S.kscope === 'team' ? 'selected' : ''}>${$t('Team only')}</option><option value="private" ${S.kscope === 'private' ? 'selected' : ''}>${$t('Mine only')}</option></select>`}<select class="in" data-f="kproj" aria-label="${$t('Project')}"><option value="">${$t('All projects')}</option>${S.d.projects.map((p) => `<option value="${p.id}" ${S.kproj === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></div>`;
+  <div class="chips" style="margin-bottom:16px;align-items:center"><span class="seg">${[['all', $t('All')], ...Object.entries(KT)].map(([k, l]) => `<button class="${S.knt === k && !S.klog ? 'on' : ''}" data-a="knt" data-v="${k}">${l}</button>`).join('')}</span><span class="seg"><button class="${S.klog ? 'on' : ''}" data-a="klog">Decision log</button><button class="${S.ksrc ? 'on' : ''}" data-a="ksrc">${ico('file', 13)} ${$t('Sources')} · ${(S.d.sources || []).length}</button></span>${personal() ? '' : `<select class="in" data-f="kscope" aria-label="${$t('Visibility')}"><option value="all">${$t('Team and mine')}</option><option value="team" ${S.kscope === 'team' ? 'selected' : ''}>${$t('Team only')}</option><option value="private" ${S.kscope === 'private' ? 'selected' : ''}>${$t('Mine only')}</option></select>`}<select class="in" data-f="kproj" aria-label="${$t('Project')}"><option value="">${$t('All projects')}</option>${S.d.projects.map((p) => `<option value="${p.id}" ${S.kproj === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></div>`;
+  if (S.ksrc) {
+    let ss = S.d.sources || [];
+    if (S.kscope !== 'all') ss = ss.filter((x) => x.scope === S.kscope);
+    if (S.kproj) ss = ss.filter((x) => derivedOf(x).some((d) => d.item?.project === S.kproj));
+    return head + `<p class="hint" style="margin:-4px 0 12px">${$t('Original transcripts and PDF documents that tasks and knowledge were created from.')}</p>` + (ss.map(srcCard).join('') || `<div class="empty">${$t('No sources yet. They appear when you apply a transcript or a PDF from the inbox.')}</div>`);
+  }
   if (S.klog) { const d = ks.filter((k) => k.type === 'decision').sort((a, b) => (a.date < b.date ? 1 : -1)); return head + (d.length ? `<div class="tl">${d.map(knCard).join('')}</div>` : `<div class="empty">${$t('No decisions yet')}</div>`); }
   const list = ks.filter((k) => !k.supersededBy && (S.knt === 'all' || k.type === S.knt)).sort((a, b) => (a.date < b.date ? 1 : -1));
   return head + (list.map(knCard).join('') || `<div class="empty">${$t('Nothing here yet. Knowledge appears after you review meetings, or you can add it manually.')}</div>`);
@@ -601,7 +658,7 @@ function drawer() {
   <span>${$t('Project')}</span>${selProj(`class="in" data-f="t.project" ${ro} aria-label="${$t('Project')}"`, t.project)}
   <span>${$t('Hypothesis')}</span>${selHyp(`class="in" data-f="t.hypothesis" ${ro} aria-label="${$t('Hypothesis')}"`, t.hypothesis, t.project)}</div>
   <label class="fl">${$t('Description')}<textarea class="in" rows="3" data-f="t.description" ${ce ? '' : 'readonly'}>${esc(t.description || '')}</textarea></label>
-  ${t.source ? `<div class="box"><h3>${$t('Source')}</h3>${t.source.quote ? `<div class="quote">“${esc(t.source.quote)}”</div>` : ''}<div class="hint" style="margin-top:6px">${esc(t.source.itemTitle)}${t.source.ts ? ' · ' + esc(t.source.ts) : ''} · ${srcOwn ? `<button class="btn ghost sm" data-a="go" data-h="review-${t.source.itemId}">${$t('View')}</button>` : `${ico('lock', 12)} ${$t('only the person who added it sees the full text')}`}</div></div>` : ''}
+  ${t.source ? `<div class="box"><h3>${$t('Source')}</h3>${t.source.quote ? `<div class="quote">“${esc(t.source.quote)}”</div>` : ''}<div class="hint" style="margin-top:6px">${esc(t.source.itemTitle)}${t.source.ts ? ' · ' + esc(t.source.ts) : ''} · ${srcOf(t.source.sourceId) ? `<button class="btn ghost sm" data-a="go" data-h="source-${t.source.sourceId}">${ico(srcIco(srcOf(t.source.sourceId).kind), 13)} ${$t('Open source')}</button>` : srcOwn ? `<button class="btn ghost sm" data-a="go" data-h="review-${t.source.itemId}">${$t('View')}</button>` : `${ico('lock', 12)} ${$t('only the person who added it sees the full text')}`}</div></div>` : ''}
   <div class="box"><h3>${$t('Comments')} · ${t.comments.length}</h3>${t.comments.map((c) => `<div class="cm">${av(c.author, 26)}<div><b>${esc(pn(c.author))}</b> <span class="when">${fdt(c.at)}</span><div style="white-space:pre-wrap">${esc(c.text)}</div></div></div>`).join('')}<textarea class="in" id="cmt" rows="2" placeholder="${ce ? $t('Comment…') : $t('Write what’s done or what’s blocking…')}"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" data-a="comment">${$t('Send')}</button></div></div>
   <div class="box"><h3>${$t('History')}</h3><div class="hist">${t.history.slice().reverse().map((h) => `<div><b style="color:var(--ink)">${fdt(h.at)}</b> · ${esc(pn(h.by))}: ${esc(h.text)}${h.source ? ` <span>(${esc(h.source)})</span>` : ''}</div>`).join('')}</div></div></div>`;
   el.classList.add('on'); el.setAttribute('aria-hidden', 'false');
@@ -616,8 +673,8 @@ function modal() {
   let h = '';
   if (m.k === 'add') {
     h = `<div class="md wide"><div class="mdh"><h2>${$t('Add to inbox')}</h2>${close}</div><div class="seg" style="margin-bottom:14px">${[['paste', $t('Paste text')], ['file', $t('File')], ['note', $t('Note')]].map(([k, l]) => `<button class="${m.tab === k ? 'on' : ''}" data-a="addTab" data-v="${k}">${l}</button>`).join('')}</div>
-    ${m.tab === 'file' ? `<label class="card" style="display:grid;place-items:center;padding:30px;border-style:dashed;cursor:pointer;text-align:center">${ico('file', 26)}<b style="margin-top:8px">${m.fileName ? esc(m.fileName) : $t('Choose a file')}</b><span class="hint">.txt .md .vtt .srt</span><input type="file" hidden data-f="addFile" accept=".txt,.md,.vtt,.srt,text/plain,text/markdown"></label>` : `<textarea class="in" id="addTxt" rows="9" placeholder="${m.tab === 'note' ? $t('Write down a thought or an agreement — TeamOS processes it just like a transcript') : $t('Paste a meeting transcript, a chat excerpt or an email…')}">${esc(m.text || '')}</textarea>`}
-    <div class="grid g2" style="margin-top:14px;gap:12px"><label class="fl">${$t('Title')}<input class="in" id="addTitle" value="${esc(m.title || '')}" placeholder="${$t('E.g. Weekly sync — 20 Nov')}"></label><label class="fl">${$t('Source type')}<select class="in" id="addType">${Object.entries(ITYPE).filter(([k]) => k !== 'routed').map(([k, l]) => `<option value="${k}" ${k === (m.tab === 'note' ? 'note' : m.type || 'transcript') ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">${$t('Date of the meeting / email')}<input class="in" type="date" id="addDate" value="${m.date || TODAY()}"></label><label class="fl">${$t('Team context')}<select class="in" data-f="addTeam">${S.teams.map((t) => `<option value="${t.id}" ${t.id === S.tid ? 'selected' : ''}>${esc(teamName(t))}</option>`).join('')}</select></label></div>
+    ${m.tab === 'file' ? `<label class="card" style="display:grid;place-items:center;padding:30px;border-style:dashed;cursor:pointer;text-align:center">${ico('file', 26)}<b style="margin-top:8px">${m.fileName ? esc(m.fileName) : $t('Choose a file')}</b><span class="hint">.pdf .txt .md .vtt .srt</span>${m.pdf ? `<span class="hint">${ico('file', 12)} PDF · ${fsize(m.pdfSize)} — ${$t('AI reads the text of the document; the PDF itself is kept as the source.')}</span>` : ''}<input type="file" hidden data-f="addFile" accept=".pdf,.txt,.md,.vtt,.srt,application/pdf,text/plain,text/markdown"></label>` : `<textarea class="in" id="addTxt" rows="9" placeholder="${m.tab === 'note' ? $t('Write down a thought or an agreement — TeamOS processes it just like a transcript') : $t('Paste a meeting transcript, a chat excerpt or an email…')}">${esc(m.text || '')}</textarea>`}
+    <div class="grid g2" style="margin-top:14px;gap:12px"><label class="fl">${$t('Title')}<input class="in" id="addTitle" value="${esc(m.title || '')}" placeholder="${$t('E.g. Weekly sync — 20 Nov')}"></label><label class="fl">${$t('Source type')}<select class="in" id="addType">${Object.entries(ITYPE).filter(([k]) => k !== 'routed').map(([k, l]) => `<option value="${k}" ${k === (m.tab === 'note' ? 'note' : m.tab === 'file' && m.pdf ? 'doc' : m.type || 'transcript') ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">${$t('Date of the meeting / email')}<input class="in" type="date" id="addDate" value="${m.date || TODAY()}"></label><label class="fl">${$t('Team context')}<select class="in" data-f="addTeam">${S.teams.map((t) => `<option value="${t.id}" ${t.id === S.tid ? 'selected' : ''}>${esc(teamName(t))}</option>`).join('')}</select></label></div>
     <p class="hint" style="margin:10px 0 0">${S.ai ? `${ico('spark', 13)} ${$t('AI will extract tasks, status updates and knowledge. Nothing is saved without your confirmation.')}` : `${ico('warn', 13)} ${$t('AI analysis is off — the item will be saved and you can add proposals manually.')}`}</p>
     <div class="mdf">${cancel}<button class="btn pri" data-a="addGo">${ico('spark')}${S.ai ? $t('Analyze') : $t('Save')}</button></div></div>`;
   } else if (m.k === 'task') {
@@ -670,7 +727,7 @@ function render() {
   else if (r.startsWith('join-')) c = pJoin();
   else if (r === 'onboarding' || !S.d) c = pOnboarding();
   else {
-    const pg = r === 'assistant' ? pAssistant() : r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r.startsWith('knowledge-') ? pKnowledge(r.slice(10)) : r === 'vision' ? pVision() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
+    const pg = r === 'assistant' ? pAssistant() : r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r.startsWith('knowledge-') ? pKnowledge(r.slice(10)) : r.startsWith('source-') ? pSource(r.slice(7)) : r === 'vision' ? pVision() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
     c = `<div class="app${S.navOpen ? ' nav-open' : ''}"><aside class="side" id="side-nav">${nav()}</aside><div class="scrim" data-a="navClose" aria-hidden="true"></div><main class="main"><header class="top">${top()}</header><div class="page page-${r.split('-')[0] || 'dashboard'}${r === 'assistant' ? ' assistant-page' : ''}">${pg}</div></main>${tabbar()}</div>`;
   }
   document.documentElement.lang = LANG;
@@ -697,7 +754,7 @@ async function switchTeam(id) { S.tid = id; S.drawer = null; S.review = null; S.
 const A = {
   navOpen: () => { S.navOpen = true; render(); },
   navClose: () => { S.navOpen = false; S.tmenu = false; render(); },
-  go: (el) => { S.tmenu = false; S.navOpen = false; S.modal = null; if (el.dataset.h.startsWith('project-')) S.ptab = 'overview'; go(el.dataset.h); },
+  go: (el) => { S.tmenu = false; S.navOpen = false; S.modal = null; if (el.dataset.h.startsWith('project-')) S.ptab = 'overview'; if (el.dataset.h.startsWith('source-')) S.srcView = null; go(el.dataset.h); },
   lang: (el) => { void setLang(el.dataset.v); },
   tmenu: () => { S.tmenu = !S.tmenu; render(); },
   team: (el) => { S.tmenu = false; act(() => switchTeam(el.dataset.v)); },
@@ -721,8 +778,11 @@ const A = {
   grp: (el) => { S.grp = el.dataset.v; render(); },
   itab: (el) => { S.itab = el.dataset.v; render(); },
   ptab: (el) => { S.ptab = el.dataset.v; render(); },
-  knt: (el) => { S.knt = el.dataset.v; S.klog = false; render(); },
-  klog: () => { S.klog = !S.klog; render(); },
+  knt: (el) => { S.knt = el.dataset.v; S.klog = false; S.ksrc = false; render(); },
+  klog: () => { S.klog = !S.klog; S.ksrc = false; render(); },
+  ksrc: () => { S.ksrc = !S.ksrc; S.klog = false; render(); },
+  delSrc: (el) => { if (!confirm($t('Delete the source together with its text and file? Tasks and knowledge created from it will stay.'))) return; act(async () => { await api('DELETE', T(`/sources/${el.dataset.id}`)); S.srcView = null; await reload(); go('knowledge'); }, () => $t('Deleted')); },
+  srcScope: (el) => { S.review.sourceScope = el.dataset.v; S.review.dirty = true; render(); },
   ask: () => { S.modal = { k: 'ask', q: '' }; modal(); },
   assistantNew: () => {
     const state = assistantState();
@@ -757,9 +817,9 @@ const A = {
   add: () => { if (!S.d) return; S.modal = { k: 'add', tab: 'paste' }; modal(); },
   addTab: (el) => { const t = document.getElementById('addTxt'); if (t) S.modal.text = t.value; S.modal.title = val('addTitle'); S.modal.tab = el.dataset.v; modal(); },
   addGo: () => act(async () => {
-    const m = S.modal; const text = m.tab === 'file' ? m.fileText : val('addTxt');
-    if (!text || !text.trim()) throw new Error(m.tab === 'file' ? $t('Choose a file') : $t('Paste some text'));
-    const body = { text, title: val('addTitle').trim(), type: val('addType'), date: val('addDate'), origin: m.tab === 'file' ? `${$t('File')} · ${m.fileName}` : m.tab === 'note' ? $t('Note') : $t('Pasted text') };
+    const m = S.modal; const pdf = m.tab === 'file' && m.pdf; const text = m.tab === 'file' ? m.fileText : val('addTxt');
+    if (!pdf && (!text || !text.trim())) throw new Error(m.tab === 'file' ? $t('Choose a file') : $t('Paste some text'));
+    const body = { title: val('addTitle').trim(), type: val('addType'), date: val('addDate'), origin: m.tab === 'file' ? `${pdf ? 'PDF' : $t('File')} · ${m.fileName}` : m.tab === 'note' ? $t('Note') : $t('Pasted text'), ...(pdf ? { file: { name: m.fileName, data: m.pdf } } : { text }) };
     const tid = m.team || S.tid;
     if (tid !== S.tid) await switchTeam(tid);
     const it = await api('POST', T('/inbox'), body);
@@ -771,7 +831,7 @@ const A = {
   pset: (el) => { const p = prop(el.dataset.p); const v = el.dataset.v; p[el.dataset.k] = v === '1' ? true : v === '0' ? false : v; S.review.dirty = true; render(); },
   addProp: (el) => { const k = el.dataset.v; const base = { id: 'pr_m' + Date.now().toString(36), kind: k, on: true, manual: true, quote: '', conf: 'high' }; S.review.props.push(k === 'task' ? { ...base, title: '', owner: uid(), requester: uid(), due: null, project: null, hypothesis: null, important: true } : k === 'kn' ? { ...base, type: 'decision', text: '', why: '', scope: personal() ? 'private' : 'team', project: null } : { ...base, if: '', then: '', because: '', project: S.d.projects[0]?.id || null, owner: uid(), metric: '' }); S.review.dirty = true; render(); },
   delProp: (el) => { S.review.props = S.review.props.filter((p) => p.id !== el.dataset.p); S.review.dirty = true; render(); },
-  saveDraft: () => act(async () => { await api('PATCH', T(`/inbox/${S.review.item.id}`), { proposals: S.review.props }); S.review.dirty = false; }, () => $t('Draft saved')),
+  saveDraft: () => act(async () => { await api('PATCH', T(`/inbox/${S.review.item.id}`), { proposals: S.review.props, sourceScope: S.review.sourceScope }); S.review.dirty = false; }, () => $t('Draft saved')),
   apply: () => applyReview(),
 
   /* tasks */
@@ -838,7 +898,7 @@ async function applyReview() {
   const bad = sel.find((p) => (p.kind === 'task' && !p.title?.trim()) || (p.kind === 'kn' && !p.text?.trim()) || (p.kind === 'hyp' && (!p.if?.trim() || !p.then?.trim())));
   if (bad) return toast($t('Fill in the empty cards or uncheck them'));
   await act(async () => {
-    const res = await api('POST', T(`/inbox/${r.item.id}/apply`), { proposals: r.props });
+    const res = await api('POST', T(`/inbox/${r.item.id}/apply`), { proposals: r.props, sourceScope: r.sourceScope });
     S.applied = { id: r.item.id, ...res }; scrollTo(0, 0); await reload();
   });
 }
@@ -849,9 +909,14 @@ const F = {
   addTeam: (el) => { S.modal.team = el.value; },
   addFile: (el) => {
     const f = el.files[0]; if (!f) return;
-    if (f.size > 2e6) { toast($t('The file is too large (max 2 MB)')); return; }
+    const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+    if (isPdf ? f.size > 20 * 1048576 : f.size > 2e6) { toast(isPdf ? $t('The file is too large (max 20 MB)') : $t('The file is too large (max 2 MB)')); return; }
     const rd = new FileReader();
-    rd.onload = () => { S.modal.fileText = String(rd.result); S.modal.fileName = f.name; S.modal.title = val('addTitle') || f.name.replace(/\.[^.]+$/, ''); modal(); document.getElementById('addTitle').value = S.modal.title; };
+    if (isPdf) {
+      rd.onload = () => { Object.assign(S.modal, { pdf: String(rd.result).split(',')[1] || '', pdfSize: f.size, fileText: null, fileName: f.name, title: val('addTitle') || f.name.replace(/\.[^.]+$/, '') }); modal(); document.getElementById('addTitle').value = S.modal.title; };
+      return rd.readAsDataURL(f);
+    }
+    rd.onload = () => { S.modal.pdf = null; S.modal.fileText = String(rd.result); S.modal.fileName = f.name; S.modal.title = val('addTitle') || f.name.replace(/\.[^.]+$/, ''); modal(); document.getElementById('addTitle').value = S.modal.title; };
     rd.readAsText(f);
   },
   ntWho: (el) => { if (el.value === '__ext') { const v = askExternal(el, uid()); if (v) { el.insertAdjacentHTML('afterbegin', `<option value="${esc(v)}">${esc(v.slice(4))} (${$t('ext.')})</option>`); el.value = v; } } },

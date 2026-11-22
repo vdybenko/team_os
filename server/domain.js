@@ -7,6 +7,7 @@ import { normalizeEmail } from './magic-link.js';
 import { analyze, aiConfigured, errorMessage } from './ai.js';
 import { knowledgeEvidence } from './evidence.js';
 import { tr, render, msg } from './i18n.js';
+import { pdfToText, MAX_PDF_BYTES } from './pdf.js';
 
 /* ================= helpers ================= */
 
@@ -164,7 +165,7 @@ export async function createKnowledge(c, input, extra = {}) {
     text: str(input.text, 1000) || fail(400, 'Write the text'), why: str(input.why, 2000) || null,
     scope: input.scope === 'private' || c.team.kind === 'personal' ? 'private' : 'team',
     project: await validProject(c, input.project), author: c.uid, date: dateOrNull(input.date) || today(),
-    source: extra.source || 'Added manually', sourceItem: extra.sourceItem || null, quote: extra.quote || null,
+    source: extra.source || 'Added manually', sourceItem: extra.sourceItem || null, sourceId: extra.sourceId || null, quote: extra.quote || null,
     supersedes: null, supersededBy: null, createdAt: store.now(),
   };
   if (extra.id) {
@@ -363,15 +364,24 @@ export function replaceProposals(item, proposals) {
 }
 
 // Adds raw text to the member's personal inbox and starts AI analysis in the background.
-export async function addInboxItem(c, body) {
-  const text = str(body.text, 400000) || fail(400, 'Paste text or choose a file');
-  const type = INBOX_TYPES.includes(body.type) ? body.type : 'transcript';
+// `pdf` = { buf, name }: the text is extracted from the file, and the file itself is kept with the item.
+export async function addInboxItem(c, body, { pdf } = {}) {
+  let extracted = null;
+  if (pdf) {
+    if (pdf.buf.length > MAX_PDF_BYTES) fail(413, 'The file is too large (max 20 MB)');
+    try { extracted = await pdfToText(pdf.buf); } catch (e) { fail(400, e.message); }
+  }
+  const text = extracted ? extracted.text.slice(0, 400000) : str(body.text, 400000) || fail(400, 'Paste text or choose a file');
+  const type = INBOX_TYPES.includes(body.type) ? body.type : pdf ? 'doc' : 'transcript';
   const date = dateOrNull(body.date) || today();
+  const fileName = pdf ? str(pdf.name, 200).replace(/[\\/\u0000-\u001f]/g, '_') || 'document.pdf' : null;
   const item = {
-    id: store.newId('i'), owner: c.uid, type, title: str(body.title, 200) || tr(c.lang, type === 'note' ? 'Note — {date}' : 'Entry — {date}', { date }),
-    date, origin: str(body.origin, 100) || tr(c.lang, 'Pasted text'), status: 'processing',
+    id: store.newId('i'), owner: c.uid, type, title: str(body.title, 200) || (fileName ? fileName.replace(/\.pdf$/i, '') : tr(c.lang, type === 'note' ? 'Note — {date}' : 'Entry — {date}', { date })),
+    date, origin: str(body.origin, 100) || (pdf ? `PDF · ${fileName}` : tr(c.lang, 'Pasted text')), status: 'processing',
     summary: [], participants: [], proposals: [], error: null, createdAt: store.now(),
+    ...(pdf ? { file: { name: fileName, size: pdf.buf.length, pages: extracted.pages, mime: 'application/pdf' } } : {}),
   };
+  if (pdf) await store.saveInboxFile(c.uid, c.tid, item.id, pdf.buf);
   await store.saveInboxItem(c.uid, c.tid, item, text);
   runAnalysis(c, item.id).catch((error) => console.error('[analyze] Failed to persist analysis:', error.name));
   return item;
@@ -482,7 +492,8 @@ function sanitizeProposals(ps) {
 export async function applyProposals(c, item) {
   const n = { task: 0, merged: 0, status: 0, routed: 0, kn: 0, project: 0, hyp: 0, skipped: 0 };
   const notified = new Set(), notes = [];
-  const sourceOf = (p) => ({ itemId: item.id, itemTitle: item.title, owner: c.uid, ts: p.ts || null, quote: p.quote || '' });
+  const src = item.proposals.some((p) => p.on || p.appliedKind) ? await ensureSource(c, item) : null;
+  const sourceOf = (p) => ({ itemId: item.id, itemTitle: item.title, owner: c.uid, ts: p.ts || null, quote: p.quote || '', ...(src ? { sourceId: src.id } : {}) });
   const idFor = (type, p) => `${type}_${crypto.createHash('sha256').update(JSON.stringify([c.uid, c.tid, item.id, p.id])).digest('hex').slice(0, 32)}`;
   const saved = async (p, id, kind) => {
     p.applied = id;
@@ -532,7 +543,7 @@ export async function applyProposals(c, item) {
           await saved(p, t.id, 'routed'); notified.add(await nameOf(controller(t)));
         }
       } else if (p.kind === 'kn') {
-        const k = await createKnowledge(c, { ...p, date: item.date }, { id: idFor('k', p), source: `${item.title}${p.ts ? ' · ' + p.ts : ''}`, sourceItem: item.id, quote: p.quote });
+        const k = await createKnowledge(c, { ...p, date: item.date }, { id: idFor('k', p), source: `${item.title}${p.ts ? ' · ' + p.ts : ''}`, sourceItem: item.id, sourceId: src?.id, quote: p.quote });
         if (p.conflict && p.res === 'replace') {
           const old = await store.findKnowledge(c.tid, p.conflict, c.uid);
           if (old && old.scope === k.scope && canSeeKn(c, old) && (canEditKn(c, old) || old.scope === 'team')) {
@@ -554,9 +565,70 @@ export async function applyProposals(c, item) {
       if (e instanceof HttpError) { n.skipped++; notes.push(e.i18n); } else throw e;
     }
   }
+  if (src) await recordDerived(c, src, item);
   const lines = [['task', 'newCommitment'], ['merged', 'merged'], ['status', 'statusUpdated'], ['routed', 'routed'], ['kn', 'knowledgeSaved'], ['project', 'project'], ['hyp', 'draftHypothesis'], ['skipped', 'skipped']]
     .filter(([k]) => n[k]).map(([k, plural]) => ({ plural, n: n[k] }));
   return { lines, notified: [...notified], notes };
+}
+
+/* ================= sources ================= */
+// When an inbox item is applied, its original — a transcript or a PDF — is kept in the knowledge base as a source,
+// and every task, knowledge entry, hypothesis and project created from it points back to it (sourceId).
+
+export const keepsSource = (item) => item.type !== 'routed' && Boolean(item.file || ['transcript', 'doc'].includes(item.type));
+export const SOURCE_SCOPES = ['team', 'private'];
+const sourceScope = (c, item) => (c.team.kind === 'personal' || item.sourceScope === 'private' ? 'private' : 'team');
+
+async function ensureSource(c, item) {
+  if (!keepsSource(item)) return null;
+  const id = `s_${crypto.createHash('sha256').update(JSON.stringify([c.uid, c.tid, item.id])).digest('hex').slice(0, 32)}`;
+  const existing = await store.findSource(c.tid, id, c.uid);
+  if (existing) return existing;
+  const text = await store.getInboxSource(c.uid, c.tid, item.id);
+  const file = item.file ? await store.getInboxFile(c.uid, c.tid, item.id) : null;
+  const src = {
+    id, kind: file ? 'pdf' : item.type, title: item.title, date: item.date, origin: item.origin,
+    author: c.uid, scope: sourceScope(c, item), inboxItem: item.id,
+    file: file ? { name: item.file.name, size: file.length, pages: item.file.pages || null } : null,
+    chars: text.length, summary: item.summary || [], derived: [], createdAt: store.now(),
+  };
+  await store.saveSource(c.tid, src, { text, file: file || undefined });
+  item.sourceId = id;
+  await store.saveInboxItem(c.uid, c.tid, item);
+  return src;
+}
+
+const DERIVED_KIND = { task: 'task', merged: 'task', status: 'task', routed: 'task', kn: 'knowledge', hyp: 'hypothesis', project: 'project' };
+async function recordDerived(c, src, item) {
+  const fresh = await store.findSource(c.tid, src.id, c.uid) || src;
+  const have = new Set((fresh.derived ||= []).map((d) => `${d.kind}:${d.id}`));
+  let changed = false;
+  for (const p of item.proposals.filter((x) => x.appliedKind && DERIVED_KIND[x.appliedKind])) {
+    const d = { kind: DERIVED_KIND[p.appliedKind], id: p.applied };
+    if (have.has(`${d.kind}:${d.id}`)) continue;
+    have.add(`${d.kind}:${d.id}`); fresh.derived.push(d); changed = true;
+  }
+  if (changed) await store.saveSource(c.tid, fresh);
+}
+
+export const listSources = (c) => store.listSourcesFor(c.tid, c.uid);
+export async function getSource(c, sid) {
+  return await store.findSource(c.tid, store.assertId(sid, 'source id'), c.uid) || fail(404, 'Source not found');
+}
+export async function getSourceWithText(c, sid) {
+  const src = await getSource(c, sid);
+  return { ...src, text: await store.getSourceText(c.tid, src) };
+}
+export async function getSourceFile(c, sid) {
+  const src = await getSource(c, sid);
+  const buf = src.file ? await store.getSourceFile(c.tid, src) : null;
+  return buf ? { src, buf } : fail(404, 'The source has no file');
+}
+export const canDeleteSource = (c, s) => s.author === c.uid || (c.admin && s.scope === 'team');
+export async function deleteSource(c, sid) {
+  const src = await getSource(c, sid);
+  if (!canDeleteSource(c, src)) fail(403, 'The author or Owner/Admin can delete');
+  await store.removeSource(c.tid, src);
 }
 
 // A status change for someone else's task goes to that person's inbox (spec §5.2).

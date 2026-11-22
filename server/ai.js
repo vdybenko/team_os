@@ -70,6 +70,7 @@ What to extract:
 
 Rules:
 - Every item needs evidence_quote: copy a short, contiguous fragment of the original source, ideally 6–20 consecutive words from a single speaker turn, plus its actual timestamp if the source has one. Keep the original wording and language, including code-switching and transcription errors. Do not translate, paraphrase, insert ellipses or stitch together separate passages. Leave out anything you cannot support with a quote.
+- Sources extracted from PDF documents contain page markers on their own line, like "[p. 3]". For such sources put the page of the quote into evidence_timestamp as "p. 3", and never include the marker itself in evidence_quote.
 - confidence "high" when the source is explicit, "medium" when you are inferring.
 - Use only ids that appear in the team context. Never invent ids.
 - Write titles, texts and the summary in the language of the source (Ukrainian sources produce Ukrainian text). Keep task titles short and start them with a verb.`;

@@ -47,6 +47,7 @@ function readJson(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 }
 function writeJson(file, obj) { writeAtomic(file, JSON.stringify(obj, null, 2) + '\n'); }
+function readBytes(file) { try { return fs.readFileSync(file); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } }
 function readText(file) { try { return fs.readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } }
 function rm(file) { try { fs.unlinkSync(file); } catch (e) { if (e.code !== 'ENOENT') throw e; } }
 function listFiles(dir, ext) {
@@ -58,6 +59,15 @@ function listDirs(dir) {
 const rel = (from, to) => path.relative(path.dirname(from), to).split(path.sep).join('/');
 const JSON_TYPE = 'application/json';
 const MD_TYPE = 'text/markdown; charset=utf-8';
+const PDF_TYPE = 'application/pdf';
+// Write-once objects (source texts and files): an existing object is kept as it is.
+async function writeOnce(key, body, type) {
+  try { await s3.write(key, body, type); } catch (error) { if (error.status !== 409) throw error; }
+}
+async function eraseIfPresent(key, binary) {
+  const object = binary ? await s3.bytes(key) : await s3.raw(key);
+  if (object) await s3.erase(object);
+}
 const jsonBody = (record) => JSON.stringify(record, null, 2) + '\n';
 const userSettings = 'settings/users/';
 const teamRoot = 'records/primary/teams/';
@@ -492,6 +502,16 @@ export async function getInboxAudio(uid, tid, id) {
   if (S3_RECORDS) return (await s3.bytes(inboxPrefix(uid, tid) + file))?.body || null;
   try { return fs.readFileSync(path.join(inboxDir(uid, tid), file)); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 }
+// The original uploaded PDF of an inbox item, kept next to its extracted text (<id>.pdf).
+export async function saveInboxFile(uid, tid, id, buf) {
+  const file = assertId(id) + '.pdf';
+  if (S3_RECORDS) return writeOnce(inboxPrefix(uid, tid) + file, buf, PDF_TYPE);
+  writeAtomic(path.join(inboxDir(uid, tid), file), buf);
+}
+export async function getInboxFile(uid, tid, id) {
+  const file = assertId(id) + '.pdf';
+  return S3_RECORDS ? (await s3.bytes(inboxPrefix(uid, tid) + file))?.body || null : readBytes(path.join(inboxDir(uid, tid), file));
+}
 export async function removeInboxItem(uid, tid, item) {
   const id = assertId(item.id);
   if (S3_RECORDS) {
@@ -501,12 +521,82 @@ export async function removeInboxItem(uid, tid, item) {
     await s3.remove(item);
     if (source) await s3.erase(source);
     if (audio) await s3.erase(audio);
+    if (item.file) await eraseIfPresent(prefix + id + '.pdf', true);
     return;
   }
   rm(path.join(inboxDir(uid, tid), id + '.json'));
   rm(path.join(inboxDir(uid, tid), id + '.md'));
   rm(path.join(inboxDir(uid, tid), id + '.audio'));
+  rm(path.join(inboxDir(uid, tid), id + '.pdf'));
   rebuildUserTeamIndex(uid, tid);
+}
+
+/* ---------------- sources (knowledge base) ---------------- */
+// A source is the original material — a transcript or a PDF — that tasks and knowledge were derived from.
+// <id>.json holds the record, <id>.md the full text, <id>.pdf the original file (when there is one).
+// Team sources live in the team folder; private ones in the author's folder for that team.
+
+const sharedSrcDir = (tid) => path.join(P.team(tid), 'sources');
+const privateSrcDir = (uid, tid) => path.join(P.userTeam(uid, tid), 'sources');
+const srcDir = (tid, s) => (s.scope === 'private' ? privateSrcDir(s.author, tid) : sharedSrcDir(tid));
+const srcPrefix = (tid, s) => (s.scope === 'private' ? userTeamPrefix(s.author, tid) : teamPrefix(tid)) + 'sources/';
+const localSources = (dir) => listFiles(dir, '.json').map((f) => readJson(path.join(dir, f))).filter(Boolean);
+const visibleSource = (s, uid) => s && (s.scope === 'team' || (s.scope === 'private' && s.author === uid));
+
+export async function listSourcesFor(tid, uid) {
+  const all = S3_RECORDS
+    ? (await Promise.all([listJson(teamPrefix(tid) + 'sources/'), listJson(userTeamPrefix(uid, tid) + 'sources/')])).flat()
+    : [...localSources(sharedSrcDir(tid)), ...localSources(privateSrcDir(uid, tid))];
+  return all.filter((s) => visibleSource(s, uid)).sort((a, b) => (a.date === b.date ? b.createdAt.localeCompare(a.createdAt) : a.date < b.date ? 1 : -1));
+}
+export async function findSource(tid, id, uid) {
+  const name = assertId(id) + '.json';
+  const read = (prefix, dir) => (S3_RECORDS ? getJson(prefix + name) : readJson(path.join(dir, name)));
+  const shared = await read(teamPrefix(tid) + 'sources/', sharedSrcDir(tid));
+  if (shared?.scope === 'team') return shared;
+  const personal = uid ? await read(userTeamPrefix(uid, tid) + 'sources/', privateSrcDir(uid, tid)) : null;
+  return visibleSource(personal, uid) && personal.scope === 'private' ? personal : null;
+}
+// text and file are written only when the source is first created.
+export async function saveSource(tid, src, { text, file } = {}) {
+  src.updatedAt = now();
+  src.teamId = tid;
+  const id = assertId(src.id);
+  const front = { id, title: src.title, kind: src.kind, date: src.date, author: src.author, scope: src.scope };
+  if (S3_RECORDS) {
+    const prefix = srcPrefix(tid, src);
+    if (text !== undefined) await writeOnce(prefix + id + '.md', toMd(front, text), MD_TYPE);
+    if (file) await writeOnce(prefix + id + '.pdf', file, PDF_TYPE);
+    return putJson(prefix + id + '.json', src);
+  }
+  const dir = srcDir(tid, src);
+  if (text !== undefined && !fs.existsSync(path.join(dir, id + '.md'))) writeAtomic(path.join(dir, id + '.md'), toMd(front, text));
+  if (file && !fs.existsSync(path.join(dir, id + '.pdf'))) { ensureDir(dir); fs.writeFileSync(path.join(dir, id + '.pdf'), file, { mode: 0o600 }); }
+  writeJson(path.join(dir, id + '.json'), src);
+  if (src.scope === 'private') rebuildUserTeamIndex(src.author, tid); else rebuildTeamIndex(tid);
+  return src;
+}
+export async function getSourceText(tid, src) {
+  const name = assertId(src.id) + '.md';
+  const text = S3_RECORDS ? (await s3.raw(srcPrefix(tid, src) + name))?.body : readText(path.join(srcDir(tid, src), name));
+  return text == null ? '' : fromMd(text).body;
+}
+export async function getSourceFile(tid, src) {
+  const name = assertId(src.id) + '.pdf';
+  return S3_RECORDS ? (await s3.bytes(srcPrefix(tid, src) + name))?.body || null : readBytes(path.join(srcDir(tid, src), name));
+}
+export async function removeSource(tid, src) {
+  const id = assertId(src.id);
+  if (S3_RECORDS) {
+    const prefix = srcPrefix(tid, src);
+    await s3.remove(src);
+    await eraseIfPresent(prefix + id + '.md');
+    if (src.file) await eraseIfPresent(prefix + id + '.pdf', true);
+    return;
+  }
+  const dir = srcDir(tid, src);
+  for (const ext of ['.json', '.md', '.pdf']) rm(path.join(dir, id + ext));
+  if (src.scope === 'private') rebuildUserTeamIndex(src.author, tid); else rebuildTeamIndex(tid);
 }
 
 /* ---------------- assistant conversations ---------------- */
@@ -577,7 +667,14 @@ export function rebuildTeamIndex(tid) {
   }
   L.push(`## Shared knowledge base (${kn.length})`, '');
   for (const k of kn.sort((a, b) => (a.date < b.date ? 1 : -1))) L.push(knLine(file, path.join(dir, 'knowledge'), k));
+  const src = localSources(sharedSrcDir(tid));
+  L.push('', `## Sources (${src.length})`, '');
+  for (const s of src) L.push(srcLine(path.join(dir, 'sources'), file, s));
   writeAtomic(file, L.join('\n') + '\n');
+}
+function srcLine(dir, file, s) {
+  const pdf = fs.existsSync(path.join(dir, s.id + '.pdf')) ? ` · [PDF](${rel(file, path.join(dir, s.id + '.pdf'))})` : '';
+  return `- [${mdEsc(s.title)}](${rel(file, path.join(dir, s.id + '.md'))}) — ${s.kind} · ${s.date || ''}${pdf}`;
 }
 
 export function rebuildUserTeamIndex(uid, tid) {
@@ -594,6 +691,9 @@ export function rebuildUserTeamIndex(uid, tid) {
   for (const t of tasks) L.push(taskLine(file, path.join(dir, 'tasks'), t, users));
   L.push('', `## Private knowledge (${kn.length})`, '');
   for (const k of kn) L.push(knLine(file, path.join(dir, 'knowledge'), k));
+  const src = localSources(privateSrcDir(uid, tid));
+  L.push('', `## Private sources (${src.length})`, '');
+  for (const s of src) L.push(srcLine(path.join(dir, 'sources'), file, s));
   writeAtomic(file, L.join('\n') + '\n');
 }
 
