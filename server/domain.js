@@ -8,6 +8,7 @@ import { analyze, aiConfigured, errorMessage } from './ai.js';
 import { knowledgeEvidence } from './evidence.js';
 import { tr, render, msg } from './i18n.js';
 import { pdfToText, MAX_PDF_BYTES } from './pdf.js';
+import { transcribe, transcribeConfigured, MAX_AUDIO_BYTES } from './transcribe.js';
 
 /* ================= helpers ================= */
 
@@ -387,6 +388,62 @@ export async function addInboxItem(c, body, { pdf } = {}) {
   return item;
 }
 
+/* ---------- dictation ---------- */
+// A voice note: the recording is kept as the item's original, its transcript becomes the source text.
+// With server transcription configured, the browser's live transcript is only a fallback.
+const AUDIO_MIME = /^audio\/[\w.+-]+(;\s*codecs=[\w.,"' -]+)?$/i;
+export const audioType = (mime) => String(mime || '').split(';')[0].trim() || 'audio/webm';
+export async function addVoiceItem(c, body) {
+  const mime = str(body.mime, 100);
+  if (!AUDIO_MIME.test(mime)) fail(400, 'Unsupported audio format');
+  if (typeof body.audio !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(body.audio)) fail(400, 'The recording is empty');
+  const audio = Buffer.from(body.audio, 'base64');
+  if (audio.length < 200) fail(400, 'The recording is empty');
+  if (audio.length > MAX_AUDIO_BYTES) fail(413, 'The recording is too long (max 20 MB)');
+  const draft = str(body.text, 400000);
+  // A transcript the person corrected by hand is kept as it is; otherwise the server transcribes again.
+  const server = transcribeConfigured() && !(body.edited === true && draft);
+  const lang = /^[a-z]{2}$/.test(body.lang) ? body.lang : null;
+  if (!server && !draft) fail(400, 'No transcript: speech recognition didn’t catch anything and server transcription isn’t configured');
+  const type = INBOX_TYPES.includes(body.type) ? body.type : 'note';
+  const date = dateOrNull(body.date) || today();
+  const duration = Math.max(0, Math.min(36000, Math.round(Number(body.duration) || 0)));
+  const item = {
+    id: store.newId('i'), owner: c.uid, type, title: str(body.title, 200) || tr(c.lang, 'Voice note — {date}', { date }),
+    date, origin: tr(c.lang, 'Voice recording'), status: 'processing',
+    audio: { mime: audioType(mime), size: audio.length, duration, lang, transcript: server ? 'pending' : 'browser' },
+    summary: [], participants: [], proposals: [], error: null, createdAt: store.now(),
+  };
+  await store.saveInboxAudio(c.uid, c.tid, item.id, audio);
+  await store.saveInboxItem(c.uid, c.tid, item, draft);
+  runAnalysis(c, item.id).catch((error) => console.error('[analyze] Failed to persist analysis:', error.name));
+  return item;
+}
+export async function getInboxAudio(c, iid) {
+  const item = await store.getInboxItem(c.uid, c.tid, iid) || fail(404, 'Item not found (the inbox is personal)');
+  const buf = item.audio ? await store.getInboxAudio(c.uid, c.tid, item.id) : null;
+  return buf ? { mime: item.audio.mime, buf } : fail(404, 'The source has no recording');
+}
+// Replaces the browser draft with the server transcript; keeps the draft if the service fails.
+async function transcribeItem(c, iid) {
+  const item = await store.getInboxItem(c.uid, c.tid, iid);
+  if (item?.audio?.transcript !== 'pending') return;
+  const draft = await store.getInboxSource(c.uid, c.tid, iid);
+  let text = '', failure = null;
+  if (transcribeConfigured()) {
+    item.stage = 'transcribing'; await store.saveInboxItem(c.uid, c.tid, item);
+    const buf = await store.getInboxAudio(c.uid, c.tid, iid);
+    try { text = buf ? await transcribe(buf, item.audio.mime, item.audio.lang) : ''; } catch (e) { failure = e; console.error('[transcribe]', e.message); }
+    // Guard against hallucinated output on silence or noise: a much shorter result than the live draft is ignored.
+    if (text && draft.trim().length > 40 && text.length < draft.trim().length * 0.3) text = '';
+  }
+  const fresh = await store.getInboxItem(c.uid, c.tid, iid); if (!fresh) return;
+  delete fresh.stage;
+  fresh.audio.transcript = text ? 'server' : 'browser';
+  if (!text && !draft.trim()) { await store.saveInboxItem(c.uid, c.tid, fresh); throw failure || new Error('The recording has no recognizable speech.'); }
+  await store.saveInboxItem(c.uid, c.tid, fresh, text || undefined);
+}
+
 /* ---------- analysis ---------- */
 
 async function analysisContext(c) {
@@ -410,6 +467,7 @@ export async function runAnalysis(c, iid) {
   if (running.has(key)) return;
   running.add(key);
   try {
+    await transcribeItem(c, iid);
     const item = await store.getInboxItem(c.uid, c.tid, iid);
     if (!item) return;
     if (!aiConfigured()) {
@@ -575,7 +633,7 @@ export async function applyProposals(c, item) {
 // When an inbox item is applied, its original — a transcript or a PDF — is kept in the knowledge base as a source,
 // and every task, knowledge entry, hypothesis and project created from it points back to it (sourceId).
 
-export const keepsSource = (item) => item.type !== 'routed' && Boolean(item.file || ['transcript', 'doc'].includes(item.type));
+export const keepsSource = (item) => item.type !== 'routed' && Boolean(item.file || item.audio || ['transcript', 'doc'].includes(item.type));
 export const SOURCE_SCOPES = ['team', 'private'];
 const sourceScope = (c, item) => (c.team.kind === 'personal' || item.sourceScope === 'private' ? 'private' : 'team');
 
@@ -586,12 +644,15 @@ async function ensureSource(c, item) {
   if (existing) return existing;
   const text = await store.getInboxSource(c.uid, c.tid, item.id);
   const file = item.file ? await store.getInboxFile(c.uid, c.tid, item.id) : null;
+  const audio = item.audio ? await store.getInboxAudio(c.uid, c.tid, item.id) : null;
   const src = {
-    id, kind: file ? 'pdf' : item.type, title: item.title, date: item.date, origin: item.origin,
+    id, kind: file ? 'pdf' : audio ? 'voice' : item.type, title: item.title, date: item.date, origin: item.origin,
     author: c.uid, scope: sourceScope(c, item), inboxItem: item.id,
     file: file ? { name: item.file.name, size: file.length, pages: item.file.pages || null } : null,
+    audio: audio ? { mime: item.audio.mime, size: audio.length, duration: item.audio.duration || 0, transcript: item.audio.transcript } : null,
     chars: text.length, summary: item.summary || [], derived: [], createdAt: store.now(),
   };
+  if (audio) await store.saveSourceAudio(c.tid, src, audio);
   await store.saveSource(c.tid, src, { text, file: file || undefined });
   item.sourceId = id;
   await store.saveInboxItem(c.uid, c.tid, item);
@@ -623,6 +684,11 @@ export async function getSourceFile(c, sid) {
   const src = await getSource(c, sid);
   const buf = src.file ? await store.getSourceFile(c.tid, src) : null;
   return buf ? { src, buf } : fail(404, 'The source has no file');
+}
+export async function getSourceAudio(c, sid) {
+  const src = await getSource(c, sid);
+  const buf = src.audio ? await store.getSourceAudio(c.tid, src) : null;
+  return buf ? { mime: src.audio.mime, buf } : fail(404, 'The source has no recording');
 }
 export const canDeleteSource = (c, s) => s.author === c.uid || (c.admin && s.scope === 'team');
 export async function deleteSource(c, sid) {

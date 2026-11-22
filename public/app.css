@@ -412,3 +412,15 @@ code{font-size:13px;background:var(--soft);padding:1px 5px;border-radius:5px;ove
 .src-scope{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:12px 6px 0;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:13px;color:var(--mut)}
 .src-card:hover{border-color:var(--ink)}
 .src-card .iico{display:inline-grid;place-items:center}
+
+/* dictation */
+.voice-rec{padding:14px;margin-bottom:10px}
+.voice-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.voice-ctl audio{height:36px;max-width:100%}
+.btn.rec.on{background:var(--red);border-color:var(--red);color:#fff}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:recpulse 1.2s ease-in-out infinite}
+@keyframes recpulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.rec-dot{animation:none}}
+.in.sm{padding:4px 8px;font-size:13px;width:auto}
+.voice-play{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 6px 12px;padding:8px 10px;border-radius:10px;background:var(--soft)}
+.voice-play audio{height:34px;flex:1;min-width:200px;max-width:100%}

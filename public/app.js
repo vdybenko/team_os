@@ -46,9 +46,12 @@ const KT = translated({ decision: 'Decision', agreement: 'Agreement', fact: 'Fac
 const TASK_SECTION_NAMES = translated({ mine: 'My tasks', delegated: 'Delegated' });
 const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 const ITYPE = translated({ transcript: 'Transcript', email: 'Email', chat: 'Chat', doc: 'Document', note: 'Note', routed: 'Proposal' });
-const SRCKIND = translated({ pdf: 'PDF', transcript: 'Transcript', doc: 'Document' });
-const srcIco = (k) => (k === 'pdf' ? 'file' : k === 'transcript' ? 'mic' : 'drive');
-const keepsSource = (i) => i.type !== 'routed' && Boolean(i.file || ['transcript', 'doc'].includes(i.type));
+const SRCKIND = translated({ pdf: 'PDF', transcript: 'Transcript', doc: 'Document', voice: 'Voice note' });
+const srcIco = (k) => (k === 'pdf' ? 'file' : k === 'transcript' || k === 'voice' ? 'mic' : 'drive');
+const keepsSource = (i) => i.type !== 'routed' && Boolean(i.file || i.audio || ['transcript', 'doc'].includes(i.type));
+const mmss = (sec) => { const s = Math.max(0, Math.round(sec || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+// The original recording of a dictated item or source; `base` is '/inbox/<id>' or '/sources/<id>'.
+const audioPlayer = (base, a) => `<div class="voice-play">${ico('mic', 15)}<audio controls preload="metadata" src="${T(base)}/audio"></audio><span class="hint">${a.duration ? mmss(a.duration) + ' · ' : ''}${fsize(a.size)} · ${a.transcript === 'server' ? $t('transcribed on the server') : a.transcript === 'pending' ? $t('transcribing…') : $t('transcribed in the browser')}</span></div>`;
 const srcOf = (id) => (id && S.d?.sources ? S.d.sources.find((s) => s.id === id) : null);
 const fsize = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const fileUrl = (base, download) => `${T(base)}/file${download ? '?download=1' : ''}`;
@@ -152,7 +155,7 @@ async function boot() {
   const res = await fetch('/api/me', { credentials: 'same-origin', headers: { 'X-TeamOS-Lang': LANG } });
   if (res.status === 401) { if (!R().startsWith('join-')) location.hash = 'login'; return render(); }
   const me = await res.json();
-  Object.assign(S, { me: me.user, teams: me.teams, ai: me.ai });
+  Object.assign(S, { me: me.user, teams: me.teams, ai: me.ai, transcribe: me.transcribe });
   if (S.me.lang !== LANG) api('PATCH', '/api/me', { lang: LANG }).then((u) => { S.me = u; }).catch(() => {});
   if (S.pendingJoin) { location.hash = 'join-' + S.pendingJoin; return render(); }
   const last = (() => { try { return localStorage.getItem('teamos.team'); } catch { return null; } })();
@@ -162,7 +165,7 @@ async function boot() {
   await reload();
   if (['login', 'onboarding'].includes(R())) location.hash = 'dashboard';
 }
-async function reloadMe() { const me = await api('GET', '/api/me'); Object.assign(S, { me: me.user, teams: me.teams, ai: me.ai }); }
+async function reloadMe() { const me = await api('GET', '/api/me'); Object.assign(S, { me: me.user, teams: me.teams, ai: me.ai, transcribe: me.transcribe }); }
 async function reload() {
   if (!S.tid) return render();
   S.d = await api('GET', T('/state'));
@@ -288,8 +291,8 @@ function pReview() {
   const lines = (item.source || '').split('\n');
   const tsRe = /^\s*\[?((?:\d{1,2}:)?\d{1,2}:\d{2})\]?\s*/;
   const head = `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="inbox">${ico('back', 14)} ${$t('Inbox')}</button><h1 style="margin-top:8px">${esc(item.title)}</h1><div class="sub inl">${ITYPE[item.type] || ''} · ${esc(item.origin)} · ${fd(item.date)}${(item.participants || []).filter((p) => p.member_id).map((p) => `<span class="alias">${esc(p.name_in_source)} → ${esc(pn(p.member_id))} ✓</span>`).join('')}</div></div><div class="act">${item.file ? `<a class="btn" href="${fileUrl(`/inbox/${item.id}`)}" target="_blank" rel="noopener">${ico('file')}${$t('Open PDF')}</a>` : ''}${item.type !== 'routed' && item.status !== 'processing' ? `<button class="btn" data-a="reanalyze">${ico('spark')}${$t('Analyze again')}</button>` : ''}${['review', 'ignored'].includes(item.status) ? `<button class="btn" data-a="ignoreItem">${item.status === 'ignored' ? $t('Back to review') : $t('Skip')}</button>` : ''}<button class="btn ghost" data-a="delItem" title="${$t('Delete item')}">${ico('trash')}</button></div></div>`;
-  const src = `<div class="card src" data-keep="src">${(item.summary || []).length ? `<div class="sum"><b>${$t('Summary')}</b><ul>${item.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}${lines.map((l, i) => { const pg = /^\[p\. (\d+)\]$/.exec(l.trim()); if (pg) return `<div class="pg" id="ln-${i}">${$t('Page {n}', { n: pg[1] })}</div>`; const m = tsRe.exec(l); return `<div class="ln ${m ? '' : 'plain'}" id="ln-${i}">${m ? `<span class="ts">${esc(m[1])}</span>` : ''}<span>${esc(m ? l.slice(m[0].length) : l) || '&nbsp;'}</span></div>`; }).join('')}${srcNote(item)}</div>`;
-  if (item.status === 'processing') return head + `<div class="rv">${src}<div class="card"><div class="empty"><span class="spin"></span><br><br>${$t('AI is analyzing the source… usually 20–60 seconds.')}<br>${$t('You can leave — the item will wait in the inbox.')}</div></div></div>`;
+  const src = `<div class="card src" data-keep="src">${item.audio ? audioPlayer(`/inbox/${item.id}`, item.audio) : ''}${(item.summary || []).length ? `<div class="sum"><b>${$t('Summary')}</b><ul>${item.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}${lines.map((l, i) => { const pg = /^\[p\. (\d+)\]$/.exec(l.trim()); if (pg) return `<div class="pg" id="ln-${i}">${$t('Page {n}', { n: pg[1] })}</div>`; const m = tsRe.exec(l); return `<div class="ln ${m ? '' : 'plain'}" id="ln-${i}">${m ? `<span class="ts">${esc(m[1])}</span>` : ''}<span>${esc(m ? l.slice(m[0].length) : l) || '&nbsp;'}</span></div>`; }).join('')}${srcNote(item)}</div>`;
+  if (item.status === 'processing') return head + `<div class="rv">${src}<div class="card"><div class="empty"><span class="spin"></span><br><br>${item.stage === 'transcribing' ? $t('Transcribing the recording…') : $t('AI is analyzing the source… usually 20–60 seconds.')}<br>${$t('You can leave — the item will wait in the inbox.')}</div></div></div>`;
   const sec = (k, l) => { const ps = props.filter((p) => p.kind === k); return ps.length ? `<div class="sec"><h2>${l}</h2><span class="n">${ps.length}</span></div>${ps.map((p) => propCard(p, lines)).join('')}` : ''; };
   const on = props.filter((p) => p.on).length;
   const closed = item.status === 'done';
@@ -307,7 +310,7 @@ function srcNote(item) {
   const src = srcOf(item.sourceId);
   if (item.status === 'done') return src ? `<p class="hint" style="margin:10px 8px 0">${ico(srcIco(src.kind), 13)} ${$t('Saved to the knowledge base as a source.')} <button class="lnk" data-a="go" data-h="source-${src.id}">${$t('Open source')}</button></p>` : lockNote;
   const sc = S.review.sourceScope;
-  return `<div class="src-scope"><span>${ico('kn', 13)} ${item.file ? $t('On apply, the PDF and its text are saved to the knowledge base as a source.') : $t('On apply, the transcript is saved to the knowledge base as a source.')}</span>${personal() ? '' : `<span class="seg sm"><button class="${sc === 'team' ? 'on' : ''}" data-a="srcScope" data-v="team">${ico('users', 12)} ${$t('Team')}</button><button class="${sc === 'private' ? 'on' : ''}" data-a="srcScope" data-v="private">${ico('lock', 12)} ${$t('Only me')}</button></span>`}</div>`;
+  return `<div class="src-scope"><span>${ico('kn', 13)} ${item.file ? $t('On apply, the PDF and its text are saved to the knowledge base as a source.') : item.audio ? $t('On apply, the recording and its transcript are saved to the knowledge base as a source.') : $t('On apply, the transcript is saved to the knowledge base as a source.')}</span>${personal() ? '' : `<span class="seg sm"><button class="${sc === 'team' ? 'on' : ''}" data-a="srcScope" data-v="team">${ico('users', 12)} ${$t('Team')}</button><button class="${sc === 'private' ? 'on' : ''}" data-a="srcScope" data-v="private">${ico('lock', 12)} ${$t('Only me')}</button></span>`}</div>`;
 }
 function propCard(p, lines) {
   const hl = quoteLines(lines, p.quote).join(',');
@@ -384,7 +387,7 @@ function derivedCounts(src) {
   return [['task', 'task'], ['knowledge', 'knowledge'], ['hypothesis', 'hypothesis'], ['project', 'project']].filter(([k]) => c(k)).map(([k, l]) => $p(c(k), l)).join(' · ') || $t('nothing you can see');
 }
 function srcCard(x) {
-  return `<div class="kn src-card" data-a="go" data-h="source-${x.id}" style="cursor:pointer"><div class="km"><span class="iico">${ico(srcIco(x.kind), 16)}</span><span class="ty context">${SRCKIND[x.kind] || x.kind}</span>${x.scope === 'private' ? `<span>${ico('lock', 12)} ${$t('Only me')}</span>` : `<span>${ico('users', 12)} ${$t('Team')}</span>`}${x.file ? `<span>${esc(x.file.name)} · ${fsize(x.file.size)}${x.file.pages ? ' · ' + $p(x.file.pages, 'page') : ''}</span>` : ''}</div><div class="ktx">${esc(x.title)}</div><div class="km" style="margin-top:6px">${av(x.author, 18)}<span>${esc(pn(x.author))} · ${fds(x.date)}</span><span>${$t('Created from it:')} ${derivedCounts(x)}</span></div></div>`;
+  return `<div class="kn src-card" data-a="go" data-h="source-${x.id}" style="cursor:pointer"><div class="km"><span class="iico">${ico(srcIco(x.kind), 16)}</span><span class="ty context">${SRCKIND[x.kind] || x.kind}</span>${x.scope === 'private' ? `<span>${ico('lock', 12)} ${$t('Only me')}</span>` : `<span>${ico('users', 12)} ${$t('Team')}</span>`}${x.file ? `<span>${esc(x.file.name)} · ${fsize(x.file.size)}${x.file.pages ? ' · ' + $p(x.file.pages, 'page') : ''}</span>` : ''}${x.audio ? `<span>${ico('mic', 12)} ${mmss(x.audio.duration)}</span>` : ''}</div><div class="ktx">${esc(x.title)}</div><div class="km" style="margin-top:6px">${av(x.author, 18)}<span>${esc(pn(x.author))} · ${fds(x.date)}</span><span>${$t('Created from it:')} ${derivedCounts(x)}</span></div></div>`;
 }
 async function loadSource(id) {
   try { S.srcView = await api('GET', T(`/sources/${encodeURIComponent(id)}`)); }
@@ -407,7 +410,7 @@ function pSource(id) {
   const pageRe = /^\[p\. (\d+)\]$/, tsRe = /^\s*\[?((?:\d{1,2}:)?\d{1,2}:\d{2})\]?\s*/;
   const text = v.loading ? '<div class="empty"><span class="spin"></span></div>' : v.error ? `<div class="err">${esc(v.error)}</div>` : lines.map((l) => { const pg = pageRe.exec(l.trim()); if (pg) return `<div class="pg">${$t('Page {n}', { n: pg[1] })}</div>`; const m = tsRe.exec(l); return `<div class="ln ${m ? '' : 'plain'}">${m ? `<span class="ts">${esc(m[1])}</span>` : ''}<span>${esc(m ? l.slice(m[0].length) : l) || '&nbsp;'}</span></div>`; }).join('');
   return `<div class="hd"><div>${back}<h1 style="margin-top:8px;display:flex;gap:10px;align-items:center">${ico(srcIco(x.kind), 22)} ${esc(x.title)}</h1><div class="sub inl">${SRCKIND[x.kind] || ''} · ${esc(x.file ? x.file.name : x.origin || '')}${x.file?.pages ? ' · ' + $p(x.file.pages, 'page') : ''} · ${fd(x.date)} · ${esc(pn(x.author))} · ${x.scope === 'private' ? `${ico('lock', 12)} ${$t('Only me')}` : `${ico('users', 12)} ${$t('Team')}`}</div></div><div class="act">${x.file ? `<a class="btn pri" href="${fileUrl(base)}" target="_blank" rel="noopener">${ico('file')}${$t('Open PDF')}</a><a class="btn" href="${fileUrl(base, true)}">${$t('Download')}</a>` : ''}${meta?.canDelete ? `<button class="btn ghost" data-a="delSrc" data-id="${x.id}" title="${$t('Delete source')}">${ico('trash')}</button>` : ''}</div></div>
-  <div class="rv"><div class="card src">${(x.summary || []).length ? `<div class="sum"><b>${$t('Summary')}</b><ul>${x.summary.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}${text}</div>
+  <div class="rv"><div class="card src">${x.audio ? audioPlayer(base, x.audio) : ''}${(x.summary || []).length ? `<div class="sum"><b>${$t('Summary')}</b><ul>${x.summary.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}${text}</div>
   <div><div class="card"><h2>${$t('Created from this source')}</h2>${ds.filter((d) => d.item).map(row).join('') || `<div class="empty">${$t('Nothing you can see')}</div>`}${hidden > 0 ? `<p class="hint">${ico('lock', 12)} ${$t('{n} more are private to other people or were deleted', { n: hidden })}</p>` : ''}</div></div></div>`;
 }
 function pKnowledge(id) {
@@ -665,6 +668,97 @@ function drawer() {
 }
 
 /* ---------- modals ---------- */
+/* ---------- dictation ---------- */
+// MediaRecorder keeps the audio; the browser's speech recognition (where available) fills the transcript live.
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const REC_LANGS = [['uk-UA', 'Українська'], ['en-US', 'English'], ['ru-RU', 'Русский'], ['pl-PL', 'Polski'], ['de-DE', 'Deutsch']];
+const VREC = { rec: null, sr: null, chunks: [], blob: null, url: null, mime: '', start: 0, dur: 0, timer: null, final: '', lang: (() => { try { return localStorage.getItem('teamos.recLang'); } catch { return null; } })() };
+const recLang = () => VREC.lang || (LANG === 'uk' ? 'uk-UA' : 'en-US');
+const MAX_AUDIO = 20 * 1048576;
+function voicePanel(m) {
+  const live = Boolean(VREC.rec);
+  const ctl = live
+    ? `<button class="btn rec on" data-a="recStop">${ico('x', 15)} ${$t('Stop')}</button><span class="rec-dot"></span><b id="recTime">${mmss((Date.now() - VREC.start) / 1000)}</b><span class="hint">${$t('Recording…')}</span>`
+    : VREC.blob
+      ? `<audio controls src="${VREC.url}"></audio><span class="hint">${mmss(VREC.dur)} · ${fsize(VREC.blob.size)}</span><button class="btn sm" data-a="recReset">${$t('Record again')}</button>`
+      : `<button class="btn pri rec" data-a="recStart">${ico('mic', 16)} ${$t('Start recording')}</button><span class="hint">${$t('Say your conclusions and takeaways — the recording and its transcript are kept as the source.')}</span>`;
+  const langSel = SR ? `<label class="hint inl" style="gap:6px">${$t('Speech language')}<select class="in sm" data-f="recLang" ${live ? 'disabled' : ''}>${REC_LANGS.map(([v, l]) => `<option value="${v}" ${v === recLang() ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : '';
+  const note = S.transcribe
+    ? $t('The live transcript comes from the browser. After saving, the server transcribes the recording again for better accuracy — unless you edit the text by hand.')
+    : SR ? $t('Check and fix the transcript before saving — it becomes the source text.') : '';
+  const warn = !SR && !S.transcribe ? `<div class="err" style="margin-top:8px">${$t('This browser has no speech recognition and server transcription isn’t configured. Use Chrome or Safari, or set OPENAI_API_KEY on the server.')}</div>` : '';
+  return `<div class="card voice-rec"><div class="voice-ctl">${ctl}</div>${langSel ? `<div style="margin-top:10px">${langSel}</div>` : ''}</div>
+    <textarea class="in" id="addTxt" rows="7" ${live ? 'readonly' : ''} placeholder="${SR ? $t('The transcript appears here as you speak…') : S.transcribe ? $t('The transcript will be made on the server after saving.') : ''}">${esc(m.text || '')}</textarea>${note ? `<p class="hint" style="margin:6px 0 0">${note}</p>` : ''}${warn}`;
+}
+function recPickMime() {
+  return ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+}
+async function recStart() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error($t('This browser can’t record audio'));
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  catch { throw new Error($t('No access to the microphone. Allow it in the browser and try again.')); }
+  recReset();
+  if (!S.modal || S.modal.tab !== 'voice') { stream.getTracks().forEach((t) => t.stop()); return; }
+  const mime = recPickMime();
+  const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  Object.assign(VREC, { rec, chunks: [], mime: rec.mimeType || mime || 'audio/webm', start: Date.now(), final: '' });
+  S.modal.text = '';
+  rec.ondataavailable = (e) => { if (e.data.size) VREC.chunks.push(e.data); };
+  rec.onstop = () => {
+    stream.getTracks().forEach((t) => t.stop());
+    if (VREC.rec !== rec) return; // discarded
+    VREC.blob = new Blob(VREC.chunks, { type: VREC.mime }); VREC.url = URL.createObjectURL(VREC.blob);
+    VREC.dur = (Date.now() - VREC.start) / 1000; VREC.rec = null; clearInterval(VREC.timer);
+    if (S.modal?.k === 'add') { const ta = document.getElementById('addTxt'); if (ta) S.modal.text = ta.value; S.modal.title = val('addTitle'); modal(); }
+  };
+  rec.start(1000);
+  VREC.timer = setInterval(() => { const el = document.getElementById('recTime'); if (el) el.textContent = mmss((Date.now() - VREC.start) / 1000); }, 500);
+  if (SR) {
+    const sr = new SR();
+    Object.assign(sr, { lang: recLang(), continuous: true, interimResults: true });
+    sr.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) VREC.final += r[0].transcript.trim() + ' '; else interim += r[0].transcript; }
+      VREC.auto = (VREC.final + interim).trim();
+      const ta = document.getElementById('addTxt'); if (ta) { ta.value = VREC.auto; ta.scrollTop = ta.scrollHeight; }
+    };
+    sr.onend = () => { if (VREC.sr === sr && VREC.rec) { try { sr.start(); } catch { /* already restarting */ } } }; // Chrome stops after a pause
+    sr.onerror = () => {};
+    try { sr.start(); VREC.sr = sr; } catch { /* recognition unavailable — audio still records */ }
+  }
+  S.modal.title = val('addTitle');
+  modal();
+}
+function recStop() {
+  const sr = VREC.sr; VREC.sr = null; try { sr?.stop(); } catch { /* ignore */ }
+  if (VREC.rec?.state !== 'inactive') VREC.rec?.stop();
+}
+// Discards the current recording (and stops one in progress).
+function recReset() {
+  const rec = VREC.rec; VREC.rec = null;
+  const sr = VREC.sr; VREC.sr = null; try { sr?.abort(); } catch { /* ignore */ }
+  if (rec && rec.state !== 'inactive') rec.stop();
+  clearInterval(VREC.timer);
+  if (VREC.url) URL.revokeObjectURL(VREC.url);
+  Object.assign(VREC, { blob: null, url: null, chunks: [], dur: 0, final: '', auto: '' });
+}
+const blobBase64 = (blob) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(new Error($t('Couldn’t read the recording'))); r.readAsDataURL(blob); });
+async function addVoice() {
+  const m = S.modal;
+  if (VREC.rec) throw new Error($t('Stop the recording first'));
+  if (!VREC.blob) throw new Error($t('Record a voice note first'));
+  if (VREC.blob.size > MAX_AUDIO) throw new Error($t('The recording is too long (max 20 MB)'));
+  const text = val('addTxt').trim();
+  if (!text && !S.transcribe) throw new Error($t('No transcript yet — type the text or record again'));
+  const edited = text !== (VREC.auto || '').trim(); // corrected by hand → the server keeps it instead of transcribing again
+  const body = { title: val('addTitle').trim(), type: val('addType'), date: val('addDate'), mime: VREC.mime, duration: VREC.dur, lang: SR ? recLang().slice(0, 2) : undefined, edited, text, audio: await blobBase64(VREC.blob) };
+  const tid = m.team || S.tid;
+  if (tid !== S.tid) await switchTeam(tid);
+  const it = await api('POST', T('/inbox/audio'), body);
+  recReset(); S.modal = null; await reload(); go(`review-${it.id}`);
+}
+
 function modal() {
   const el = document.getElementById('modal'), m = S.modal;
   if (!m) { el.innerHTML = ''; return; }
@@ -672,9 +766,9 @@ function modal() {
   const cancel = `<button class="btn" data-a="closeM">${$t('Cancel')}</button>`;
   let h = '';
   if (m.k === 'add') {
-    h = `<div class="md wide"><div class="mdh"><h2>${$t('Add to inbox')}</h2>${close}</div><div class="seg" style="margin-bottom:14px">${[['paste', $t('Paste text')], ['file', $t('File')], ['note', $t('Note')]].map(([k, l]) => `<button class="${m.tab === k ? 'on' : ''}" data-a="addTab" data-v="${k}">${l}</button>`).join('')}</div>
-    ${m.tab === 'file' ? `<label class="card" style="display:grid;place-items:center;padding:30px;border-style:dashed;cursor:pointer;text-align:center">${ico('file', 26)}<b style="margin-top:8px">${m.fileName ? esc(m.fileName) : $t('Choose a file')}</b><span class="hint">.pdf .txt .md .vtt .srt</span>${m.pdf ? `<span class="hint">${ico('file', 12)} PDF · ${fsize(m.pdfSize)} — ${$t('AI reads the text of the document; the PDF itself is kept as the source.')}</span>` : ''}<input type="file" hidden data-f="addFile" accept=".pdf,.txt,.md,.vtt,.srt,application/pdf,text/plain,text/markdown"></label>` : `<textarea class="in" id="addTxt" rows="9" placeholder="${m.tab === 'note' ? $t('Write down a thought or an agreement — TeamOS processes it just like a transcript') : $t('Paste a meeting transcript, a chat excerpt or an email…')}">${esc(m.text || '')}</textarea>`}
-    <div class="grid g2" style="margin-top:14px;gap:12px"><label class="fl">${$t('Title')}<input class="in" id="addTitle" value="${esc(m.title || '')}" placeholder="${$t('E.g. Weekly sync — 20 Nov')}"></label><label class="fl">${$t('Source type')}<select class="in" id="addType">${Object.entries(ITYPE).filter(([k]) => k !== 'routed').map(([k, l]) => `<option value="${k}" ${k === (m.tab === 'note' ? 'note' : m.tab === 'file' && m.pdf ? 'doc' : m.type || 'transcript') ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">${$t('Date of the meeting / email')}<input class="in" type="date" id="addDate" value="${m.date || TODAY()}"></label><label class="fl">${$t('Team context')}<select class="in" data-f="addTeam">${S.teams.map((t) => `<option value="${t.id}" ${t.id === S.tid ? 'selected' : ''}>${esc(teamName(t))}</option>`).join('')}</select></label></div>
+    h = `<div class="md wide"><div class="mdh"><h2>${$t('Add to inbox')}</h2>${close}</div><div class="seg" style="margin-bottom:14px">${[['paste', $t('Paste text')], ['file', $t('File')], ['note', $t('Note')], ['voice', `${ico('mic', 13)} ${$t('Dictate')}`]].map(([k, l]) => `<button class="${m.tab === k ? 'on' : ''}" data-a="addTab" data-v="${k}">${l}</button>`).join('')}</div>
+    ${m.tab === 'voice' ? voicePanel(m) : m.tab === 'file' ? `<label class="card" style="display:grid;place-items:center;padding:30px;border-style:dashed;cursor:pointer;text-align:center">${ico('file', 26)}<b style="margin-top:8px">${m.fileName ? esc(m.fileName) : $t('Choose a file')}</b><span class="hint">.pdf .txt .md .vtt .srt</span>${m.pdf ? `<span class="hint">${ico('file', 12)} PDF · ${fsize(m.pdfSize)} — ${$t('AI reads the text of the document; the PDF itself is kept as the source.')}</span>` : ''}<input type="file" hidden data-f="addFile" accept=".pdf,.txt,.md,.vtt,.srt,application/pdf,text/plain,text/markdown"></label>` : `<textarea class="in" id="addTxt" rows="9" placeholder="${m.tab === 'note' ? $t('Write down a thought or an agreement — TeamOS processes it just like a transcript') : $t('Paste a meeting transcript, a chat excerpt or an email…')}">${esc(m.text || '')}</textarea>`}
+    <div class="grid g2" style="margin-top:14px;gap:12px"><label class="fl">${$t('Title')}<input class="in" id="addTitle" value="${esc(m.title || '')}" placeholder="${$t('E.g. Weekly sync — 20 Nov')}"></label><label class="fl">${$t('Source type')}<select class="in" id="addType">${Object.entries(ITYPE).filter(([k]) => k !== 'routed').map(([k, l]) => `<option value="${k}" ${k === (m.tab === 'note' || m.tab === 'voice' ? 'note' : m.tab === 'file' && m.pdf ? 'doc' : m.type || 'transcript') ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">${$t('Date of the meeting / email')}<input class="in" type="date" id="addDate" value="${m.date || TODAY()}"></label><label class="fl">${$t('Team context')}<select class="in" data-f="addTeam">${S.teams.map((t) => `<option value="${t.id}" ${t.id === S.tid ? 'selected' : ''}>${esc(teamName(t))}</option>`).join('')}</select></label></div>
     <p class="hint" style="margin:10px 0 0">${S.ai ? `${ico('spark', 13)} ${$t('AI will extract tasks, status updates and knowledge. Nothing is saved without your confirmation.')}` : `${ico('warn', 13)} ${$t('AI analysis is off — the item will be saved and you can add proposals manually.')}`}</p>
     <div class="mdf">${cancel}<button class="btn pri" data-a="addGo">${ico('spark')}${S.ai ? $t('Analyze') : $t('Save')}</button></div></div>`;
   } else if (m.k === 'task') {
@@ -808,15 +902,17 @@ const A = {
     if (kind === 'goal') { S.ptab = 'overview'; return go('project-' + id); }
     if (kind === 'hypothesis') go('hyp-' + id);
   },
-  closeM: () => { S.modal = null; modal(); },
+  closeM: () => { recReset(); S.modal = null; modal(); },
   ovClose: (el, e) => { if (e.target === el) { S.modal = null; modal(); } },
   copyText: (el) => { navigator.clipboard?.writeText(el.dataset.v).then(() => toast($t('Copied')), () => toast($t('Couldn’t copy'))); },
   copyInv: (el) => { navigator.clipboard?.writeText(`${location.origin}/join/${el.dataset.v}`).then(() => toast($t('Link copied')), () => toast($t('Couldn’t copy'))); },
 
   /* inbox */
   add: () => { if (!S.d) return; S.modal = { k: 'add', tab: 'paste' }; modal(); },
-  addTab: (el) => { const t = document.getElementById('addTxt'); if (t) S.modal.text = t.value; S.modal.title = val('addTitle'); S.modal.tab = el.dataset.v; modal(); },
+  recStart: () => act(recStart), recStop: () => recStop(), recReset: () => { recReset(); S.modal.text = ''; modal(); },
+  addTab: (el) => { if (VREC.rec) recStop(); const t = document.getElementById('addTxt'); if (t) S.modal.text = t.value; S.modal.title = val('addTitle'); S.modal.tab = el.dataset.v; modal(); },
   addGo: () => act(async () => {
+    if (S.modal.tab === 'voice') return addVoice();
     const m = S.modal; const pdf = m.tab === 'file' && m.pdf; const text = m.tab === 'file' ? m.fileText : val('addTxt');
     if (!pdf && (!text || !text.trim())) throw new Error(m.tab === 'file' ? $t('Choose a file') : $t('Paste some text'));
     const body = { title: val('addTitle').trim(), type: val('addType'), date: val('addDate'), origin: m.tab === 'file' ? `${pdf ? 'PDF' : $t('File')} · ${m.fileName}` : m.tab === 'note' ? $t('Note') : $t('Pasted text'), ...(pdf ? { file: { name: m.fileName, data: m.pdf } } : { text }) };
@@ -907,6 +1003,7 @@ const F = {
   dir: (el) => { S.dir = el.value; render(); }, fperson: (el) => { S.person = el.value; render(); }, fproj: (el) => { S.proj = el.value; render(); }, fst: (el) => { S.fst = el.value; render(); },
   kscope: (el) => { S.kscope = el.value; render(); }, kproj: (el) => { S.kproj = el.value; render(); },
   addTeam: (el) => { S.modal.team = el.value; },
+  recLang: (el) => { VREC.lang = el.value; try { localStorage.setItem('teamos.recLang', el.value); } catch { /* per-browser convenience only */ } },
   addFile: (el) => {
     const f = el.files[0]; if (!f) return;
     const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
@@ -998,7 +1095,7 @@ document.addEventListener('keydown', (e) => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
   if (!S.d) return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); A.ask(); }
-  else if (e.key === 'Escape') { if (S.navOpen) { S.navOpen = false; render(); } else if (S.modal) { S.modal = null; modal(); } else if (S.drawer) { S.drawer = null; render(); } }
+  else if (e.key === 'Escape') { if (S.navOpen) { S.navOpen = false; render(); } else if (S.modal) { recReset(); S.modal = null; modal(); } else if (S.drawer) { S.drawer = null; render(); } }
   else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && R().startsWith('review-') && !S.modal) { e.preventDefault(); applyReview(); }
   else if (!typing && !S.modal && !e.metaKey && !e.ctrlKey && ['i', 'I', 'ш', 'Ш'].includes(e.key)) { e.preventDefault(); A.add(); }
 });

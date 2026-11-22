@@ -585,6 +585,17 @@ export async function getSourceFile(tid, src) {
   const name = assertId(src.id) + '.pdf';
   return S3_RECORDS ? (await s3.bytes(srcPrefix(tid, src) + name))?.body || null : readBytes(path.join(srcDir(tid, src), name));
 }
+// Original recording of a dictated source (<id>.audio), written once like the PDF.
+export async function saveSourceAudio(tid, src, buf) {
+  const name = assertId(src.id) + '.audio';
+  if (S3_RECORDS) return writeOnce(srcPrefix(tid, src) + name, buf, 'application/octet-stream');
+  const file = path.join(srcDir(tid, src), name);
+  if (!fs.existsSync(file)) writeAtomic(file, buf);
+}
+export async function getSourceAudio(tid, src) {
+  const name = assertId(src.id) + '.audio';
+  return S3_RECORDS ? (await s3.bytes(srcPrefix(tid, src) + name))?.body || null : readBytes(path.join(srcDir(tid, src), name));
+}
 export async function removeSource(tid, src) {
   const id = assertId(src.id);
   if (S3_RECORDS) {
@@ -592,10 +603,11 @@ export async function removeSource(tid, src) {
     await s3.remove(src);
     await eraseIfPresent(prefix + id + '.md');
     if (src.file) await eraseIfPresent(prefix + id + '.pdf', true);
+    if (src.audio) await eraseIfPresent(prefix + id + '.audio', true);
     return;
   }
   const dir = srcDir(tid, src);
-  for (const ext of ['.json', '.md', '.pdf']) rm(path.join(dir, id + ext));
+  for (const ext of ['.json', '.md', '.pdf', '.audio']) rm(path.join(dir, id + ext));
   if (src.scope === 'private') rebuildUserTeamIndex(src.author, tid); else rebuildTeamIndex(tid);
 }
 

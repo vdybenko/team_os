@@ -1,6 +1,6 @@
 // Speech → text for dictated inbox items. Uses the OpenAI transcription API when OPENAI_API_KEY is set
 // (independently of AI_PROVIDER). Without it the browser's own speech recognition text is used.
-export const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // OpenAI's upload limit
+export const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // fits the 30 MB inbox JSON limit as base64 (OpenAI accepts up to 25 MB)
 const KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.TRANSCRIBE_MODEL || 'gpt-4o-transcribe';
 

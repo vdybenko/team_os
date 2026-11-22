@@ -9,6 +9,7 @@ import { aiConfigured, errorMessage, AI_PROVIDER, MODEL } from './ai.js';
 import { askAssistant } from './assistant.js';
 import { langOf, tr, render, msg, LANGS } from './i18n.js';
 import * as D from './domain.js';
+import { transcribeConfigured } from './transcribe.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -16,7 +17,7 @@ app.disable('x-powered-by');
 if (process.env.TRUST_LOCAL_PROXY === '1') app.set('trust proxy', 'loopback');
 // A PDF arrives base64-encoded in JSON, so adding to the inbox gets a larger body limit than the rest of the API.
 const jsonSmall = express.json({ limit: '5mb' }), jsonInbox = express.json({ limit: '30mb' });
-app.use((req, res, next) => (req.method === 'POST' && /^\/api\/teams\/[^/]+\/inbox\/?$/.test(req.path) ? jsonInbox : jsonSmall)(req, res, next));
+app.use((req, res, next) => (req.method === 'POST' && /^\/api\/teams\/[^/]+\/inbox(\/audio)?\/?$/.test(req.path) ? jsonInbox : jsonSmall)(req, res, next));
 app.use(sessionMiddleware);
 mountAuthRoutes(app);
 
@@ -38,7 +39,7 @@ const ctx = (req) => D.ctxFor(req.user, req.params.tid, langOf(req));
 app.get('/api/me', requireUser, route(async (req) => ({
   user: req.user,
   teams: (await store.teamsOfUser(req.user.id)).map((t) => ({ id: t.id, name: t.name, kind: t.kind, role: t.members.find((m) => m.userId === req.user.id).role })),
-  ai: aiConfigured(), model: MODEL,
+  ai: aiConfigured(), model: MODEL, transcribe: transcribeConfigured(),
 })));
 
 app.patch('/api/me', requireUser, route(async (req) => {
@@ -210,6 +211,7 @@ app.get('/api/teams/:tid/sources/:sid/file', requireUser, route(async (req, res)
   const { src, buf } = await D.getSourceFile(await ctx(req), req.params.sid);
   sendPdf(res, buf, src.file.name, req.query.download !== '1');
 }));
+app.get('/api/teams/:tid/sources/:sid/audio', requireUser, route(async (req, res) => sendAudio(res, await D.getSourceAudio(await ctx(req), req.params.sid))));
 app.delete('/api/teams/:tid/sources/:sid', requireUser, route(async (req) => { await D.deleteSource(await ctx(req), req.params.sid); }));
 
 /* ================= API: inbox ================= */
@@ -239,6 +241,14 @@ function sendPdf(res, buf, name, inline) {
   });
   res.send(buf);
 }
+// Recordings are served with their own audio type and never sniffed into anything else.
+function sendAudio(res, { mime, buf }) {
+  res.set({ 'Content-Type': D.audioType(mime), 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'private, no-store', 'Content-Disposition': 'inline' });
+  res.send(buf);
+}
+app.post('/api/teams/:tid/inbox/audio', requireUser, route(async (req) => D.addVoiceItem(await ctx(req), req.body)));
+app.get('/api/teams/:tid/inbox/:iid/audio', requireUser, route(async (req, res) => sendAudio(res, await D.getInboxAudio(await ctx(req), req.params.iid))));
+
 app.get('/api/teams/:tid/inbox/:iid/file', requireUser, route(async (req, res) => {
   const c = await ctx(req);
   const item = await store.getInboxItem(c.uid, c.tid, req.params.iid) || fail(404, 'Item not found (the inbox is personal)');
