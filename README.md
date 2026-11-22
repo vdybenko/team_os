@@ -10,7 +10,7 @@ A team's second brain that fills itself from meetings. Specification: [docs/01-v
 - **Tasks** (commitments): Eisenhower matrix, kanban, list, "delegated"; a side panel with comments and history. **Only the requester** changes the status and fields; the owner comments. An AI proposal to change the status of someone else's task goes to the requester's inbox.
 - **Projects** (status: active / paused / done / archived, vision, goals) and **hypotheses** ("If… then… because…", status: draft / testing / validated / invalidated, metric, learnings, verdict).
 - **Knowledge** (decisions, agreements, facts, processes, context; private or team-wide; a new decision can replace an old one) and **Team vision**.
-- **Assistant**: ask questions about your workspace's tasks, knowledge, goals and hypotheses, with links to the records it used.
+- **Assistant**: ask about tasks, knowledge, goals and hypotheses, or ask a question about a document. Answers can cite the original PDF page. Your personal assistant can read documents awaiting review in your own inbox. Team members can use a shared source once you apply it in Review.
 - **Interface in English and Ukrainian**: switch the language in Profile or on the sign-in screen.
 - **MCP server with OAuth**: connect your knowledge base to Claude, Codex or any MCP client — search and read it, add tasks, knowledge, projects, goals and hypotheses, add to the inbox, create teams and manage members. See [Connecting Claude and Codex (MCP)](#connecting-claude-and-codex-mcp).
 

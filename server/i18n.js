@@ -171,6 +171,11 @@ const UK = {
   'Wait for the answer to your previous question.': 'Зачекай на відповідь на попереднє запитання.',
   'There are no records or documents in this space yet that I could rely on.': 'У цьому просторі поки немає записів або документів, на які я міг би спиратися.',
   'The assistant returned an empty answer. Try again.': 'Асистент повернув порожню відповідь. Спробуй ще раз.',
+  'The assistant could not verify its document citations. Try again.': 'Асистент не зміг звірити цитати з документом. Спробуй ще раз.',
+  'The document dated {date} describes a proposal under discussion.': 'Документ від {date} фіксує пропозицію на етапі обговорення.',
+  'The document describes a proposal under discussion.': 'Документ фіксує пропозицію на етапі обговорення.',
+  'Open questions included {items}.': 'Відкритими залишалися такі питання: {items}.',
+  'The available records do not establish what happened afterwards. The current status is unknown.': 'Що відбулося після цього, надані джерела не встановлюють. Поточний стан невідомий.',
 
   // AI providers
   'The model returned a result that doesn’t match the expected format.': 'Модель повернула результат, який не відповідає очікуваному формату.',

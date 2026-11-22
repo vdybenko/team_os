@@ -3,7 +3,7 @@ import { tr } from './i18n.js';
 import { pdfPages } from './pdf.js';
 
 const excerpt = (value, length = 1200) => String(value ?? '').trim().slice(0, length);
-const terms = (text) => new Set((String(text).normalize('NFKC').toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []).map((word) => word.slice(0, 5)));
+const terms = (text) => new Set((String(text).normalize('NFKC').toLowerCase().match(/\d+(?:[.,]\d+)?%?|\p{L}[\p{L}\p{N}]{2,}/gu) || []).map((word) => word.slice(0, 5)));
 const topicTerms = {
   task: terms('задачі завдання комітменти дедлайн прострочені діє відкриті tasks deadline overdue'),
   knowledge: terms('знання рішення домовленість факти процес інформація knowledge decision fact'),
@@ -27,6 +27,7 @@ function* passages(document) {
 export async function askAssistant({ question, turns, team, lang = 'en', viewerId, today, tasks, knowledge, projects, hypotheses, nameOf, documents = [] }) {
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const records = [];
+  const openings = new Map();
   function add(kind, id, title, data, target = id) {
     records.push({ key: `${kind}:${id}`, kind, title: excerpt(title, 160), target, data });
   }
@@ -37,6 +38,7 @@ export async function askAssistant({ question, turns, team, lang = 'en', viewerI
   });
   for (const k of knowledge) add('knowledge', k.id, k.text, {
     text: excerpt(k.text), why: excerpt(k.why, 500), type: k.type, date: k.date,
+    ...(k.quote ? { quote: excerpt(k.quote), source: excerpt(k.source, 250) } : {}),
     scope: k.scope, superseded: Boolean(k.supersededBy), project: projectNames.get(k.project),
   });
   for (const p of projects) (p.goals || []).forEach((g, index) => add('goal', `${p.id}:${index}`, g.goal, {
@@ -51,7 +53,8 @@ export async function askAssistant({ question, turns, team, lang = 'en', viewerI
   for await (const document of documents) {
     for (const { page, start, passage } of passages(document)) {
       add(document.kind, `${document.id}:${page ?? 0}:${start}`, document.title,
-        { page, date: document.date, text: passage }, document.id);
+        { page, workspaceRecordDate: document.date, text: passage }, document.id);
+      if (!openings.has(document.id)) openings.set(document.id, records.at(-1));
     }
   }
   if (!records.length) return { answer: tr(lang, 'There are no records or documents in this space yet that I could rely on.'), sources: [] };
@@ -85,6 +88,9 @@ export async function askAssistant({ question, turns, team, lang = 'en', viewerI
     selected.set(record.key, data);
   }
   for (const kind of Object.keys(topicTerms)) ranked.filter((entry) => entry.record.kind === kind).slice(0, 3).forEach(include);
+  const topPassages = ranked.filter(({ record }) => openings.has(record.target)).slice(0, 3);
+  topPassages.forEach(include);
+  for (const { record } of topPassages) include({ record: openings.get(record.target) });
   ranked.forEach(include);
 
   const active = tasks.filter((t) => !['done', 'cancelled'].includes(t.status));
