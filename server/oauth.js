@@ -142,7 +142,8 @@ const pageLang = (req) => (req.user || req.get('X-TeamOS-Lang') ? langOf(req) : 
 function page(res, lang, title, body, status = 200) {
   res.status(status).set({
     'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'",
-    'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
+    // Same-origin form POSTs need Origin for consent and revocation checks.
+    'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Referrer-Policy': 'same-origin',
   }).type('html').send(`<!doctype html>
 <html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/oauth.css"><script src="/oauth.js" defer></script></head>
