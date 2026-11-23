@@ -98,6 +98,7 @@ const UK = {
   'This task link is unavailable': 'Посилання на задачу недоступне',
   'Could not load the task. Please try again.': 'Не вдалося відкрити задачу. Спробуй ще раз.',
   'Deadline': 'Дедлайн',
+  'Comments': 'Коментарі',
   'Write what needs to be done': 'Напиши, що треба зробити',
   '{name}, who set the task, changes its status and fields. Write a comment.': 'Статус і поля змінює {name} — той, хто поставив задачу. Напиши коментар.',
   'Choose an owner': 'Вкажи виконавця',

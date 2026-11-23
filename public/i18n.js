@@ -424,7 +424,7 @@ window.TEAMOS_I18N = {
     // task drawer
     'Share task': 'Поділитися задачею',
     'Loading…': 'Завантаження…',
-    'Anyone with the link can view the title, description and deadline.': 'За посиланням доступні лише назва, опис і дедлайн.',
+    'Anyone with the link can view the title, description, deadline and comments.': 'За посиланням доступні назва, опис, дедлайн і коментарі.',
     'Task link': 'Посилання на задачу',
     'Creating a new link disables the previous one.': 'Після створення нового посилання попереднє перестане працювати.',
     'Disable link': 'Вимкнути посилання',

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import * as store from './store.js';
-import { canEditTask, fail, getTaskFor, isMember } from './domain.js';
+import { canEditTask, fail, getTaskFor, isMember, nameOf } from './domain.js';
 
 async function shareKey() {
   return crypto.createHmac('sha256', await store.sessionSecret()).update('TeamOS task share v1').digest();
@@ -40,5 +40,10 @@ export async function getSharedTask(token) {
   if (task?.shareToken !== token || !canEditTask({ uid }, task)) return null;
   const team = await store.getTeam(tid);
   if (!team || !isMember(team, uid)) return null;
-  return { title: task.title, description: task.description, due: task.due };
+  const authors = new Map();
+  const comments = await Promise.all((task.comments || []).map(async ({ author, at, text }) => {
+    if (!authors.has(author)) authors.set(author, nameOf(author));
+    return { author: await authors.get(author), at, text };
+  }));
+  return { title: task.title, description: task.description, due: task.due, comments };
 }
