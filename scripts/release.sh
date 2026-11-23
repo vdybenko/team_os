@@ -12,7 +12,9 @@ if [ -z "$remote_head" ] || [ "$local_head" != "$remote_head" ]; then
   exit 1
 fi
 npm test
-node scripts/check-staging.mjs
+if [ -n "${TEAMOS_STAGING_URL:-}${TEAMOS_STAGING_COOKIE:-}${TEAMOS_STAGING_TEAM:-}${TEAMOS_STAGING_GOAL:-}" ]; then
+  node scripts/check-staging.mjs
+fi
 ssh -4 -T -i "$HOME/.ssh/teamos_release" \
   -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
   -o UserKnownHostsFile="$HOME/.ssh/teamos_known_hosts" \

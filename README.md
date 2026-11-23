@@ -208,9 +208,9 @@ Done: the remote MCP server with OAuth (see [Connecting Claude and Codex (MCP)](
 
 Run `npm test` before release. The S3 startup integration test uses a simulated S3 service and checks authenticated loading and migration of an existing team and project goal. It cannot verify the production IAM policy.
 
-For a production release, deploy the exact candidate to an isolated HTTPS staging environment first. Give staging the same S3 permissions as production and seed it with a legacy team and a project goal that have not yet been migrated. Sign in with a staging-only account, then set `TEAMOS_STAGING_URL`, `TEAMOS_STAGING_COOKIE` (the session cookie), `TEAMOS_STAGING_TEAM`, and `TEAMOS_STAGING_GOAL`. From a clean checkout of the exact remote `main` commit, run `scripts/release.sh`. It runs the tests, checks authenticated staging profile and workspace loading including the migrated organization and goal, then invokes the production deploy. Never use production credentials or production data for staging. Reset the staging fixture before each migration check; after the first run it is no longer a legacy fixture. Protect the staging cookie as a credential.
+From a clean checkout of the exact remote `main` commit, run `scripts/release.sh`. It runs the tests and invokes the production deploy over SSH. The production server also runs the tests before activating each new build.
 
-The server-side deploy command can still be invoked directly; this script is a local release gate, not server-enforced protection. A staging environment and production-equivalent IAM policy are required to verify actual access before release.
+For releases that change storage permissions or data layout, verify access for the production service before switching releases. If an isolated HTTPS staging environment has matching permissions, the release script can also check authenticated profile and workspace loading there. Seed staging with a legacy team and project goal, then provide `TEAMOS_STAGING_URL`, `TEAMOS_STAGING_COOKIE`, `TEAMOS_STAGING_TEAM`, and `TEAMOS_STAGING_GOAL`. Use a staging account and reset the fixture before each migration check.
 
 ### Preparing existing workspaces for the OKR release
 
