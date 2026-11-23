@@ -8,7 +8,10 @@ A team's second brain that fills itself from meetings. Specification: [docs/01-v
 - **Teams**: create a team, invite people with a link, Owner / Admin / Member roles, transfer ownership.
 - **Inbox**: paste a transcript or note, or upload `.txt .md .vtt .srt`. AI extracts tasks, status updates, knowledge chunks, new projects and hypotheses, each with a quote. Items reach the knowledge base only after you confirm them in **Review**.
 - **Tasks** (commitments): Eisenhower matrix, kanban, list, "delegated"; a side panel with comments and history. **Only the requester** changes the status and fields; the owner comments. An AI proposal to change the status of someone else's task goes to the requester's inbox.
-- **Projects** (status: active / paused / done / archived, vision, goals) and **hypotheses** ("If… then… because…", status: draft / testing / validated / invalidated, metric, learnings, verdict).
+- **Projects** (status: active / paused / done / archived, vision) and **hypotheses** ("If… then… because…", status: draft / testing / validated / invalidated, metric, learnings, verdict).
+- **Goals (OKR)**: one Goal entity (objective + key results) on every level — annual and quarterly team goals, project goals and member goals. A goal contributes to a key result one level higher, a hypothesis moves a key result of its project, and a task moves a goal through its hypothesis or directly (`task.kr`). The Goals page has an OKR list, an alignment tree with risks ("no hypotheses", "one bet", not aligned) and a weekly check-in (value, confidence, comment). Alignment score = the share of tasks closed this quarter that lead to a team key result.
+- **Hypothesis prioritization**: Impact × Confidence × Speed ÷ Cost (team time and money), 1–10 sliders with anchors, a suggestion for Impact from the expected contribution, cards / 2×2 matrix / ranking views, a WIP limit of 3 hypotheses in testing, success and stop criteria. The estimates are fixed as a forecast when testing starts.
+- **Organizations** group teams (v1). The first team creates an organization with its name; later teams pick an organization or create a new one. Org Owner/Admin see the org's teams but not their content.
 - **Knowledge** (decisions, agreements, facts, processes, context; private or team-wide; a new decision can replace an old one) and **Team vision**.
 - **Assistant**: ask about tasks, knowledge, goals and hypotheses, or ask a question about a document. Answers can cite the original PDF page. Your personal assistant can read documents awaiting review in your own inbox. Team members can use a shared source once you apply it in Review.
 - **Interface in English and Ukrainian**: switch the language in Profile or on the sign-in screen.
@@ -60,10 +63,12 @@ settings/
   auth/session-secret
   auth/signin-links/<sha256>.json
 records/primary/
+  orgs/<orgId>/org.json          # organization: name, owners, admins
   teams/<teamId>/
-    team.json
+    team.json                    # orgId points to the organization
     vision.md
-    projects/<id>.json           # project goals are stored in the goals field
+    projects/<id>.json
+    goals/<id>.json              # goals (OKR) on every level; older project.goals move here on first read
     hypotheses/<id>.json
     tasks/<id>.json              # shared tasks
     knowledge/<id>.md            # shared knowledge
@@ -121,8 +126,8 @@ codex mcp login teamos
 
 | Access | Tools |
 | --- | --- |
-| Read | `list_workspaces`, `get_workspace_overview`, `search`, `list_tasks` (*i owe* / *owed to me*), `get_task`, `list_knowledge`, `list_projects`, `list_hypotheses`, `list_members`, `list_inbox`, `get_inbox_item` |
-| Write | `add_to_inbox`, `create_task`, `update_task`, `comment_on_task`, `delete_task`, `add_knowledge` (can replace an older decision), `update_knowledge`, `delete_knowledge`, `create_project`, `update_project`, `save_goal`, `remove_goal`, `create_hypothesis`, `update_hypothesis`, `add_hypothesis_learning`, `update_team_vision` |
+| Read | `list_workspaces`, `get_workspace_overview` (with this quarter's OKRs), `search`, `list_tasks` (*i owe* / *owed to me*), `get_task`, `list_knowledge`, `list_projects`, `list_goals`, `list_hypotheses`, `list_members`, `list_inbox`, `get_inbox_item` |
+| Write | `add_to_inbox`, `create_task`, `update_task`, `comment_on_task`, `delete_task`, `add_knowledge` (can replace an older decision), `update_knowledge`, `delete_knowledge`, `create_project`, `update_project`, `save_goal` / `remove_goal` (a simple project goal with one key result), `checkin_key_result`, `create_hypothesis`, `update_hypothesis`, `set_hypothesis_priority`, `add_hypothesis_learning`, `update_team_vision` |
 | Manage | `create_team`, `invite_member` (returns a join link), `revoke_invite`, `change_member_role`, `remove_member` |
 
 Each team's vision is also available as an MCP resource (`teamos://teams/<id>/vision`). Text added with `add_to_inbox` is analyzed like any other inbox item and waits for your confirmation in Review.
@@ -198,3 +203,23 @@ Done: the remote MCP server with OAuth (see [Connecting Claude and Codex (MCP)](
 - A queue for AI analysis with retries (currently in process memory).
 - Mobile layout for key screens.
 - Success metrics from the specification: time to process a meeting, precision and recall of proposals, active members.
+
+## Release checks
+
+Run `npm test` before release. The S3 startup integration test uses a simulated S3 service and checks authenticated loading and migration of an existing team and project goal. It cannot verify the production IAM policy.
+
+For a production release, deploy the exact candidate to an isolated HTTPS staging environment first. Give staging the same S3 permissions as production and seed it with a legacy team and a project goal that have not yet been migrated. Sign in with a staging-only account, then set `TEAMOS_STAGING_URL`, `TEAMOS_STAGING_COOKIE` (the session cookie), `TEAMOS_STAGING_TEAM`, and `TEAMOS_STAGING_GOAL`. From a clean checkout of the exact remote `main` commit, run `scripts/release.sh`. It runs the tests, checks authenticated staging profile and workspace loading including the migrated organization and goal, then invokes the production deploy. Never use production credentials or production data for staging. Reset the staging fixture before each migration check; after the first run it is no longer a legacy fixture. Protect the staging cookie as a credential.
+
+The server-side deploy command can still be invoked directly; this script is a local release gate, not server-enforced protection. A staging environment and production-equivalent IAM policy are required to verify actual access before release.
+
+### Preparing existing workspaces for the OKR release
+
+The new version also migrates legacy organizations and project goals on first read. For a controlled migration, first verify a backup, pause application writes, and run the new release's code with the intended storage configuration and credentials:
+
+```bash
+node --env-file-if-exists=.env server/migrate-okr.js
+node --env-file-if-exists=.env server/migrate-okr.js --apply
+node --env-file-if-exists=.env server/migrate-okr.js
+```
+
+The first command is read-only and reports counts. Apply only after reviewing the plan and verifying S3 access; the final dry run should show no remaining organizations or legacy goals. The migration can be repeated after a failure while writes remain paused. A dry run reads existing data but does not prove write permissions. Test the migration against an isolated copy with production-equivalent permissions before running it on production. The deployment SSH account only supports `deploy` and `status`; running this migration on the production host requires an authorized operational access path.
