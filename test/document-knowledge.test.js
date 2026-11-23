@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { setImmediate } from 'node:timers/promises';
 import { after, test } from 'node:test';
 
 const directory = mkdtempSync(path.join(tmpdir(), 'teamos-document-test-'));
@@ -9,7 +10,7 @@ Object.assign(process.env, { DATA_DIR: directory, S3_BUCKET: '', AI_PROVIDER: 'o
 const store = await import('../server/store.js');
 const { analyze } = await import('../server/ai.js');
 const { askAssistant } = await import('../server/assistant.js');
-const { applyProposals, assistantDocuments, runAnalysis } = await import('../server/domain.js');
+const { applyProposals, assistantDocuments, reanalyzeInboxItem, reviewProposals, runAnalysis } = await import('../server/domain.js');
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 function model(t, respond) {
@@ -255,7 +256,7 @@ test('knowledge proposals carry placement, earlier-agreement conflicts and visio
     const entry = { type: 'agreement', text: 'Usage data will be shared with advertisers from next month.', why: null, scope: 'team',
       project_id: null, hypothesis_id: 'h_ads', conflicts_with_id: 'k_old', conflict_note: 'Earlier the app was to stay ad-free.',
       vision_conflict: 'The vision says the team never sells user data.', confidence: 'high',
-      evidence_quote: 'we agreed to share usage data with advertisers', evidence_timestamp: null };
+      first_line: 1, last_line: 1 };
     return { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [],
       knowledge: [entry, { ...entry, text: 'Unrelated note.', hypothesis_id: 'invented', conflicts_with_id: 'invented', conflict_note: 'x', vision_conflict: '' }] };
   });
@@ -265,4 +266,76 @@ test('knowledge proposals carry placement, earlier-agreement conflicts and visio
   assert.equal(kn.conflictNote, 'Earlier the app was to stay ad-free.');
   assert.equal(kn.visionConflict, 'The vision says the team never sells user data.');
   assert.deepEqual([other.project, other.hypothesis, other.conflict, other.conflictNote, other.visionConflict], [null, null, null, null, null]);
+});
+
+test('long transcript review recovers evidence and retains both saved commitments without reopening them', { timeout: 1500 }, async (t) => {
+  const team = { id: 'meeting-review', kind: 'team', members: [{ userId: 'lead', role: 'owner' }] };
+  const c = { tid: team.id, uid: 'lead', me: { name: 'Lead' }, team, admin: true };
+  const item = { id: 'sync', owner: c.uid, type: 'transcript', title: 'Sync', status: 'review', date: '2026-11-23',
+    proposals: [
+      { id: 'saved-drafts', kind: 'task', title: 'Investigate missing drafts', owner: 'lead', quote: 'I will investigate missing drafts.', on: true },
+      { id: 'saved-outreach', kind: 'task', title: 'Test outreach', owner: 'lead', quote: 'I will test outreach.', on: true },
+    ] };
+  const text = '01:25 Lead: I will investigate missing drafts. I will test outreach.\n'
+    + '02:30 Lead: Draft mode never sends messages automatically.\n\n'
+    + `${'Context for the product demo. '.repeat(410)}\n\n`
+    + '1:11:42 Lead: I will check the invitation logs.';
+  await store.saveInboxItem(c.uid, team.id, item, text);
+  await applyProposals(c, item);
+  item.status = 'done';
+  item.appliedAt = store.now();
+  await store.saveInboxItem(c.uid, team.id, item);
+  const savedIds = item.proposals.map((p) => p.applied);
+  const task = (title, line, duplicate_of_task_id = null) => ({ title, owner_member_id: 'lead', owner_external_name: null,
+    requester_member_id: 'lead', requester_external_name: null, due: null, project_id: null, hypothesis_id: null, important: false,
+    duplicate_of_task_id, confidence: 'high', first_line: line, last_line: line });
+  let sections = 0;
+  model(t, ({ input, text: format }) => {
+    sections++;
+    assert.equal(format.format.name, 'teamos_transcript_analysis');
+    const context = JSON.parse(input.split('<team_context>\n')[1].split('\n</team_context>')[0]);
+    assert.deepEqual(new Set(context.applied_tasks.map(({ id }) => id)), new Set(savedIds));
+    const source = input.split('<source>\n')[1];
+    const result = { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [], knowledge: [] };
+    if (source.includes('Draft mode')) {
+      result.knowledge.push({ type: 'process', text: 'Draft mode does not send automatically.', why: null, scope: 'team',
+        project_id: null, hypothesis_id: null, conflicts_with_id: null, conflict_note: null, vision_conflict: null,
+        confidence: 'high', first_line: 2, last_line: 2 });
+      result.commitments.push(task('Find out why drafts disappeared', 1, savedIds[0]), task('Test outreach!', 1));
+    } else {
+      const line = Number(/(\d+) \| 1:11:42/.exec(source)[1]);
+      result.commitments.push(task('Check the invitation logs', line), task('Check the invitation logs', line));
+      result.knowledge.push({ type: 'fact', text: 'Out-of-section evidence.', why: null, scope: 'team',
+        project_id: null, hypothesis_id: null, conflicts_with_id: null, conflict_note: null, vision_conflict: null,
+        confidence: 'high', first_line: 1, last_line: 1 });
+    }
+    return result;
+  });
+  let reopened;
+  for (let pass = 0; pass < 2; pass++) {
+    assert.equal((await reanalyzeInboxItem(c, item.id)).status, 'processing');
+    do {
+      await setImmediate();
+      reopened = await store.getInboxItem(c.uid, team.id, item.id);
+    } while (reopened.status === 'processing');
+    assert.equal(reopened.status, 'review');
+    assert.deepEqual(reopened.proposals.filter((p) => p.appliedKind).map((p) => p.applied), savedIds);
+    const [task, knowledge, ...extra] = reviewProposals(reopened);
+    assert.equal(extra.length, 0);
+    assert.equal(task.title, 'Check the invitation logs');
+    assert.equal(task.ts, '1:11:42');
+    assert.equal(knowledge.quote, '02:30 Lead: Draft mode never sends messages automatically.');
+    assert.equal(knowledge.ts, '02:30');
+  }
+  assert.equal(sections, 4);
+  assert.equal((await store.listTasksFor(c.tid, c.uid)).length, 2);
+  await store.saveInboxItem(c.uid, team.id, { ...reopened, proposals: [] });
+  await runAnalysis(c, item.id);
+  reopened = await store.getInboxItem(c.uid, team.id, item.id);
+  assert.deepEqual(reviewProposals(reopened).filter((p) => p.kind === 'task').map((p) => p.title), ['Check the invitation logs']);
+  await applyProposals(c, reopened);
+  assert.equal((await store.listTasksFor(c.tid, c.uid)).length, 3);
+  const source = await store.findSource(c.tid, item.sourceId, c.uid);
+  assert.equal(source.derived.filter((d) => d.kind === 'task').length, 3);
+  assert.equal(source.derived.filter((d) => d.kind === 'knowledge').length, 1);
 });

@@ -361,9 +361,11 @@ export const inboxKey = (uid, tid, iid) => `${uid}/${tid}/${iid}`;
 
 export const inboxView = (lang, i) => ({
   ...i,
+  ...(i.proposals ? { proposals: reviewProposals(i) } : {}),
   ...(i.resultMsg ? { result: i.resultMsg.map((m) => render(lang, m)).join(' · ') || render(lang, msg('Nothing was saved')) } : {}),
   ...(i.error ? { error: render(lang, i.errorMsg || msg(i.error)) } : {}),
 });
+export const reviewProposals = ({ status, proposals = [] }) => (status === 'done' ? proposals : proposals.filter((p) => !p.appliedKind));
 export const countProps = (ps = []) => ps.reduce((a, p) => ((a[p.kind] = (a[p.kind] || 0) + 1), a), {});
 
 export function replaceProposals(item, proposals) {
@@ -455,10 +457,19 @@ async function transcribeItem(c, iid) {
 
 /* ---------- analysis ---------- */
 
-async function analysisContext(c) {
+async function analysisContext(c, item) {
   const [people, prj, hypotheses, tasks, knowledge, vision] = await Promise.all([
     teamMembers(c.team), store.projects.list(c.tid), store.hypotheses.list(c.tid), visibleTasks(c), visibleKnowledge(c), store.getVision(c.tid),
   ]);
+  const appliedTasks = new Map((item.proposals || []).filter((p) => ['task', 'merged'].includes(p.appliedKind)).map((p) => [p.applied, {
+    id: p.applied, title: p.title, owner: p.owner, requester: p.requester, quote: p.quote, timestamp: p.ts,
+  }]));
+  for (const { id, title, owner, requester, source } of tasks) {
+    // Older reanalysis runs replaced the proposal list. The task still points to its inbox item.
+    if (source?.itemId === item.id && source.owner === c.uid) {
+      appliedTasks.set(id, { id, title, owner, requester, quote: source.quote, timestamp: source.ts });
+    }
+  }
   return {
     team_vision: (vision || '').slice(0, 6000),
     members: people.map(({ userId, role, profile }) => ({ id: userId, name: profile?.name || userId, emails: profile?.emails, aliases: profile?.aliases || [], role })),
@@ -466,14 +477,31 @@ async function analysisContext(c) {
     hypotheses: hypotheses.map((h) => ({ id: h.id, project_id: h.project, statement: h.statement || [h.if, h.then, h.because].filter(Boolean).join(' → '), status: h.status })),
     open_tasks: tasks.filter((t) => !['done', 'cancelled'].includes(t.status)).slice(0, 200)
       .map((t) => ({ id: t.id, title: t.title, owner: t.owner, requester: t.requester, status: t.status, due: t.due })),
+    ...(appliedTasks.size ? { applied_tasks: [...appliedTasks.values()] } : {}),
     existing_knowledge: knowledge.filter((k) => !k.supersededBy).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 60)
       .map((k) => ({ id: k.id, type: k.type, text: k.text, date: k.date, project_id: k.project || null })),
   };
 }
 
 const running = new Set();
+export async function reanalyzeInboxItem(c, iid) {
+  const key = inboxKey(c.uid, c.tid, iid);
+  if (applying.has(key)) fail(409, 'This item is already being saved. Try again in a moment.');
+  applying.add(key);
+  try {
+    const item = await store.getInboxItem(c.uid, c.tid, iid) || fail(404, 'Item not found');
+    if (item.type === 'routed') fail(400, 'This item has no source to analyze');
+    if (running.has(key)) return item;
+    if (!item.appliedAt && item.status !== 'done' && item.proposals.some((p) => p.appliedKind)) fail(409, 'Finish saving this item first.');
+    Object.assign(item, { status: 'processing', error: null, errorMsg: null });
+    await store.saveInboxItem(c.uid, c.tid, item);
+    runAnalysis(c, iid).catch((error) => console.error('[analyze] Failed to persist analysis:', error.name));
+    return item;
+  } finally { applying.delete(key); }
+}
+
 export async function runAnalysis(c, iid) {
-  const key = `${c.uid}/${c.tid}/${iid}`;
+  const key = inboxKey(c.uid, c.tid, iid);
   if (running.has(key)) return;
   running.add(key);
   try {
@@ -481,14 +509,16 @@ export async function runAnalysis(c, iid) {
     const item = await store.getInboxItem(c.uid, c.tid, iid);
     if (!item) return;
     if (!aiConfigured()) {
-      Object.assign(item, { status: 'review', summary: [], proposals: [], error: 'AI analysis is not configured. Add proposals manually, or configure a provider and run the analysis again.', errorMsg: null });
+      Object.assign(item, { status: 'review', error: 'AI analysis is not configured. Add proposals manually, or configure a provider and run the analysis again.', errorMsg: null });
       return await store.saveInboxItem(c.uid, c.tid, item);
     }
-    const context = await analysisContext(c);
+    const context = await analysisContext(c, item);
     const text = await store.getInboxSource(c.uid, c.tid, iid);
     const out = await analyze({ text, title: item.title, type: item.type, pdf: Boolean(item.file), date: item.date, uploader: { id: c.uid, name: c.me.name }, context });
     const fresh = await store.getInboxItem(c.uid, c.tid, iid); if (!fresh) return;
-    Object.assign(fresh, { status: 'review', error: null, errorMsg: null, summary: out.summary || [], participants: out.participants || [], proposals: toProposals(c, out, context, text), analyzedAt: store.now() });
+    const applied = (fresh.proposals || []).filter((p) => p.appliedKind);
+    Object.assign(fresh, { status: 'review', error: null, errorMsg: null, summary: out.summary || [], participants: out.participants || [],
+      proposals: [...applied, ...toProposals(c, out, context, text)], analyzedAt: store.now() });
     await store.saveInboxItem(c.uid, c.tid, fresh);
   } catch (e) {
     console.error('[analyze]', e);
@@ -511,8 +541,14 @@ function toProposals(c, out, context, source) {
   const pid = () => store.newId('pr');
   const ev = (x) => ({ quote: str(x.evidence_quote, 1000), ts: str(x.evidence_timestamp, 20) || null, conf: x.confidence === 'high' ? 'high' : 'medium' });
   const P = [];
+  const taskKey = (title, owner) => `${owner || ''}\n${str(title, 300).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()}`;
+  const appliedTaskIds = new Set(context.applied_tasks?.map((t) => t.id));
+  const seenTasks = new Set(context.applied_tasks?.map((t) => taskKey(t.title, t.owner)));
   for (const x of out.commitments || []) {
     let owner = who(x.owner_member_id, x.owner_external_name, c.uid), requester = who(x.requester_member_id, x.requester_external_name, c.uid);
+    const key = taskKey(x.title, owner);
+    if (!str(x.title) || !str(x.evidence_quote) || appliedTaskIds.has(x.duplicate_of_task_id) || seenTasks.has(key)) continue;
+    seenTasks.add(key);
     if (isExternal(owner) && isExternal(requester)) requester = c.uid;
     const project = prj.has(x.project_id) ? x.project_id : null;
     const hypothesis = hyp.has(x.hypothesis_id) && (!project || hyp.get(x.hypothesis_id).project_id === project) ? x.hypothesis_id : null;

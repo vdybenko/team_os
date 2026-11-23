@@ -71,7 +71,7 @@ app.get('/api/teams/:tid/state', requireUser, route(async (req) => {
     tasks: tasks.map((t) => D.taskView(c, t)),
     knowledge,
     sources: sources.map((s) => ({ ...s, canDelete: D.canDeleteSource(c, s) })),
-    inbox: inbox.map(({ proposals, ...i }) => ({ ...D.inboxView(c.lang, i), counts: D.countProps(proposals) })),
+    inbox: inbox.map(({ proposals, ...i }) => ({ ...D.inboxView(c.lang, i), counts: D.countProps(D.reviewProposals({ ...i, proposals })) })),
     vision,
   };
 }));
@@ -286,12 +286,7 @@ app.post('/api/teams/:tid/inbox/:iid/ignore', requireUser, route(async (req) => 
 
 app.post('/api/teams/:tid/inbox/:iid/reanalyze', requireUser, route(async (req) => {
   const c = await ctx(req);
-  const item = await store.getInboxItem(c.uid, c.tid, req.params.iid) || fail(404, 'Item not found');
-  if (item.type === 'routed') fail(400, 'This item has no source to analyze');
-  if (item.status !== 'done' && item.proposals.some((p) => p.appliedKind)) fail(409, 'Finish saving this item first.');
-  item.status = 'processing'; item.error = null; item.errorMsg = null; await store.saveInboxItem(c.uid, c.tid, item);
-  D.runAnalysis(c, item.id).catch((error) => console.error('[analyze] Failed to persist analysis:', error.name));
-  return item;
+  return D.inboxView(c.lang, await D.reanalyzeInboxItem(c, req.params.iid));
 }));
 
 app.delete('/api/teams/:tid/inbox/:iid', requireUser, route(async (req) => {
