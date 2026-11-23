@@ -686,7 +686,7 @@ function drawer() {
 function taskShareContent(m) {
   if (m.pending) return `<p class="hint" role="status">${$t('Loading…')}</p>`;
   if (m.error) return `<p class="err" role="alert">${esc(m.error)}</p><div class="mdf"><button class="btn" data-a="retryTaskShare">${$t('Try again')}</button></div>`;
-  return `<p class="hint">${$t('Anyone with the link can view the title, description and deadline.')}</p>
+  return `<p class="hint">${$t('Anyone with the link can view the title, description, deadline and comments.')}</p>
   ${m.link ? `<label class="fl" for="task-share-link">${$t('Task link')}</label><div class="task-share-link"><input class="in" id="task-share-link" type="url" value="${esc(m.link)}" readonly><button class="btn pri" data-a="copyTaskShare">${$t('Copy')}</button></div>
   <p class="hint">${$t('Creating a new link disables the previous one.')}</p><div class="mdf"><button class="btn ghost" data-a="disableTaskShare">${$t('Disable link')}</button><button class="btn" data-a="replaceTaskShare">${$t('Regenerate link')}</button></div>` :
   `<div class="mdf"><button class="btn pri" data-a="replaceTaskShare">${$t('Create link')}</button></div>`}`;

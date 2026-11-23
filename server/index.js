@@ -377,6 +377,15 @@ app.get('/share/task/:token', async (req, res) => {
   const deadline = date && !Number.isNaN(+date)
     ? new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(date)
     : task?.due;
+  let comments = '';
+  if (task?.comments.length) {
+    const commentDate = new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeZone: 'UTC' });
+    comments = task.comments.map(({ author, at, text }) => {
+      const timestamp = Date.parse(at);
+      const time = Number.isNaN(timestamp) ? '' : `<time class="hint" datetime="${escapeHtml(at)}">${escapeHtml(commentDate.format(timestamp))}</time>`;
+      return `<li><b>${escapeHtml(author)}</b>${time}<p>${escapeHtml(text)}</p></li>`;
+    }).join('');
+  }
   res.type('html').send(`<!doctype html>
 <html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${t('Shared task')} · TeamOS</title><link rel="stylesheet" href="/app.css"></head>
@@ -384,7 +393,9 @@ app.get('/share/task/:token', async (req, res) => {
 <article class="card"><h1>${escapeHtml(task?.title ?? unavailable)}</h1>
 ${deadline ? `<p class="hint">${t('Deadline')} · <time datetime="${escapeHtml(task.due)}">${escapeHtml(deadline)}</time></p>` : ''}
 ${task?.description ? `<p class="task-share-description">${escapeHtml(task.description)}</p>` : ''}
-</article></main></body></html>`);
+</article>
+${comments ? `<section class="card task-share-comments"><h2>${t('Comments')}</h2><ul>${comments}</ul></section>` : ''}
+</main></body></html>`);
 });
 
 app.get('/join/:token', (req, res) => res.redirect(`/#join-${encodeURIComponent(req.params.token)}`));

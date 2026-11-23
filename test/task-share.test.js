@@ -19,14 +19,19 @@ async function workspace(id) {
   return Promise.all(team.members.map(({ userId }) => tasks.ctxFor({ id: userId }, id, 'en')));
 }
 
-test('a private task link exposes only read-only details and grants no workspace visibility', async () => {
+test('a private task link exposes details and live comments and grants no workspace visibility', async () => {
   const [requester, teammate] = await workspace('private-tasks');
+  await store.saveUser({ id: requester.uid, name: 'Report writer', email: 'writer@example.test' });
   const task = await tasks.createTask(requester, { title: 'Review report', description: 'Compare the totals', due: '2026-11-27', status: 'progress' }, {
     source: { quote: 'Internal transcript' },
   });
-  await tasks.commentOnTask(requester, task.id, 'Internal progress update');
   const token = await share.replaceTaskShare(requester, await share.taskForSharing(requester, task.id));
-  assert.deepEqual(await share.getSharedTask(token), { title: task.title, description: task.description, due: task.due });
+  assert.deepEqual((await share.getSharedTask(token)).comments, []);
+  const updated = await tasks.commentOnTask(requester, task.id, 'Check the second column');
+  assert.deepEqual(await share.getSharedTask(token), {
+    title: task.title, description: task.description, due: task.due,
+    comments: [{ author: 'Report writer', text: 'Check the second column', at: updated.comments[0].at }],
+  });
   const altered = (token[0] === 'A' ? 'B' : 'A') + token.slice(1);
   assert.equal(await share.getSharedTask(altered), null);
   assert.deepEqual(await tasks.visibleTasks(teammate), []);

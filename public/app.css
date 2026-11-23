@@ -217,6 +217,11 @@ code{font-size:13px;background:var(--soft);padding:1px 5px;border-radius:5px;ove
 .task-share-page .card{padding:clamp(18px,4vw,32px);overflow-wrap:anywhere}
 .task-share-page h1{text-wrap:wrap}
 .task-share-description{margin:20px 0 0;white-space:pre-wrap}
+.task-share-comments{margin-top:14px}
+.task-share-comments ul{list-style:none;margin:14px 0 0;padding:0}
+.task-share-comments li+li{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
+.task-share-comments time{margin-inline-start:8px}
+.task-share-comments li p{margin:4px 0 0;white-space:pre-wrap}
 .steps{display:flex;gap:6px;margin-bottom:28px}
 .steps i{flex:1;height:4px;border-radius:4px;background:var(--line)}.steps i.on{background:var(--ink)}
 .opt{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;cursor:pointer;background:var(--card);width:100%;text-align:left}
