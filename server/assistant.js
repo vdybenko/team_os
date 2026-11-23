@@ -24,7 +24,7 @@ function* passages(document) {
   }
 }
 
-export async function askAssistant({ question, turns, team, lang = 'en', viewerId, today, tasks, knowledge, projects, hypotheses, goals = [], nameOf, documents = [] }) {
+export async function askAssistant({ question, turns, team, lang = 'en', viewerId, today, tasks, knowledge, projects, hypotheses, nameOf, documents = [] }) {
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const records = [];
   const openings = new Map();
@@ -44,17 +44,11 @@ export async function askAssistant({ question, turns, team, lang = 'en', viewerI
   for (const p of projects) (p.goals || []).forEach((g, index) => add('goal', `${p.id}:${index}`, g.goal, {
     project: p.name, projectStatus: p.status, goal: g.goal, metric: g.metric, target: g.target, current: g.current, due: g.by,
   }, p.id));
-  for (const g of goals) add('goal', g.id, g.title, {
-    level: g.level, period: g.period, type: g.type, status: g.status, owner: nameOf(g.owner), project: projectNames.get(g.project), member: g.member ? nameOf(g.member) : undefined,
-    keyResults: (g.keyResults || []).map((k) => ({ title: k.title, unit: k.unit, start: k.start, current: k.current, target: k.target, owner: nameOf(k.owner), confidence: k.confidence, note: excerpt(k.note, 200) })),
-  }, g.id);
   for (const h of hypotheses) add('hypothesis', h.id, h.statement || h.then, {
     statement: excerpt(h.statement || `If ${h.if}, then ${h.then}, because ${h.because}`),
     project: projectNames.get(h.project), status: h.status, owner: nameOf(h.owner), metric: h.metric,
     target: h.target, current: h.current, from: h.from, until: h.to, verdict: excerpt(h.verdict, 500),
     learnings: (h.learnings || []).slice(-3).map((l) => excerpt(l.text, 300)),
-    ...(h.priority ? { priorityScore: Math.round((h.priority.impact * h.priority.confidence * h.priority.speed) / ((h.priority.costTime + h.priority.costMoney) / 2)), priority: h.priority } : {}),
-    ...(h.kr ? { movesKeyResult: goals.flatMap((g) => g.keyResults || []).find((k) => k.id === h.kr)?.title } : {}),
   });
   for await (const document of documents) {
     for (const { page, start, passage } of passages(document)) {

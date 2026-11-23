@@ -106,7 +106,7 @@ export async function createTask(c, input, extra = {}) {
     owner, requester, creator: c.uid,
     due: dateOrNull(input.due), important: Boolean(input.important), urgent: null,
     status: TASK_ST.includes(input.status) ? input.status : 'open',
-    project: await validProject(c, input.project), hypothesis: await validHyp(c, input.hypothesis), kr: await validKr(c, input.kr),
+    project: await validProject(c, input.project), hypothesis: await validHyp(c, input.hypothesis),
     source: extra.source || null, comments: [], history: [], createdAt: store.now(),
   };
   if (extra.id) {
@@ -142,7 +142,6 @@ export async function updateTask(c, t, body, sourceNote, reviewId) {
   if (body.urgent !== undefined) t.urgent = body.urgent === null ? null : Boolean(body.urgent);
   if (body.project !== undefined) { t.project = await validProject(c, body.project); if (t.hypothesis && (await store.hypotheses.get(c.tid, t.hypothesis))?.project !== t.project) t.hypothesis = null; }
   if (body.hypothesis !== undefined) t.hypothesis = await validHyp(c, body.hypothesis);
-  if (body.kr !== undefined) t.kr = await validKr(c, body.kr);
   return store.saveTask(c.tid, t, prev);
 }
 export async function deleteTask(c, id) {
@@ -216,7 +215,7 @@ export async function deleteKnowledge(c, id) {
 }
 
 /* ---------- projects & hypotheses ---------- */
-const legacyGoalInput = (g) => ({ id: typeof g.id === 'string' && /^[\w-]{1,80}$/.test(g.id) ? g.id : store.newId('g'), goal: str(g.goal, 300), metric: str(g.metric, 200), target: str(g.target, 50), current: str(g.current, 50), by: dateOrNull(g.by) });
+const goalInput = (g) => ({ id: typeof g.id === 'string' && /^[\w-]{1,80}$/.test(g.id) ? g.id : store.newId('g'), goal: str(g.goal, 300), metric: str(g.metric, 200), target: str(g.target, 50), current: str(g.current, 50), by: dateOrNull(g.by) });
 function projectInput(c, body, p = {}) {
   if (body.name !== undefined) p.name = str(body.name, 120) || fail(400, 'Project name is required');
   if (body.vision !== undefined) p.vision = str(body.vision, 5000);
@@ -224,7 +223,7 @@ function projectInput(c, body, p = {}) {
   if (body.owner !== undefined) p.owner = person(c.team, body.owner, 'Project owner') || c.uid;
   if (body.color !== undefined && /^#[0-9a-f]{6}$/i.test(body.color)) p.color = body.color;
   if (Array.isArray(body.members)) p.members = body.members.filter((u) => isMember(c.team, u));
-  if (Array.isArray(body.goals)) p.goals = body.goals.slice(0, 20).map(legacyGoalInput).filter((g) => g.goal);
+  if (Array.isArray(body.goals)) p.goals = body.goals.slice(0, 20).map(goalInput).filter((g) => g.goal);
   return p;
 }
 export async function createProject(c, body, extra = {}) {
@@ -232,18 +231,14 @@ export async function createProject(c, body, extra = {}) {
   const n = (await store.projects.list(c.tid)).length;
   const p = projectInput(c, { owner: c.uid, status: 'active', members: [c.uid], goals: [], vision: '', ...body }, { id: extra.id || store.newId('p'), color: COLORS[n % COLORS.length], creator: c.uid, createdAt: store.now(), ...(extra.source ? { source: extra.source } : {}) });
   if (!p.name) fail(400, 'Project name is required');
-  await store.projects.save(c.tid, p);
-  await migrateProjectGoals(c, p);
-  return p;
+  return store.projects.save(c.tid, p);
 }
 export async function getProject(c, pid) {
   return await store.projects.get(c.tid, store.assertId(pid, 'project id')) || fail(404, 'Project not found');
 }
 export async function updateProject(c, pid, body) {
   if (!c.admin) fail(403, 'Owner and Admin edit projects');
-  const p = await store.projects.save(c.tid, projectInput(c, body, await getProject(c, pid)));
-  await migrateProjectGoals(c, p);
-  return p;
+  return store.projects.save(c.tid, projectInput(c, body, await getProject(c, pid)));
 }
 export async function deleteProject(c, pid) {
   if (!c.admin) fail(403, 'Only Owner or Admin');
@@ -251,197 +246,26 @@ export async function deleteProject(c, pid) {
   if ((await store.hypotheses.list(c.tid)).some((h) => h.project === p.id)) fail(400, 'Delete or move the project’s hypotheses first');
   await store.projects.remove(c.tid, p);
 }
-// Older clients (MCP save_goal / remove_goal) address a project goal as { goal, metric, target, current, by }.
-// It is stored as a project-level Goal with one key result.
-export const legacyGoalView = (g) => {
-  const k = g.keyResults?.[0];
-  return { id: g.id, goal: g.title, metric: k?.title || '', target: k ? String(k.target) : '', current: k ? String(k.current) : '', by: g.legacyBy || null, period: g.period };
-};
+// Goals live inside the project. Upsert by goal id; a new goal is appended.
 export async function saveGoal(c, pid, input) {
+  if (!c.admin) fail(403, 'Owner and Admin edit projects');
   const p = await getProject(c, pid);
-  if (!canEditProjectGoals(c, p)) fail(403, 'Project goals are edited by the project Owner or a team Owner/Admin');
-  await migrateProjectGoals(c, p);
-  const existing = input.id ? await store.goals.get(c.tid, store.assertId(input.id, 'goal id')) : null;
-  if (input.id && (!existing || existing.project !== p.id)) fail(404, 'Goal not found');
-  const kr = existing?.keyResults?.[0];
-  const title = input.goal !== undefined ? str(input.goal, 300) : existing?.title;
-  if (!title) fail(400, 'Write the goal');
-  const keyResults = [{
-    ...(kr ? { id: kr.id } : {}), title: input.metric !== undefined ? str(input.metric, 200) || title : kr?.title || title, unit: kr?.unit || '',
-    start: kr?.start ?? 0, current: input.current !== undefined ? num(input.current) : kr?.current ?? 0, target: input.target !== undefined ? num(input.target) : kr?.target ?? 0, owner: kr?.owner || p.owner || c.uid,
-  }, ...(existing?.keyResults || []).slice(1)];
-  const body = { title, keyResults, ...(input.by !== undefined ? { period: quarterOf(dateOrNull(input.by)) } : {}) };
-  const goal = existing ? await updateGoal(c, existing.id, body) : await createGoal(c, { level: 'project', project: p.id, type: 'committed', period: quarterOf(dateOrNull(input.by)), ...body });
-  if (input.by !== undefined) { goal.legacyBy = dateOrNull(input.by); await store.goals.save(c.tid, goal); }
-  return { project: p, goal: legacyGoalView(goal) };
+  const goals = [...(p.goals || [])];
+  const i = input.id ? goals.findIndex((g) => g.id === input.id) : -1;
+  if (input.id && i < 0) fail(404, 'Goal not found');
+  const merged = goalInput({ ...(i >= 0 ? goals[i] : {}), ...Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) });
+  if (!merged.goal) fail(400, 'Write the goal');
+  if (i >= 0) goals[i] = merged; else { if (goals.length >= 20) fail(400, 'A project can have up to 20 goals'); goals.push(merged); }
+  p.goals = goals;
+  await store.projects.save(c.tid, p);
+  return { project: p, goal: merged };
 }
 export async function removeGoal(c, pid, goalId) {
+  if (!c.admin) fail(403, 'Owner and Admin edit projects');
   const p = await getProject(c, pid);
-  await migrateProjectGoals(c, p);
-  const g = await store.goals.get(c.tid, store.assertId(goalId, 'goal id'));
-  if (!g || g.project !== p.id) fail(404, 'Goal not found');
-  await deleteGoal(c, g.id);
-  return p;
-}
-
-/* ---------- goals (OKR) ---------- */
-// One entity on every level: a team goal (annual "2027" or quarterly "2027Q1"), a project goal and a member goal.
-// A goal contributes to a key result one level higher (alignedTo); hypotheses move a key result of their project;
-// a task moves a goal through its hypothesis or directly through task.kr.
-
-export const GOAL_LEVELS = ['team', 'project', 'member'];
-export const GOAL_TYPES = ['committed', 'aspirational'];
-export const GOAL_ST = ['active', 'done', 'cancelled'];
-export const KR_CONF = ['on_track', 'at_risk', 'off_track'];
-export const UNALIGNED = ['growth', 'bau'];
-const num = (v, d = 0) => { const n = Number(String(v ?? '').replace(/[\s\u00a0]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : d; };
-export const periodOk = (p) => typeof p === 'string' && /^\d{4}(Q[1-4])?$/.test(p);
-export const currentQuarter = (d = new Date()) => `${d.getUTCFullYear()}Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
-const quarterOf = (date) => (date ? `${date.slice(0, 4)}Q${Math.floor((Number(date.slice(5, 7)) - 1) / 3) + 1}` : currentQuarter());
-const periodsOverlap = (a, b) => a.slice(0, 4) === b.slice(0, 4) && (a.length === 4 || b.length === 4 || a === b);
-// Lower rank = higher level. A goal can only contribute to a key result of a goal with a lower rank.
-export const goalRank = (g) => (g.level === 'team' ? (g.period.length === 4 ? 0 : 1) : g.level === 'project' ? 2 : 3);
-export const krProgress = (k) => { const d = k.target - k.start; return d ? Math.max(0, Math.min(1, (k.current - k.start) / d)) : k.current >= k.target ? 1 : 0; };
-export const goalProgress = (g) => (g.keyResults?.length ? g.keyResults.reduce((a, k) => a + krProgress(k), 0) / g.keyResults.length : 0);
-
-export const canEditProjectGoals = (c, p) => c.admin || p?.owner === c.uid;
-export async function canEditGoal(c, g) {
-  if (g.level === 'team') return c.admin;
-  if (g.level === 'project') return canEditProjectGoals(c, await store.projects.get(c.tid, g.project));
-  return g.member === c.uid;
-}
-const canCheckinKr = async (c, g, k) => k.owner === c.uid || await canEditGoal(c, g);
-
-// Projects created before goals became their own entity kept them in project.goals; they move into goals/ on first read.
-async function migrateProjectGoals(c, p) {
-  if (!p?.goals?.length) return;
-  for (const old of p.goals) {
-    const id = /^[\w-]{1,80}$/.test(old.id || '') ? old.id : store.newId('g');
-    if (await store.goals.get(c.tid, id)) continue;
-    const owner = isMember(c.team, p.owner) ? p.owner : c.uid;
-    await store.goals.save(c.tid, {
-      id, level: 'project', project: p.id, member: null, title: str(old.goal, 300) || '—', description: '',
-      period: quarterOf(dateOrNull(old.by)), type: 'committed', owner, alignedTo: [], unaligned: null, status: 'active',
-      keyResults: [{ id: `${id}_kr`, title: str(old.metric, 200) || str(old.goal, 200) || '—', unit: '', start: 0, current: num(old.current), target: num(old.target), owner, confidence: null, note: '', checkins: [] }],
-      score: null, retro: null, legacyBy: dateOrNull(old.by), creator: owner, createdAt: store.now(), history: [{ at: store.now(), by: c.uid, text: 'Moved from the project goals' }],
-    });
-  }
-  p.goals = [];
-  await store.projects.save(c.tid, p);
-}
-export async function listGoals(c, projects) {
-  for (const p of projects || await store.projects.list(c.tid)) if (p.goals?.length) await migrateProjectGoals(c, p);
-  return store.goals.list(c.tid);
-}
-export async function getGoal(c, gid) {
-  return await store.goals.get(c.tid, store.assertId(gid, 'goal id')) || fail(404, 'Goal not found');
-}
-const findKr = (goals, krId) => { for (const g of goals) { const k = (g.keyResults || []).find((x) => x.id === krId); if (k) return { g, k }; } return null; };
-async function validKr(c, id) {
-  if (!id || typeof id !== 'string') return null;
-  return findKr(await store.goals.list(c.tid), id) ? id : null;
-}
-// A hypothesis moves a key result of a goal of its own project.
-async function validHypKr(c, project, id) {
-  if (!id || typeof id !== 'string') return null;
-  const hit = findKr((await store.goals.list(c.tid)).filter((g) => g.level === 'project' && g.project === project), id);
-  return hit ? id : fail(400, 'Choose a key result of this project’s goals');
-}
-
-function krInput(c, k, old) {
-  const title = str(k.title, 200);
-  if (!title) return null;
-  return {
-    id: old?.id || store.newId('kr'), title, unit: str(k.unit ?? old?.unit, 12),
-    start: k.start !== undefined ? num(k.start) : old?.start ?? 0,
-    current: k.current !== undefined ? num(k.current) : old ? old.current : num(k.start),
-    target: k.target !== undefined ? num(k.target) : old?.target ?? 0,
-    owner: (k.owner !== undefined ? person(c.team, k.owner, 'Key result owner') : old?.owner) || c.uid,
-    confidence: old?.confidence || null, note: old?.note || '', checkins: old?.checkins || [],
-  };
-}
-async function alignInput(c, g, raw, goals) {
-  const ids = (Array.isArray(raw) ? raw : raw ? [raw] : []).map((x) => (typeof x === 'string' ? x : x?.krId)).filter(Boolean);
-  const out = [];
-  for (const krId of [...new Set(ids)].slice(0, 3)) {
-    const hit = findKr(goals.filter((x) => x.id !== g.id), krId) || fail(400, 'The key result to align with was not found');
-    if (goalRank(hit.g) >= goalRank(g)) fail(400, 'A goal can contribute only to a key result one level higher');
-    if (!periodsOverlap(hit.g.period, g.period)) fail(400, 'The key result to align with is in a different period');
-    if (g.level === 'member' && hit.g.level === 'project' && !((await store.projects.get(c.tid, hit.g.project))?.members || []).includes(g.member)) fail(400, 'A personal goal can contribute to the goals of projects you take part in');
-    out.push({ goalId: hit.g.id, krId });
-  }
-  return out;
-}
-async function goalInput(c, body, g) {
-  if (body.title !== undefined) g.title = str(body.title, 300);
-  if (!g.title) fail(400, 'Write the objective');
-  if (body.description !== undefined) g.description = str(body.description, 5000);
-  if (body.period !== undefined) { if (!periodOk(body.period)) fail(400, 'Unknown period'); g.period = body.period; }
-  if (g.period.length === 4 && g.level !== 'team') fail(400, 'Annual goals are set for the team only');
-  if (body.type !== undefined) g.type = GOAL_TYPES.includes(body.type) ? body.type : 'committed';
-  if (body.owner !== undefined && g.level !== 'member') g.owner = person(c.team, body.owner, 'Owner') || g.owner;
-  if (body.status !== undefined) { if (!GOAL_ST.includes(body.status)) fail(400, 'Unknown status'); g.status = body.status; }
-  if (body.score !== undefined) g.score = body.score === null || body.score === '' ? null : Math.max(0, Math.min(1, Math.round(num(body.score) * 10) / 10));
-  if (body.retro !== undefined) g.retro = str(body.retro, 3000) || null;
-  if (Array.isArray(body.keyResults)) {
-    const old = new Map((g.keyResults || []).map((k) => [k.id, k]));
-    g.keyResults = body.keyResults.slice(0, 10).map((k) => krInput(c, k, old.get(k?.id))).filter(Boolean);
-  }
-  if (g.period.length > 4 && !g.keyResults?.length) fail(400, 'A quarterly goal needs at least one key result');
-  const goals = await store.goals.list(c.tid);
-  if (body.alignedTo !== undefined || body.period !== undefined) g.alignedTo = await alignInput(c, g, body.alignedTo !== undefined ? body.alignedTo : g.alignedTo, goals);
-  if (body.unaligned !== undefined) {
-    const reason = typeof body.unaligned === 'string' ? body.unaligned : body.unaligned?.reason;
-    g.unaligned = UNALIGNED.includes(reason) ? { reason, note: str(body.unaligned?.note, 500) } : null;
-  }
-  if (g.alignedTo.length) g.unaligned = null;
-  return g;
-}
-export async function createGoal(c, body, extra = {}) {
-  const level = GOAL_LEVELS.includes(body.level) ? body.level : fail(400, 'Choose the level of the goal');
-  const g = { id: extra.id || store.newId('g'), level, project: null, member: null, title: '', description: '', period: periodOk(body.period) ? body.period : currentQuarter(), type: 'committed', owner: c.uid, alignedTo: [], unaligned: null, status: 'active', keyResults: [], score: null, retro: null, creator: c.uid, createdAt: store.now(), history: [] };
-  if (level === 'team' && !c.admin) fail(403, 'Team goals are set by the Owner or an Admin');
-  if (level === 'project') {
-    const p = await store.projects.get(c.tid, String(body.project || '')) || fail(400, 'Choose a project');
-    if (!canEditProjectGoals(c, p)) fail(403, 'Project goals are set by the project Owner or a team Owner/Admin');
-    g.project = p.id;
-  }
-  if (level === 'member') { g.member = c.uid; g.project = await validProject(c, body.project); }
-  await goalInput(c, { keyResults: [], ...body, period: g.period }, g);
-  g.history.push({ at: store.now(), by: c.uid, text: 'Created' });
-  return store.goals.save(c.tid, g);
-}
-export async function updateGoal(c, gid, body) {
-  const g = await getGoal(c, gid);
-  if (!await canEditGoal(c, g)) fail(403, g.level === 'team' ? 'Team goals are edited by the Owner or an Admin' : g.level === 'project' ? 'Project goals are edited by the project Owner or a team Owner/Admin' : 'Only the author edits a personal goal');
-  const prevStatus = g.status;
-  await goalInput(c, body, g);
-  if (prevStatus !== g.status) g.history.push({ at: store.now(), by: c.uid, text: `${prevStatus} → ${g.status}` });
-  return store.goals.save(c.tid, g);
-}
-export async function deleteGoal(c, gid) {
-  const g = await getGoal(c, gid);
-  if (!await canEditGoal(c, g)) fail(403, 'No permission');
-  const krs = new Set((g.keyResults || []).map((k) => k.id));
-  for (const child of await store.goals.list(c.tid)) {
-    if ((child.alignedTo || []).some((a) => krs.has(a.krId))) { child.alignedTo = child.alignedTo.filter((a) => !krs.has(a.krId)); await store.goals.save(c.tid, child); }
-  }
-  for (const h of await store.hypotheses.list(c.tid)) if (krs.has(h.kr)) { h.kr = null; await store.hypotheses.save(c.tid, h); }
-  await store.goals.remove(c.tid, g);
-}
-// Weekly check-in: the new value of a key result, confidence and a comment.
-export async function checkinKr(c, gid, krId, body) {
-  const g = await getGoal(c, gid);
-  const k = (g.keyResults || []).find((x) => x.id === krId) || fail(404, 'Key result not found');
-  if (!await canCheckinKr(c, g, k)) fail(403, 'The owner of the key result or whoever edits the goal makes the check-in');
-  const value = body.value === undefined || body.value === '' ? k.current : num(body.value, k.current);
-  const confidence = KR_CONF.includes(body.confidence) ? body.confidence : k.confidence || 'on_track';
-  const entry = { at: store.now(), by: c.uid, value, confidence, note: str(body.note, 1000) };
-  if (body.source?.quote) entry.source = { itemId: str(body.source.itemId, 80) || null, quote: str(body.source.quote, 1000) };
-  (k.checkins ||= []).push(entry);
-  if (k.checkins.length > 200) k.checkins = k.checkins.slice(-200);
-  Object.assign(k, { current: value, confidence, note: entry.note || k.note });
-  return store.goals.save(c.tid, g);
+  if (!(p.goals || []).some((g) => g.id === goalId)) fail(404, 'Goal not found');
+  p.goals = p.goals.filter((g) => g.id !== goalId);
+  return store.projects.save(c.tid, p);
 }
 
 export const canEditHyp = (c, h) => c.admin || h.owner === c.uid;
@@ -454,24 +278,9 @@ async function hypInput(c, body, h = {}) {
   for (const k of ['from', 'to']) if (body[k] !== undefined) h[k] = dateOrNull(body[k]);
   if (body.status !== undefined) { if (!HYP_ST.includes(body.status)) fail(400, 'Unknown status'); h.status = body.status; }
   if (!h.if || !h.then) fail(400, 'Fill in “If…” and “then…”');
-  if (body.kr !== undefined) h.kr = await validHypKr(c, h.project, body.kr);
-  else if (h.kr && body.project !== undefined) h.kr = await validHypKr(c, h.project, h.kr).catch(() => null);
-  if (body.expectedImpact !== undefined) h.expectedImpact = body.expectedImpact === null || body.expectedImpact === '' ? null : num(body.expectedImpact);
-  for (const k of ['successCriteria', 'killCriteria']) if (body[k] !== undefined) h[k] = str(body[k], 500);
-  if (body.priority !== undefined) h.priority = priorityInput(body.priority, h.priority);
-  h.score = hypScore(h);
   h.statement = stmt(h);
   return h;
 }
-// Priority = Impact × Confidence × Speed ÷ Cost, where Cost = (team time + money) / 2. Every factor is 1–10.
-export const PRIORITY_KEYS = ['impact', 'confidence', 'speed', 'costTime', 'costMoney'];
-function priorityInput(raw, old) {
-  if (raw === null) return null;
-  const out = { impact: 5, confidence: 3, speed: 5, costTime: 3, costMoney: 3, ...(old || {}) };
-  for (const k of PRIORITY_KEYS) if (raw?.[k] !== undefined) out[k] = Math.max(1, Math.min(10, Math.round(num(raw[k], out[k]))));
-  return out;
-}
-export const hypScore = (h) => (h.priority ? Math.round((h.priority.impact * h.priority.confidence * h.priority.speed) / ((h.priority.costTime + h.priority.costMoney) / 2)) : null);
 export async function createHypothesis(c, body, extra = {}) {
   const h = await hypInput(c, { status: 'draft', owner: c.uid, metric: '', target: '', current: '', ...body }, { id: extra.id || store.newId('h'), creator: c.uid, learnings: [], createdAt: store.now(), ...(extra.source ? { source: extra.source } : {}) });
   if (!h.project) fail(400, 'A hypothesis must belong to a project');
@@ -486,8 +295,6 @@ export async function updateHypothesis(c, hid, body) {
   const prevSt = h.status;
   await hypInput(c, body, h);
   if (prevSt !== h.status) (h.history ||= []).push({ at: store.now(), by: c.uid, text: `${prevSt} → ${h.status}` });
-  // Entering “Testing”, the estimates become the forecast that is later compared with the actual contribution.
-  if (prevSt !== 'testing' && h.status === 'testing' && h.priority) h.forecast = { ...h.priority, score: h.score, expectedImpact: h.expectedImpact ?? null, at: store.now() };
   return store.hypotheses.save(c.tid, h);
 }
 export async function addLearning(c, hid, text) {
@@ -504,50 +311,9 @@ export async function deleteHypothesis(c, hid) {
 
 /* ---------- teams, vision, members & invites ---------- */
 
-/* ---------- organizations ---------- */
-// An organization only groups teams (v1). Its Owner/Admin create teams in it and see the list of its teams,
-// but get no access to a team's content.
-export const orgRole = (o, uid) => (o?.owners?.includes(uid) ? 'owner' : o?.admins?.includes(uid) ? 'admin' : null);
-const newOrg = (user, name) => store.saveOrg({ id: store.newId('org'), name: str(name, 120) || fail(400, 'Organization name is required'), owners: [user.id], admins: [], creator: user.id, createdAt: store.now() });
-// Teams created before organizations each get their own organization with the team's name.
-export async function ensureOrgs(teams) {
-  for (const t of teams) {
-    if (t.kind === 'personal' || t.orgId) continue;
-    const owner = t.members.find((m) => m.role === 'owner')?.userId;
-    const o = await store.saveOrg({ id: store.newId('org'), name: t.name, owners: owner ? [owner] : [], admins: [], creator: owner || null, createdAt: store.now() });
-    t.orgId = o.id;
-    await store.saveTeam(t);
-  }
-}
-// The organizations of my teams. Org Owner/Admin also see the org's other teams (names and owners only).
-export async function orgsFor(user, allTeams) {
-  const mine = allTeams.filter((t) => isMember(t, user.id));
-  await ensureOrgs(mine);
-  const ids = [...new Set(mine.map((t) => t.orgId).filter(Boolean))];
-  const out = [];
-  for (const id of ids) {
-    const o = await store.getOrg(id); if (!o) continue;
-    const role = orgRole(o, user.id);
-    const teams = allTeams.filter((t) => t.orgId === o.id && (role || isMember(t, user.id)));
-    out.push({ id: o.id, name: o.name, role, teams: await Promise.all(teams.map(async (t) => ({ id: t.id, name: t.name, member: isMember(t, user.id), owner: await nameOf(t.members.find((m) => m.role === 'owner')?.userId) }))) });
-  }
-  return out;
-}
-export async function renameOrg(user, oid, name) {
-  const o = await store.getOrg(store.assertId(oid, 'organization id')) || fail(404, 'Organization not found');
-  if (!orgRole(o, user.id)) fail(403, 'Only the Owner or an Admin of the organization');
-  o.name = str(name, 120) || fail(400, 'Organization name is required');
-  return store.saveOrg(o);
-}
-
-export async function createTeam(user, nameInput, lang, { orgId, newOrgName } = {}) {
+export async function createTeam(user, nameInput, lang) {
   const name = str(nameInput, 120) || fail(400, 'Team name is required');
-  let org;
-  if (orgId) {
-    org = await store.getOrg(store.assertId(orgId, 'organization id')) || fail(404, 'Organization not found');
-    if (!orgRole(org, user.id)) fail(403, 'Only the Owner or an Admin of the organization can add teams to it');
-  } else org = await newOrg(user, str(newOrgName, 120) || name);
-  const team = await store.saveTeam({ id: store.newId('team'), kind: 'team', name, orgId: org.id, members: [{ userId: user.id, role: 'owner', joinedAt: store.now() }], invites: [], settings: { urgentDays: 2 }, createdAt: store.now() });
+  const team = await store.saveTeam({ id: store.newId('team'), kind: 'team', name, members: [{ userId: user.id, role: 'owner', joinedAt: store.now() }], invites: [], settings: { urgentDays: 2 }, createdAt: store.now() });
   await store.saveVision(team.id, store.initialVision(team, lang));
   return team;
 }
@@ -595,11 +361,9 @@ export const inboxKey = (uid, tid, iid) => `${uid}/${tid}/${iid}`;
 
 export const inboxView = (lang, i) => ({
   ...i,
-  ...(i.proposals ? { proposals: reviewProposals(i) } : {}),
   ...(i.resultMsg ? { result: i.resultMsg.map((m) => render(lang, m)).join(' · ') || render(lang, msg('Nothing was saved')) } : {}),
   ...(i.error ? { error: render(lang, i.errorMsg || msg(i.error)) } : {}),
 });
-export const reviewProposals = ({ status, proposals = [] }) => (status === 'done' ? proposals : proposals.filter((p) => !p.appliedKind));
 export const countProps = (ps = []) => ps.reduce((a, p) => ((a[p.kind] = (a[p.kind] || 0) + 1), a), {});
 
 export function replaceProposals(item, proposals) {
@@ -691,19 +455,10 @@ async function transcribeItem(c, iid) {
 
 /* ---------- analysis ---------- */
 
-async function analysisContext(c, item) {
+async function analysisContext(c) {
   const [people, prj, hypotheses, tasks, knowledge, vision] = await Promise.all([
     teamMembers(c.team), store.projects.list(c.tid), store.hypotheses.list(c.tid), visibleTasks(c), visibleKnowledge(c), store.getVision(c.tid),
   ]);
-  const appliedTasks = new Map((item.proposals || []).filter((p) => ['task', 'merged'].includes(p.appliedKind)).map((p) => [p.applied, {
-    id: p.applied, title: p.title, owner: p.owner, requester: p.requester, quote: p.quote, timestamp: p.ts,
-  }]));
-  for (const { id, title, owner, requester, source } of tasks) {
-    // Older reanalysis runs replaced the proposal list. The task still points to its inbox item.
-    if (source?.itemId === item.id && source.owner === c.uid) {
-      appliedTasks.set(id, { id, title, owner, requester, quote: source.quote, timestamp: source.ts });
-    }
-  }
   return {
     team_vision: (vision || '').slice(0, 6000),
     members: people.map(({ userId, role, profile }) => ({ id: userId, name: profile?.name || userId, emails: profile?.emails, aliases: profile?.aliases || [], role })),
@@ -711,31 +466,14 @@ async function analysisContext(c, item) {
     hypotheses: hypotheses.map((h) => ({ id: h.id, project_id: h.project, statement: h.statement || [h.if, h.then, h.because].filter(Boolean).join(' → '), status: h.status })),
     open_tasks: tasks.filter((t) => !['done', 'cancelled'].includes(t.status)).slice(0, 200)
       .map((t) => ({ id: t.id, title: t.title, owner: t.owner, requester: t.requester, status: t.status, due: t.due })),
-    ...(appliedTasks.size ? { applied_tasks: [...appliedTasks.values()] } : {}),
     existing_knowledge: knowledge.filter((k) => !k.supersededBy).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 60)
       .map((k) => ({ id: k.id, type: k.type, text: k.text, date: k.date, project_id: k.project || null })),
   };
 }
 
 const running = new Set();
-export async function reanalyzeInboxItem(c, iid) {
-  const key = inboxKey(c.uid, c.tid, iid);
-  if (applying.has(key)) fail(409, 'This item is already being saved. Try again in a moment.');
-  applying.add(key);
-  try {
-    const item = await store.getInboxItem(c.uid, c.tid, iid) || fail(404, 'Item not found');
-    if (item.type === 'routed') fail(400, 'This item has no source to analyze');
-    if (running.has(key)) return item;
-    if (!item.appliedAt && item.status !== 'done' && item.proposals.some((p) => p.appliedKind)) fail(409, 'Finish saving this item first.');
-    Object.assign(item, { status: 'processing', error: null, errorMsg: null });
-    await store.saveInboxItem(c.uid, c.tid, item);
-    runAnalysis(c, iid).catch((error) => console.error('[analyze] Failed to persist analysis:', error.name));
-    return item;
-  } finally { applying.delete(key); }
-}
-
 export async function runAnalysis(c, iid) {
-  const key = inboxKey(c.uid, c.tid, iid);
+  const key = `${c.uid}/${c.tid}/${iid}`;
   if (running.has(key)) return;
   running.add(key);
   try {
@@ -743,16 +481,14 @@ export async function runAnalysis(c, iid) {
     const item = await store.getInboxItem(c.uid, c.tid, iid);
     if (!item) return;
     if (!aiConfigured()) {
-      Object.assign(item, { status: 'review', error: 'AI analysis is not configured. Add proposals manually, or configure a provider and run the analysis again.', errorMsg: null });
+      Object.assign(item, { status: 'review', summary: [], proposals: [], error: 'AI analysis is not configured. Add proposals manually, or configure a provider and run the analysis again.', errorMsg: null });
       return await store.saveInboxItem(c.uid, c.tid, item);
     }
-    const context = await analysisContext(c, item);
+    const context = await analysisContext(c);
     const text = await store.getInboxSource(c.uid, c.tid, iid);
     const out = await analyze({ text, title: item.title, type: item.type, pdf: Boolean(item.file), date: item.date, uploader: { id: c.uid, name: c.me.name }, context });
     const fresh = await store.getInboxItem(c.uid, c.tid, iid); if (!fresh) return;
-    const applied = (fresh.proposals || []).filter((p) => p.appliedKind);
-    Object.assign(fresh, { status: 'review', error: null, errorMsg: null, summary: out.summary || [], participants: out.participants || [],
-      proposals: [...applied, ...toProposals(c, out, context, text)], analyzedAt: store.now() });
+    Object.assign(fresh, { status: 'review', error: null, errorMsg: null, summary: out.summary || [], participants: out.participants || [], proposals: toProposals(c, out, context, text), analyzedAt: store.now() });
     await store.saveInboxItem(c.uid, c.tid, fresh);
   } catch (e) {
     console.error('[analyze]', e);
@@ -775,14 +511,8 @@ function toProposals(c, out, context, source) {
   const pid = () => store.newId('pr');
   const ev = (x) => ({ quote: str(x.evidence_quote, 1000), ts: str(x.evidence_timestamp, 20) || null, conf: x.confidence === 'high' ? 'high' : 'medium' });
   const P = [];
-  const taskKey = (title, owner) => `${owner || ''}\n${str(title, 300).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()}`;
-  const appliedTaskIds = new Set(context.applied_tasks?.map((t) => t.id));
-  const seenTasks = new Set(context.applied_tasks?.map((t) => taskKey(t.title, t.owner)));
   for (const x of out.commitments || []) {
     let owner = who(x.owner_member_id, x.owner_external_name, c.uid), requester = who(x.requester_member_id, x.requester_external_name, c.uid);
-    const key = taskKey(x.title, owner);
-    if (!str(x.title) || !str(x.evidence_quote) || appliedTaskIds.has(x.duplicate_of_task_id) || seenTasks.has(key)) continue;
-    seenTasks.add(key);
     if (isExternal(owner) && isExternal(requester)) requester = c.uid;
     const project = prj.has(x.project_id) ? x.project_id : null;
     const hypothesis = hyp.has(x.hypothesis_id) && (!project || hyp.get(x.hypothesis_id).project_id === project) ? x.hypothesis_id : null;
@@ -913,10 +643,10 @@ export async function applyProposals(c, item) {
 }
 
 /* ================= sources ================= */
-// When an inbox item is applied, its original is kept in the knowledge base as a source,
+// When an inbox item is applied, its original — a transcript or a PDF — is kept in the knowledge base as a source,
 // and every task, knowledge entry, hypothesis and project created from it points back to it (sourceId).
 
-export const keepsSource = (item) => INBOX_TYPES.includes(item.type);
+export const keepsSource = (item) => item.type !== 'routed' && Boolean(item.file || item.audio || ['transcript', 'doc'].includes(item.type));
 export const SOURCE_SCOPES = ['team', 'private'];
 const sourceScope = (c, item) => (c.team.kind === 'personal' || item.sourceScope === 'private' ? 'private' : 'team');
 

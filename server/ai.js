@@ -68,13 +68,6 @@ const PDF_SCHEMA = obj({ ...SCHEMA.properties, knowledge: arr(obj({
     first_line: S('integer'), last_line: S('integer'),
   })),
 })) });
-const transcriptEntries = (name) => {
-  const { evidence_quote, evidence_timestamp, ...fields } = SCHEMA.properties[name].items.properties;
-  return arr(obj({ ...fields, first_line: S('integer'), last_line: S('integer') }));
-};
-const TRANSCRIPT_SCHEMA = obj(Object.fromEntries(Object.keys(SCHEMA.properties).map((name) => [name,
-  ['summary', 'participants'].includes(name) ? SCHEMA.properties[name] : transcriptEntries(name),
-])));
 const DOCUMENT_RULES = `Read each substantive section, including tables. Think of the questions a teammate could later ask: which terms and percentages apply to whom and to what base, who contributes what and owns which function, what stage is documented, what is the goal, which numbers are targets, what are the dependencies and next steps? Capture the answers the source actually supplies as searchable knowledge. Keep names, units, stages, and conditions together. Tasks alone do not preserve a documented plan or its milestones. Group related table rows when they answer one question. Avoid repeating the same information across slides.
 Keep qualifiers such as proposed, illustrative, pending, tested or agreed in both the entry text and summary. Use context for a proposal, open question or target. Classify something as a decision or agreement only with evidence of adoption. A high confidence in what a proposal says does not mean it has been adopted.`;
 
@@ -99,74 +92,16 @@ Rules:
 - Use only ids that appear in the team context. Never invent ids.
 - Write titles, texts and the summary in the original language of the source. Preserve the language even if the workspace context is in another language. Keep task titles short and start them with a verb.`;
 
-const TRANSCRIPT_RULES = `
-Read the entire numbered excerpt. Review each topic for concrete decisions and agreements, established processes, observed results, and product behavior demonstrated on the call. Preserve confidentiality in scope. Capture specific workflow steps, thresholds or conditions when stated. Record targets and unverified explanations as context, clearly labeled. Extract these independently of task assignment and the summary.
-Look for distinct requests, promises and follow-ups throughout the excerpt. Keep separate investigations separate even when they involve the same account or product area. Combine reiterations of the same action. Use the final clarification when a person or account is corrected. Set a deadline only when the source gives one. Do not create a new project or hypothesis for an existing one mentioned in the context.
-When applied_tasks lists an action already saved from this source, omit the same action even if you would phrase the title differently, or identify it by duplicate_of_task_id. A different follow-up within the same hypothesis can still be a distinct commitment.
-For every proposal supply the smallest inclusive first_line and last_line range containing the evidence from THIS excerpt. The application copies the original wording and inherits the last timestamp at or before the start of the evidence. The rules for copying evidence_quote and evidence_timestamp do not apply to this schema. Cite the lines that substantiate the actual proposal, including any essential qualification.`;
-
-function transcriptLines(text) {
-  let timestamp = null;
-  const lines = [];
-  for (const paragraph of text.split(/\r?\n/)) {
-    const line = paragraph.trim();
-    if (!line) continue;
-    const cue = /^\[?((?:\d{1,2}:)?\d{1,2}:\d{2})(?=[\]\s]|$)/.exec(line);
-    if (cue) timestamp = cue[1];
-    // Long ASR turns can cover several topics. Keep evidence addressable within a turn.
-    for (const fragment of line.match(/.{1,280}(?:\s|$)|\S+/gu) || []) {
-      lines.push({ number: lines.length + 1, text: fragment.trim(), timestamp });
-    }
-  }
-  return lines;
-}
-
-async function analyzeTranscript(text, input) {
-  const sections = [];
-  let section = [], length = 0;
-  for (const line of transcriptLines(text)) {
-    if (length >= 11000) { sections.push(section); section = []; length = 0; }
-    section.push(line);
-    length += line.text.length;
-  }
-  if (section.length) sections.push(section);
-  const results = [];
-  for (let start = 0; start < sections.length; start += 3) {
-    results.push(...await Promise.all(sections.slice(start, start + 3).map(async (lines) => {
-      const numbered = lines.map((line) => `${line.number} | ${line.text}`).join('\n');
-      const result = await structuredAnswer(input(numbered), {
-        instructions: SYSTEM + TRANSCRIPT_RULES, schema: TRANSCRIPT_SCHEMA, name: 'teamos_transcript_analysis',
-        toolName: 'submit_analysis', maxTokens: MAX_TOKENS, openAIMaxTokens: 16000,
-      });
-      const offset = lines[0].number;
-      for (const kind of Object.keys(result).filter((key) => !['summary', 'participants'].includes(key))) {
-        result[kind] = result[kind].flatMap(({ first_line, last_line, ...entry }) => {
-          const first = first_line - offset, last = last_line - offset;
-          if (first < 0 || last < first || last >= lines.length) return [];
-          const quote = lines.slice(first, last + 1).map((line) => line.text).join(' ').replace(/\s+/g, ' ');
-          return [{ ...entry, evidence_quote: quote, evidence_timestamp: lines[first].timestamp }];
-        });
-      }
-      return result;
-    })));
-  }
-  const combined = Object.fromEntries(Object.keys(SCHEMA.properties).map((key) => [key, results.flatMap((result) => result[key])]));
-  combined.summary = [...new Set([...results.flatMap(({ summary }) => summary.slice(0, 1)), ...combined.summary])].slice(0, 5);
-  combined.participants = [...new Map(combined.participants.map((p) => [p.member_id || p.name_in_source, p])).values()];
-  return combined;
-}
-
 export async function analyze({ text, title, type, date, uploader, context, pdf = false }) {
   const ctx = JSON.stringify(context, null, 1);
   const pages = new Map((pdf ? pdfPages(text) : []).map(({ page, text }) => [page, text.split(/\n+/)]));
   const source = pages.size ? [...pages].map(([page, lines]) =>
     '[p. ' + page + ']\n' + lines.map((line, i) => (i + 1) + ' | ' + line).join('\n')
   ).join('\n\n') : text;
-  const input = (excerpt) => `Source date: ${date}\nSource type: ${type}\nSource title: ${title}\nUploaded by member: ${uploader.id} (${uploader.name})\n\n<team_context>\n${ctx}\n</team_context>\n\n<source>\n${excerpt}\n</source>`;
-  if (type === 'transcript' && !pdf) return analyzeTranscript(text, input);
+  const user = `Source date: ${date}\nSource type: ${type}\nSource title: ${title}\nUploaded by member: ${uploader.id} (${uploader.name})\n\n<team_context>\n${ctx}\n</team_context>\n\n<source>\n${source}\n</source>`;
   const documentRules = pdf || type === 'doc' ? '\n' + DOCUMENT_RULES : '';
   const pdfRules = pages.size ? '\nFor knowledge, return one group per supplied physical page. Provide the smallest inclusive first_line and last_line range on that page supporting each entry. The application copies the quote from these lines. Empty entries are appropriate for blank pages and repeated material. For other proposal kinds copy a quote without the line-number prefixes. Write entries in the language used in the document.' : '';
-  const result = await structuredAnswer(input(source), {
+  const result = await structuredAnswer(user, {
     instructions: SYSTEM + documentRules + pdfRules, schema: pages.size ? PDF_SCHEMA : SCHEMA, name: 'teamos_analysis',
     toolName: 'submit_analysis', maxTokens: MAX_TOKENS, openAIMaxTokens: 16000,
   });

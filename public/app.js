@@ -34,7 +34,7 @@ const fd = (s) => (s ? dtf({ weekday: 'short', day: 'numeric', month: 'short' })
 const fds = (s) => (s ? dtf({ day: 'numeric', month: 'short' }).format(D(String(s).slice(0, 10))) : '—');
 const fdt = (iso) => (iso ? dtf({ day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso)) : '');
 const fdl = (d) => { const s = dtf({ weekday: 'long', day: 'numeric', month: 'long' }).format(d); return s[0].toUpperCase() + s.slice(1); };
-const I = { dash: 'M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z', inbox: 'M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6H3v-6z', tasks: 'M4 4h16v16H4zM8 12l3 3 5-6', kn: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4zM5 16a4 4 0 0 1 4-4h10', vision: 'M12 3l9 9-9 9-9-9z', users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 20a5 5 0 0 0-4-5', gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12h3M2 12h3M12 2v3M12 19v3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2', search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5', plus: 'M12 5v14M5 12h14', x: 'M6 6l12 12M18 6L6 18', menu: 'M4 6h16M4 12h16M4 18h16', lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4', file: 'M6 3h9l4 4v14H6zM14 3v5h5', chat: 'M4 5h16v11H9l-5 4z', warn: 'M12 3l10 18H2zM12 10v5M12 18v.5', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', note: 'M5 3h14v18H5zM9 8h6M9 12h6M9 16h3', arrow: 'M5 12h14M13 6l6 6-6 6', back: 'M19 12H5M11 6l-6 6 6 6', chev: 'M6 9l6 6 6-6', cmt: 'M4 5h16v11H9l-5 4z', route: 'M5 12h14M13 6l6 6-6 6', spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6', mail: 'M3 6h18v12H3zM3 6l9 7 9-7', drive: 'M8 3h8l6 11-4 7H6l-4-7z', out: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6', trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13', user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', link: 'M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1', target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01', tree: 'M5 3v18M5 8h8M5 16h8M13 6h7v4h-7zM13 14h7v4h-7z', check: 'M5 12l5 5L20 7', org: 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M9 17h1M14 17h1', chart: 'M4 20V4M4 20h16M8 16l4-5 3 3 5-7' };
+const I = { dash: 'M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z', inbox: 'M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6H3v-6z', tasks: 'M4 4h16v16H4zM8 12l3 3 5-6', kn: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4zM5 16a4 4 0 0 1 4-4h10', vision: 'M12 3l9 9-9 9-9-9z', users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 20a5 5 0 0 0-4-5', gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12h3M2 12h3M12 2v3M12 19v3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2', search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5', plus: 'M12 5v14M5 12h14', x: 'M6 6l12 12M18 6L6 18', menu: 'M4 6h16M4 12h16M4 18h16', lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4', file: 'M6 3h9l4 4v14H6zM14 3v5h5', chat: 'M4 5h16v11H9l-5 4z', warn: 'M12 3l10 18H2zM12 10v5M12 18v.5', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', note: 'M5 3h14v18H5zM9 8h6M9 12h6M9 16h3', arrow: 'M5 12h14M13 6l6 6-6 6', back: 'M19 12H5M11 6l-6 6 6 6', chev: 'M6 9l6 6 6-6', cmt: 'M4 5h16v11H9l-5 4z', route: 'M5 12h14M13 6l6 6-6 6', spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6', mail: 'M3 6h18v12H3zM3 6l9 7 9-7', drive: 'M8 3h8l6 11-4 7H6l-4-7z', out: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6', trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13', user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', link: 'M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1' };
 const ico = (n, s = 16) => `<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${I[n]}"/></svg>`;
 const PALETTE = ['#1f4fd8', '#0b8a5f', '#b4441c', '#7a3fb0', '#a8326e', '#2f7f8f', '#8a6d00'];
 const colorFor = (id) => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
@@ -46,9 +46,9 @@ const KT = translated({ decision: 'Decision', agreement: 'Agreement', fact: 'Fac
 const TASK_SECTION_NAMES = translated({ mine: 'My tasks', delegated: 'Delegated' });
 const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 const ITYPE = translated({ transcript: 'Transcript', email: 'Email', chat: 'Chat', doc: 'Document', note: 'Note', routed: 'Proposal' });
-const SRCKIND = translated({ pdf: 'PDF', transcript: 'Transcript', doc: 'Document', voice: 'Voice note', note: 'Note', email: 'Email', chat: 'Chat' });
+const SRCKIND = translated({ pdf: 'PDF', transcript: 'Transcript', doc: 'Document', voice: 'Voice note' });
 const srcIco = (k) => (k === 'pdf' ? 'file' : k === 'transcript' || k === 'voice' ? 'mic' : 'drive');
-const keepsSource = (i) => ['transcript', 'doc', 'note', 'email', 'chat'].includes(i.type);
+const keepsSource = (i) => i.type !== 'routed' && Boolean(i.file || i.audio || ['transcript', 'doc'].includes(i.type));
 const mmss = (sec) => { const s = Math.max(0, Math.round(sec || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 // The original recording of a dictated item or source; `base` is '/inbox/<id>' or '/sources/<id>'.
 const audioPlayer = (base, a) => `<div class="voice-play">${ico('mic', 15)}<audio controls preload="metadata" src="${T(base)}/audio"></audio><span class="hint">${a.duration ? mmss(a.duration) + ' · ' : ''}${fsize(a.size)} · ${a.transcript === 'server' ? $t('transcribed on the server') : a.transcript === 'pending' ? $t('transcribing…') : $t('transcribed in the browser')}</span></div>`;
@@ -73,10 +73,9 @@ const T = (p) => `/api/teams/${encodeURIComponent(S.tid)}${p}`;
 /* ---------- state ---------- */
 const S = {
   me: null, teams: [], tid: null, d: null, ai: false, cfg: { emailLink: false, dev: false }, loginEmail: '', loginSent: false, loginBusy: false, loginError: '',
-  tmenu: false, tab: 'matrix', dir: 'mine', taskDirs: { matrix: 'mine', kanban: 'mine', list: 'all' }, person: '', proj: '', fst: 'all', grp: 'person', dash: 'all', itab: 'review',
+  tmenu: false, tab: 'matrix', dir: 'all', person: '', proj: '', fst: 'open', grp: 'person', dash: 'all', itab: 'review',
   knt: 'all', kscope: 'all', kproj: '', klog: false, ptab: 'overview', vEdit: false,
   review: null, applied: null, drawer: null, modal: null, pendingJoin: null, busy: false,
-  orgs: [], period: null, gtab: 'okr', goal: null, hview: 'cards', hsort: 'score', ckAll: false, ckc: {},
   assistant: new Map(),
 };
 const role = () => S.d?.role;
@@ -122,7 +121,6 @@ const memberOpts = (val) => (S.d?.members || []).map((m) => `<option value="${m.
 const selWho = (attrs, val, ext = true) => `<select ${attrs}>${memberOpts(val)}${ext && isExt(val) ? `<option value="${esc(val)}" selected>${esc(val.slice(4))} (${$t('ext.')})</option>` : ''}${ext ? `<option value="__ext">${$t('+ External contact…')}</option>` : ''}</select>`;
 const selProj = (attrs, val) => `<select ${attrs}><option value="">${$t('No project')}</option>${(S.d?.projects || []).filter((p) => p.status !== 'archived' || p.id === val).map((p) => `<option value="${p.id}" ${p.id === val ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`;
 const selHyp = (attrs, val, proj) => `<select ${attrs}><option value="">${$t('No hypothesis')}</option>${(S.d?.hypotheses || []).filter((h) => !proj || h.project === proj).map((h) => `<option value="${h.id}" ${h.id === val ? 'selected' : ''}>${hcode(h.id)} · ${esc((h.then || '').slice(0, 36))}…</option>`).join('')}</select>`;
-const stmtText = (h) => h.if && h.then ? `${$t('If')} ${h.if}, ${$t('then')} ${h.then}${h.because ? `, ${$t('because')} ${h.because}` : ''}` : h.statement || h.then || h.if || '';
 const stmtHtml = (h) => `<em>${$t('If')}</em> ${esc(h.if)}, <em>${$t('then')}</em> ${esc(h.then)}${h.because ? `, <em>${$t('because')}</em> ${esc(h.because)}` : ''}.`;
 const stmt = (h) => `<span class="stmt">${stmtHtml(h)}</span>`;
 const hypChip = (h) => `<span class="chip ${h.status === 'testing' ? 'amber' : h.status === 'validated' ? 'green' : h.status === 'invalidated' ? 'red' : ''}">${HST[h.status]}</span>`;
@@ -157,7 +155,7 @@ async function boot() {
   const res = await fetch('/api/me', { credentials: 'same-origin', headers: { 'X-TeamOS-Lang': LANG } });
   if (res.status === 401) { if (!R().startsWith('join-')) location.hash = 'login'; return render(); }
   const me = await res.json();
-  Object.assign(S, { me: me.user, teams: me.teams, orgs: me.orgs || [], ai: me.ai, transcribe: me.transcribe });
+  Object.assign(S, { me: me.user, teams: me.teams, ai: me.ai, transcribe: me.transcribe });
   if (S.me.lang !== LANG) api('PATCH', '/api/me', { lang: LANG }).then((u) => { S.me = u; }).catch(() => {});
   if (S.pendingJoin) { location.hash = 'join-' + S.pendingJoin; return render(); }
   const last = (() => { try { return localStorage.getItem('teamos.team'); } catch { return null; } })();
@@ -167,7 +165,7 @@ async function boot() {
   await reload();
   if (['login', 'onboarding'].includes(R())) location.hash = 'dashboard';
 }
-async function reloadMe() { const me = await api('GET', '/api/me'); Object.assign(S, { me: me.user, teams: me.teams, orgs: me.orgs || [], ai: me.ai, transcribe: me.transcribe }); }
+async function reloadMe() { const me = await api('GET', '/api/me'); Object.assign(S, { me: me.user, teams: me.teams, ai: me.ai, transcribe: me.transcribe }); }
 async function reload() {
   if (!S.tid) return render();
   S.d = await api('GET', T('/state'));
@@ -206,7 +204,7 @@ function nav() {
   const team = S.d.team, ib = S.d.inbox.filter((i) => i.status === 'review').length;
   const projs = S.d.projects.filter((p) => p.status !== 'archived');
   return `<button class="teamsw" data-a="tmenu"><span class="logo">${esc(teamLogo(team))}</span><span class="lbl">${esc(teamName(team))}</span><span class="lbl" style="margin-left:auto">${ico('chev', 14)}</span></button>
-  ${S.tmenu ? teamMenu() : ''}
+  ${S.tmenu ? `<div class="tmenu">${S.teams.map((t) => `<button data-a="team" data-v="${t.id}"><span class="logo">${esc(teamLogo(t))}</span>${esc(teamName(t))}${t.id === S.tid ? ' ✓' : ''}</button>`).join('')}<button data-a="newTeam">${ico('plus')}${$t('Create a team')}</button></div>` : ''}
   <button class="srch" data-a="ask">${ico('search', 15)}<span class="lbl">${$t('Search')}</span><kbd>⌘K</kbd></button>
   <button class="nv ${on('dashboard')}" data-a="go" data-h="dashboard">${ico('dash')}<span class="lbl">${$t('Dashboard')}</span></button>
   <button class="nv ${on('inbox') || on('review')}" data-a="go" data-h="inbox">${ico('inbox')}<span class="lbl">${$t('Inbox')}</span>${ib ? `<span class="bd">${ib}</span>` : ''}</button>
@@ -215,22 +213,13 @@ function nav() {
   <button class="nv ${on('assistant')}" data-a="go" data-h="assistant" aria-label="${$t('Assistant')}">${ico('spark')}<span class="lbl">${$t('Assistant')}</span></button>
   <div class="sect">${personal() ? $t('My space') : 'Team Space'}</div>
   <button class="nv ${on('vision')}" data-a="go" data-h="vision">${ico('vision')}<span class="lbl">${personal() ? 'Vision' : 'Team vision'}</span></button>
-  <button class="nv ${on('goals')}" data-a="go" data-h="goals">${ico('target')}<span class="lbl">${$t('Goals (OKR)')}</span></button>
-  ${projs.map((p) => `<button class="nv ${on('project-' + p.id)}" data-a="go" data-h="project-${p.id}"><span class="dot" style="--c:${p.color}"></span><span class="lbl">${esc(p.name)}</span></button>${S.d.hypotheses.filter((h) => h.project === p.id).sort(byScore).map((h) => `<button class="nv sub ${r === 'hyp-' + h.id ? 'on' : ''}" data-a="go" data-h="hyp-${h.id}" title="${esc(stmtText(h))}">${hcode(h.id)} · ${HST[h.status]}${h.priority ? `<span class="sc">${hscore(h)}</span>` : ''}</button>`).join('')}`).join('')}
+  ${projs.map((p) => `<button class="nv ${on('project-' + p.id)}" data-a="go" data-h="project-${p.id}"><span class="dot" style="--c:${p.color}"></span><span class="lbl">${esc(p.name)}</span></button>${S.d.hypotheses.filter((h) => h.project === p.id).map((h) => `<button class="nv sub ${r === 'hyp-' + h.id ? 'on' : ''}" data-a="go" data-h="hyp-${h.id}">${hcode(h.id)} · ${HST[h.status]}</button>`).join('')}`).join('')}
   ${isAdmin() ? `<button class="nv" data-a="newProject">${ico('plus')}<span class="lbl">${$t('New project')}</span></button>` : ''}
   <div class="spacer"></div>
   ${personal() ? '' : `<button class="nv ${on('members')}" data-a="go" data-h="members">${ico('users')}<span class="lbl">${$t('Members')}</span></button>`}
   <button class="nv ${on('profile')}" data-a="go" data-h="profile">${ico('gear')}<span class="lbl">${$t('Profile')}</span></button>
   <button class="nv ${on('roadmap')}" data-a="go" data-h="roadmap">${ico('route')}<span class="lbl">Roadmap</span></button>
   <div class="me">${av(uid(), 28)}<span class="lbl"><b>${esc(S.me.name)}</b><br><span class="hint">${ROLE[role()]}</span></span><button class="btn ghost sm lbl" style="margin-left:auto" data-a="logout" title="${$t('Sign out')}">${ico('out', 14)}</button></div>`;
-}
-// The team switcher groups teams by organization; the personal space belongs to none.
-function teamMenu() {
-  const tb = (t) => `<button data-a="team" data-v="${t.id}"><span class="logo">${esc(teamLogo(t))}</span>${esc(teamName(t))}${t.id === S.tid ? ' ✓' : ''}</button>`;
-  const grouped = S.orgs.map((o) => [o, S.teams.filter((t) => t.orgId === o.id)]).filter(([, ts]) => ts.length);
-  const rest = S.teams.filter((t) => t.kind !== 'personal' && !grouped.some(([, ts]) => ts.includes(t)));
-  const own = S.teams.filter((t) => t.kind === 'personal');
-  return `<div class="tmenu">${grouped.map(([o, ts]) => `<div class="og orgrow">${ico('org', 12)} ${esc(o.name)}</div>${ts.map(tb).join('')}`).join('')}${rest.map(tb).join('')}${own.length ? `<div class="og">${$t('Personal')}</div>${own.map(tb).join('')}` : ''}<button data-a="newTeam">${ico('plus')}${$t('Create a team')}</button></div>`;
 }
 function top() {
   const team = S.d.team;
@@ -254,19 +243,17 @@ function pDashboard() {
   const rv = S.d.inbox.filter((i) => i.status === 'review'), proc = S.d.inbox.filter((i) => i.status === 'processing');
   const unr = tasks().filter((t) => t.unread);
   const dec = S.d.knowledge.filter((k) => !k.supersededBy).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 5);
-  const act = S.d.hypotheses.filter((h) => h.status === 'testing').sort(byScore);
-  const al = alignment(curQ()), myCk = allKrs().filter(needsCheckin).length;
-  const teamQ = GL().filter((g) => g.level === 'team' && g.period === curQ() && g.status === 'active');
+  const act = S.d.hypotheses.filter((h) => h.status === 'testing');
   const h = new Date().getHours(), hi = h < 12 ? $t('Good morning') : h < 18 ? $t('Good afternoon') : $t('Good evening');
   return `<div class="hd"><div><h1>${hi}, ${esc(S.me.name.split(' ')[0])}</h1><div class="sub">${fdl(new Date())}</div></div></div>
-  <div class="chips" style="margin-bottom:20px"><button class="chip big" data-a="go" data-h="inbox">${$t('<b>{n}</b> waiting for review', { n: rv.length })}</button>${proc.length ? `<span class="chip big"><span class="spin"></span> ${$t('<b>{n}</b> being analyzed', { n: proc.length })}</span>` : ''}<span class="chip big" style="${over ? 'color:var(--red)' : ''}">${$t('<b>{n}</b> overdue', { n: over })}</span>${unr.length ? `<span class="chip big" style="color:var(--red)">${$t('<b>{n}</b> with new comments', { n: unr.length })}</span>` : ''}${myCk ? `<button class="chip big" data-a="toCheckin" data-p="${curQ()}">${$t('<b>{n}</b> KRs waiting for a check-in', { n: myCk })}</button>` : ''}${al.total ? `<button class="chip big" data-a="treeGo">Alignment <b>${P100(al.pct)}</b></button>` : ''}</div>
+  <div class="chips" style="margin-bottom:20px"><button class="chip big" data-a="go" data-h="inbox">${$t('<b>{n}</b> waiting for review', { n: rv.length })}</button>${proc.length ? `<span class="chip big"><span class="spin"></span> ${$t('<b>{n}</b> being analyzed', { n: proc.length })}</span>` : ''}<span class="chip big" style="${over ? 'color:var(--red)' : ''}">${$t('<b>{n}</b> overdue', { n: over })}</span>${unr.length ? `<span class="chip big" style="color:var(--red)">${$t('<b>{n}</b> with new comments', { n: unr.length })}</span>` : ''}</div>
   <div class="grid g3">
   <div class="col"><div class="card"><h2>${TASK_SECTION_NAMES.mine} <span class="seg sm" style="margin-left:auto">${[['all', $t('All')], ['team', $t('To team')], ['ext', $t('To external')]].map(([k, l]) => `<button class="${S.dash === k ? 'on' : ''}" data-a="dash" data-v="${k}">${l}</button>`).join('')}</span></h2>${mf.length ? mf.map(trow).join('') : `<div class="empty">${$t('No open commitments.')}<br><button class="btn sm" style="margin-top:10px" data-a="newTask">${ico('plus', 13)} ${$t('New task')}</button></div>`}</div>
   ${unr.length ? `<div class="card"><h2>${$t('New comments')}</h2>${unr.map((t) => { const c = t.comments.at(-1); return `<button class="trow" data-a="open" data-id="${t.id}">${av(c.author)}<span class="tt"><b>${esc(t.title)}</b><span class="mt">${esc(c.text.slice(0, 120))}</span></span></button>`; }).join('')}</div>` : ''}</div>
   <div class="col"><div class="card"><h2>${TASK_SECTION_NAMES.delegated} <button class="lnk" data-a="tasksTab" data-v="delegated">${$t('All →')}</button></h2>${Object.keys(byP).length ? Object.entries(byP).map(([pid, ts]) => { const od = ts.filter((t) => t.due && diff(TODAY(), t.due) < 0).length; const nx = ts.filter((t) => t.due).sort((a, b) => (a.due < b.due ? -1 : 1))[0]; return `<button class="trow" data-a="${isExt(pid) ? 'tasksTab' : 'go'}" data-v="delegated" data-h="person-${esc(pid)}">${av(pid, 32)}<span class="tt"><b>${esc(pnx(pid))}</b><span class="mt"><span>${$t('{n} open', { n: ts.length })}</span>${od ? `<span class="chip red">${$t('{n} overdue', { n: od })}</span>` : ''}${nx ? `<span>${$t('next: {date}', { date: fd(nx.due) })}</span>` : ''}</span></span>${ico('arrow', 14)}</button>`; }).join('') : `<div class="empty">${$t('You haven’t delegated anything yet.')}<br>${$t('Tasks appear after you review a meeting.')}</div>`}</div>
   <div class="card"><h2>${$t('Inbox')} <button class="lnk" data-a="go" data-h="inbox">${$t('Open →')}</button></h2>${rv.length ? rv.slice(0, 5).map((i) => `<button class="trow" data-a="go" data-h="review-${i.id}"><span class="iico">${ico(typeIco(i.type))}</span><span class="tt"><b>${esc(i.title)}</b><span class="mt">${propCount(i)} · ${esc(i.origin)}</span></span><span class="btn sm">Review</span></button>`).join('') : `<div class="empty">${$t('The inbox is clear.')}<br><button class="btn sm" style="margin-top:10px" data-a="add">${ico('plus', 13)} ${$t('Drop a transcript')}</button></div>`}</div></div>
-  <div class="col">${teamQ.length ? `<div class="card"><h2>${ico('target')} ${$t('Quarter goals · {period}', { period: periodLabel(curQ()) })} <button class="lnk" data-a="go" data-h="goals">${$t('All goals →')}</button></h2>${teamQ.map((g) => `<div style="margin-bottom:12px;cursor:pointer" data-a="goal" data-id="${g.id}"><div style="display:flex;gap:8px;align-items:center"><b style="flex:1">${esc(g.title)}</b>${typeChip(g.type)}<b>${P100(gPct(g))}</b></div>${(g.keyResults || []).map((k) => `<div class="dk"><span class="x">${cd(k.confidence)} ${esc(k.title)} <span class="hint">${fnum(k.current, k.unit)} / ${fnum(k.target, k.unit)}</span></span>${pbar(k)}</div>`).join('')}</div>`).join('')}</div>` : ''}<div class="card"><h2>${$t('Recent knowledge')} <button class="lnk" data-a="go" data-h="knowledge">${$t('Knowledge →')}</button></h2>${dec.map((k) => `<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="ty ${k.type}">${KT[k.type]}</span> ${esc(k.text)}<div class="hint">${fds(k.date)} ${tag(k.project)}</div></div>`).join('') || `<div class="empty">${$t('Nothing here yet')}</div>`}</div>
-  <div class="card"><h2>${$t('Active hypotheses')}</h2>${act.map((h) => { const ts = tasks().filter((t) => t.hypothesis === h.id), dn = ts.filter((t) => t.status === 'done').length; return `<button class="trow" data-a="go" data-h="hyp-${h.id}">${h.priority ? scb(h) : ''}<span class="tt"><b>${hcode(h.id)} · ${esc(h.then)}</b><span class="mt">${av(h.owner, 18)}${h.to ? `<span>${diff(TODAY(), h.to) >= 0 ? $t('{n} d left', { n: diff(TODAY(), h.to) }) : $t('past the deadline')}</span>` : ''}<span>${$t('{done}/{total} tasks', { done: dn, total: ts.length })}</span>${tag(h.project)}${krHit(h.kr) ? `<span>${ico('target', 12)} ${esc(krHit(h.kr).k.title)}</span>` : ''}</span></span></button>`; }).join('') || `<div class="empty">${$t('No hypotheses in “Testing”')}</div>`}</div></div>
+  <div class="col"><div class="card"><h2>${$t('Recent knowledge')} <button class="lnk" data-a="go" data-h="knowledge">${$t('Knowledge →')}</button></h2>${dec.map((k) => `<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="ty ${k.type}">${KT[k.type]}</span> ${esc(k.text)}<div class="hint">${fds(k.date)} ${tag(k.project)}</div></div>`).join('') || `<div class="empty">${$t('Nothing here yet')}</div>`}</div>
+  <div class="card"><h2>${$t('Active hypotheses')}</h2>${act.map((h) => { const ts = tasks().filter((t) => t.hypothesis === h.id), dn = ts.filter((t) => t.status === 'done').length; return `<button class="trow" data-a="go" data-h="hyp-${h.id}"><span class="tt"><b>${hcode(h.id)} · ${esc(h.then)}</b><span class="mt">${av(h.owner, 18)}${h.to ? `<span>${diff(TODAY(), h.to) >= 0 ? $t('{n} d left', { n: diff(TODAY(), h.to) }) : $t('past the deadline')}</span>` : ''}<span>${$t('{done}/{total} tasks', { done: dn, total: ts.length })}</span>${tag(h.project)}</span></span></button>`; }).join('') || `<div class="empty">${$t('No hypotheses in “Testing”')}</div>`}</div></div>
   </div><footer class="dashboard-comparison">${comparisonLink()}</footer>`;
 }
 const propCount = (i) => { const c = i.counts || {}; const parts = [['task', 'task'], ['status', 'status'], ['kn', 'knowledge'], ['hyp', 'hypothesis'], ['project', 'project']].filter(([k]) => c[k]).map(([k, l]) => $p(c[k], l)); return parts.join(' · ') || $t('no proposals'); };
@@ -323,7 +310,7 @@ function srcNote(item) {
   const src = srcOf(item.sourceId);
   if (item.status === 'done') return src ? `<p class="hint" style="margin:10px 8px 0">${ico(srcIco(src.kind), 13)} ${$t('Saved to the knowledge base as a source.')} <button class="lnk" data-a="go" data-h="source-${src.id}">${$t('Open source')}</button></p>` : lockNote;
   const sc = S.review.sourceScope;
-  return `<div class="src-scope"><span>${ico('kn', 13)} ${item.file ? $t('On apply, the PDF and its text are saved to the knowledge base as a source.') : item.audio ? $t('On apply, the recording and its transcript are saved to the knowledge base as a source.') : $t('On apply, the original text is saved to the knowledge base as a source.')}</span>${personal() ? '' : `<span class="seg sm"><button class="${sc === 'team' ? 'on' : ''}" data-a="srcScope" data-v="team">${ico('users', 12)} ${$t('Team')}</button><button class="${sc === 'private' ? 'on' : ''}" data-a="srcScope" data-v="private">${ico('lock', 12)} ${$t('Only me')}</button></span>`}</div>`;
+  return `<div class="src-scope"><span>${ico('kn', 13)} ${item.file ? $t('On apply, the PDF and its text are saved to the knowledge base as a source.') : item.audio ? $t('On apply, the recording and its transcript are saved to the knowledge base as a source.') : $t('On apply, the transcript is saved to the knowledge base as a source.')}</span>${personal() ? '' : `<span class="seg sm"><button class="${sc === 'team' ? 'on' : ''}" data-a="srcScope" data-v="team">${ico('users', 12)} ${$t('Team')}</button><button class="${sc === 'private' ? 'on' : ''}" data-a="srcScope" data-v="private">${ico('lock', 12)} ${$t('Only me')}</button></span>`}</div>`;
 }
 // Where a knowledge entry belongs: project → hypothesis.
 const knPlace = (k) => {
@@ -336,7 +323,7 @@ function propCard(p, lines) {
   const A = (f) => `data-f="${f}" data-p="${p.id}"`;
   let b = '';
   if (p.kind === 'task') {
-    b = `<input class="ttl" ${A('p.title')} value="${esc(p.title)}" placeholder="${$t('What to do')}" aria-label="${$t('Task title')}"><div class="fields"><label>${$t('Requester')} ${selWho(A('p.requester'), p.requester)}</label><label class="owner-field">${$t('Owner')} ${selWho(A('p.owner'), p.owner)}</label><label>${$t('Deadline')} <input type="date" ${A('p.due')} value="${p.due || ''}"></label><label>${$t('Project')} ${selProj(A('p.project'), p.project)}</label><label>${$t('Hypothesis')} ${selHyp(A('p.hypothesis'), p.hypothesis, p.project)}</label><label><input type="checkbox" ${A('p.important')} ${p.important ? 'checked' : ''}> ${$t('Important')}</label></div>`;
+    b = `<input class="ttl" ${A('p.title')} value="${esc(p.title)}" placeholder="${$t('What to do')}" aria-label="${$t('Task title')}"><div class="fields"><label>${$t('Owner')} ${selWho(A('p.owner'), p.owner)}</label><label>${$t('Requester')} ${selWho(A('p.requester'), p.requester)}</label><label>${$t('Deadline')} <input type="date" ${A('p.due')} value="${p.due || ''}"></label><label>${$t('Project')} ${selProj(A('p.project'), p.project)}</label><label>${$t('Hypothesis')} ${selHyp(A('p.hypothesis'), p.hypothesis, p.project)}</label><label><input type="checkbox" ${A('p.important')} ${p.important ? 'checked' : ''}> ${$t('Important')}</label></div>`;
     if (p.owner && p.owner !== uid() && !isExt(p.owner)) b += `<div class="route">${ico('route', 13)} ${$t('{name} will see the task in “{section}”', { name: esc(pn(p.owner)), section: TASK_SECTION_NAMES.mine })}</div>`;
     if (p.requester && p.requester !== uid() && !isExt(p.requester)) b += `<div class="route">${ico('lock', 13)} ${$t('{name}, the requester, will change the status', { name: esc(pn(p.requester)) })}</div>`;
     if (p.dup) { const d = tasks().find((x) => x.id === p.dup); if (d) b += `<div class="warn">${ico('warn')} ${$t('Looks like an existing task “{title}”', { title: esc(d.title) })}<span class="seg sm"><button class="${p.merge ? 'on' : ''}" data-a="pset" data-p="${p.id}" data-k="merge" data-v="1">${$t('Merge')}</button><button class="${p.merge ? '' : 'on'}" data-a="pset" data-p="${p.id}" data-k="merge" data-v="0">${$t('Create new')}</button></span></div>`; }
@@ -395,8 +382,7 @@ function pTasks() {
 function knCard(k) {
   const sup = k.supersedes && S.d.knowledge.find((x) => x.id === k.supersedes), supBy = k.supersededBy && S.d.knowledge.find((x) => x.id === k.supersededBy);
   const canEdit = k.author === uid() || (isAdmin() && k.scope === 'team');
-  const inboxSource = k.author === uid() && k.sourceItem && S.d.inbox.some((i) => i.id === k.sourceItem);
-  return `<div class="kn ${k.supersededBy ? 'sup' : ''}"><div class="km"><span class="ty ${k.type}">${KT[k.type]}</span>${k.scope === 'private' ? `<span>${ico('lock', 12)} ${$t('Only me')}</span>` : `<span>${ico('users', 12)} ${$t('Team')}</span>`}${tag(k.project)}${k.hypothesis && hyp(k.hypothesis) ? `<button class="chip" data-a="go" data-h="hyp-${k.hypothesis}">${hcode(k.hypothesis)}</button>` : ''}${canEdit ? `<span style="margin-left:auto" class="inl"><button class="btn ghost sm" data-a="editKn" data-id="${k.id}">${$t('Edit')}</button><button class="btn ghost sm" data-a="delKn" data-id="${k.id}" title="${$t('Delete')}">${ico('trash', 13)}</button></span>` : ''}</div><div class="ktx">${esc(k.text)}</div>${k.why ? `<div class="hint">${$t('Why:')} ${esc(k.why)}</div>` : ''}${k.quote ? `<div class="ev">“${esc(k.quote)}”</div>` : ''}<div class="km" style="margin-top:6px">${av(k.author, 18)}<span>${esc(pn(k.author))} · ${fds(k.date)}</span><span>${$t('Source:')} ${srcOf(k.sourceId) ? `<button class="lnk" data-a="go" data-h="source-${k.sourceId}">${ico(srcIco(srcOf(k.sourceId).kind), 12)} ${esc(knSource(k.source))}</button>` : inboxSource ? `<button class="lnk" data-a="go" data-h="review-${esc(k.sourceItem)}">${esc(knSource(k.source))}</button>` : esc(knSource(k.source))}</span>${sup ? `<span>${$t('replaces “{text}”', { text: esc(sup.text) })}</span>` : ''}${supBy ? `<span class="chip red">${$t('replaced {date}', { date: fds(supBy.date) })}</span>` : ''}</div></div>`;
+  return `<div class="kn ${k.supersededBy ? 'sup' : ''}"><div class="km"><span class="ty ${k.type}">${KT[k.type]}</span>${k.scope === 'private' ? `<span>${ico('lock', 12)} ${$t('Only me')}</span>` : `<span>${ico('users', 12)} ${$t('Team')}</span>`}${tag(k.project)}${k.hypothesis && hyp(k.hypothesis) ? `<button class="chip" data-a="go" data-h="hyp-${k.hypothesis}">${hcode(k.hypothesis)}</button>` : ''}${canEdit ? `<span style="margin-left:auto" class="inl"><button class="btn ghost sm" data-a="editKn" data-id="${k.id}">${$t('Edit')}</button><button class="btn ghost sm" data-a="delKn" data-id="${k.id}" title="${$t('Delete')}">${ico('trash', 13)}</button></span>` : ''}</div><div class="ktx">${esc(k.text)}</div>${k.why ? `<div class="hint">${$t('Why:')} ${esc(k.why)}</div>` : ''}${k.quote ? `<div class="ev">“${esc(k.quote)}”</div>` : ''}<div class="km" style="margin-top:6px">${av(k.author, 18)}<span>${esc(pn(k.author))} · ${fds(k.date)}</span><span>${$t('Source:')} ${srcOf(k.sourceId) ? `<button class="lnk" data-a="go" data-h="source-${k.sourceId}">${ico(srcIco(srcOf(k.sourceId).kind), 12)} ${esc(knSource(k.source))}</button>` : esc(knSource(k.source))}</span>${sup ? `<span>${$t('replaces “{text}”', { text: esc(sup.text) })}</span>` : ''}${supBy ? `<span class="chip red">${$t('replaced {date}', { date: fds(supBy.date) })}</span>` : ''}</div></div>`;
 }
 function derivedOf(src) {
   const find = { task: (id) => tasks().find((t) => t.id === id), knowledge: (id) => S.d.knowledge.find((k) => k.id === id), hypothesis: (id) => S.d.hypotheses.find((h) => h.id === id), project: (id) => prj(id) };
@@ -447,7 +433,7 @@ function pKnowledge(id) {
     let ss = S.d.sources || [];
     if (S.kscope !== 'all') ss = ss.filter((x) => x.scope === S.kscope);
     if (S.kproj) ss = ss.filter((x) => derivedOf(x).some((d) => d.item?.project === S.kproj));
-    return head + `<p class="hint" style="margin:-4px 0 12px">${$t('Original texts, recordings and documents that tasks and knowledge were created from.')}</p>` + (ss.map(srcCard).join('') || `<div class="empty">${$t('No sources yet. They appear when you apply an item from the inbox.')}</div>`);
+    return head + `<p class="hint" style="margin:-4px 0 12px">${$t('Original transcripts and PDF documents that tasks and knowledge were created from.')}</p>` + (ss.map(srcCard).join('') || `<div class="empty">${$t('No sources yet. They appear when you apply a transcript or a PDF from the inbox.')}</div>`);
   }
   if (S.klog) { const d = ks.filter((k) => k.type === 'decision').sort((a, b) => (a.date < b.date ? 1 : -1)); return head + (d.length ? `<div class="tl">${d.map(knCard).join('')}</div>` : `<div class="empty">${$t('No decisions yet')}</div>`); }
   const list = ks.filter((k) => !k.supersededBy && (S.knt === 'all' || k.type === S.knt)).sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -560,454 +546,33 @@ function pVision() {
   ${S.vEdit ? '' : `<h2 style="margin-top:26px">${$t('Projects')}</h2>${S.d.projects.filter((p) => p.status !== 'archived').map((p) => `<p>${tag(p.id)} — ${esc(p.vision || '')}</p>`).join('') || `<p class="hint">${$t('No projects yet')}</p>`}`}</div>`;
 }
 
-/* ---------- goals (OKR): helpers ---------- */
-// Goals on every level (team annual / quarterly, project, member) share one shape: an objective with key results.
-// A goal contributes to a key result one level higher (alignedTo); a hypothesis moves a key result of its project; a task moves
-// a key result through its hypothesis, or directly through task.kr. The "golden thread" is that chain up to a team goal.
-const GL = () => S.d?.goals || [];
-const goalById = (id) => GL().find((g) => g.id === id);
-const krHit = (id) => { if (!id) return null; for (const g of GL()) { const k = (g.keyResults || []).find((x) => x.id === id); if (k) return { g, k }; } return null; };
-const krPct = (k) => { const d = k.target - k.start; return d ? Math.max(0, Math.min(1, (k.current - k.start) / d)) : k.current >= k.target ? 1 : 0; };
-const gPct = (g) => (g.keyResults?.length ? g.keyResults.reduce((a, k) => a + krPct(k), 0) / g.keyResults.length : 0);
-const P100 = (x) => `${Math.round(x * 100)}%`;
-const fnum = (n, unit) => { const s = Number(n || 0).toLocaleString(LANG === 'uk' ? 'uk-UA' : 'en-US', { maximumFractionDigits: 2 }); return unit === '$' ? (LANG === 'uk' ? `${s} $` : `$${s}`) : unit === '%' ? `${s}%` : unit ? `${s} ${unit}` : s; };
-const curQ = () => { const d = new Date(); return `${d.getFullYear()}Q${Math.floor(d.getMonth() / 3) + 1}`; };
-const qShift = (p, n) => { let y = +p.slice(0, 4), q = +p[5] - 1 + n; y += Math.floor(q / 4); q = ((q % 4) + 4) % 4; return `${y}Q${q + 1}`; };
-const yearOf = (p) => p.slice(0, 4);
-const periodLabel = (p) => (p.length === 4 ? $t('Year {year}', { year: p }) : `Q${p[5]} ${p.slice(0, 4)}`);
-const qRange = (p) => { const y = +p.slice(0, 4), q = +p[5]; return [new Date(y, (q - 1) * 3, 1), new Date(y, q * 3, 1)]; };
-const curPeriod = () => (S.period && /^\d{4}Q[1-4]$/.test(S.period) ? S.period : curQ());
-const periodList = () => [...new Set([qShift(curQ(), -1), curQ(), qShift(curQ(), 1), ...GL().filter((g) => g.period.length > 4).map((g) => g.period)])].sort();
-const weekOfQuarter = (p) => { const [a, b] = qRange(p); const n = Math.round((b - a) / 6048e5); const w = Math.min(n, Math.max(1, Math.ceil((Date.now() - a) / 6048e5))); return [w, n]; };
-const CONF = { on_track: 'on', at_risk: 'risk', off_track: 'off' };
-const CONFL = translated({ on_track: 'On track', at_risk: 'At risk', off_track: 'Off track' });
-const cd = (c) => `<span class="cd ${CONF[c] || 'none'}" title="${c ? CONFL[c] : $t('No check-in yet')}"></span>`;
-const pbar = (k, w) => `<div class="pb ${CONF[k.confidence] || ''}" ${w ? `style="width:${w}"` : ''}><i style="width:${Math.round(krPct(k) * 100)}%"></i></div>`;
-const typeChip = (t) => (t === 'committed' ? `<span class="ty2 com" title="${$t('We deliver it in full')}">Committed</span>` : `<span class="ty2" title="${$t('0.7 is a good result')}">Aspirational</span>`);
-const levelName = (g) => (g.level === 'team' ? (g.period.length === 4 ? $t('Annual team goal') : $t('Team goal')) : g.level === 'project' ? `${$t('Project goal')} · ${prj(g.project)?.name || '—'}` : `${$t('Member goal')} · ${pn(g.member)}`);
-const parentKr = (g) => (g.alignedTo || []).map((a) => a.krId).find((id) => krHit(id));
-function chainFromKr(krId) {
-  const out = []; const seen = new Set(); let id = krId;
-  while (id && !seen.has(id)) { seen.add(id); const h = krHit(id); if (!h) break; out.push(h); id = parentKr(h.g); }
-  return out;
-}
-const reachesTeam = (krId) => chainFromKr(krId).some((x) => x.g.level === 'team' && x.g.status !== 'cancelled');
-const taskKr = (t) => (t.kr && krHit(t.kr) ? t.kr : t.hypothesis && krHit(hyp(t.hypothesis)?.kr) ? hyp(t.hypothesis).kr : null);
-const taskAligned = (t) => { const k = taskKr(t); return Boolean(k && reachesTeam(k)); };
-// Alignment score: the share of tasks closed in the quarter that lead, through the chain, to an active team key result.
-function alignment(p = curPeriod()) {
-  const [a, b] = qRange(p);
-  const done = tasks().filter((t) => t.status === 'done' && ((d) => d >= a && d < b)(new Date(t.updatedAt || t.createdAt)));
-  const al = done.filter(taskAligned);
-  return { total: done.length, aligned: al.length, pct: done.length ? al.length / done.length : 0, orphans: done.filter((t) => !taskAligned(t)) };
-}
-const childrenOfKr = (krId) => GL().filter((g) => g.status !== 'cancelled' && (g.alignedTo || []).some((x) => x.krId === krId));
-const hypsOfKr = (krId) => S.d.hypotheses.filter((h) => h.kr === krId);
-const unalignedGoals = (p) => GL().filter((g) => g.period === p && g.status === 'active' && !parentKr(g) && !g.unaligned);
-const allKrs = () => GL().flatMap((g) => (g.keyResults || []).map((k) => ({ k, g })));
-const mondayOf = () => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; };
-const needsCheckin = ({ k, g }) => g.status === 'active' && k.owner === uid() && (g.period === curQ() || g.period === yearOf(curQ())) && !(k.checkins || []).some((c) => new Date(c.at) >= mondayOf());
-
-// rights (the server enforces the same rules)
-const canTeamGoal = () => isAdmin();
-const canProjectGoal = (p) => Boolean(p) && (isAdmin() || p.owner === uid());
-const canEditGoal = (g) => (g.level === 'team' ? canTeamGoal() : g.level === 'project' ? canProjectGoal(prj(g.project)) : g.member === uid());
-const canCheckin = (g, k) => k.owner === uid() || canEditGoal(g);
-const canEditHyp = (h) => isAdmin() || h.owner === uid();
-
-/* ---------- hypothesis priority ---------- */
-// Priority = Impact × Confidence × Speed ÷ Cost; Cost is the average of team time and money. Every factor is 1–10.
-const PKEYS = ['impact', 'confidence', 'speed', 'costTime', 'costMoney'];
-const DEF_PR = { impact: 5, confidence: 3, speed: 5, costTime: 3, costMoney: 3 };
-const prOf = (h) => h.priority || DEF_PR;
-const hcost = (p) => (p.costTime + p.costMoney) / 2;
-const hscore = (h) => (h.priority ? Math.round((h.priority.impact * h.priority.confidence * h.priority.speed) / hcost(h.priority)) : null);
-const hvalue = (h) => prOf(h).impact * prOf(h).confidence;
-const QUAD = translated({ qw: 'Quick win', bb: 'Big bet', ce: 'Cheap experiment', nw: 'Costly, little evidence' });
-const quad = (h) => { const hv = hvalue(h) >= 25, hc = hcost(prOf(h)) >= 5; return hv && !hc ? 'qw' : hv && hc ? 'bb' : !hv && !hc ? 'ce' : 'nw'; };
-const qchip = (h, id) => (h.priority ? `<span class="qchip ${quad(h)}" ${id ? `id="${id}"` : ''}>${QUAD[quad(h)]}</span>` : '');
-const byScore = (a, b) => (hscore(b) ?? -1) - (hscore(a) ?? -1);
-const projHyps = (pid) => S.d.hypotheses.filter((h) => h.project === pid);
-const rankIn = (h) => { const list = projHyps(h.project).filter((x) => x.priority).sort(byScore); return [list.indexOf(h) + 1, list.length]; };
-const scb = (h, big) => (h.priority ? `<span class="scb ${hscore(h) < 30 ? 'lo' : ''} ${big ? 'big' : ''}" title="${$t('Priority')}">${hscore(h)}</span>` : `<span class="scb lo ${big ? 'big' : ''}" title="${$t('Not scored yet')}">—</span>`);
-// AI suggestion for Impact: the expected contribution as a share of what is left to the key result's target.
-const aiImpact = (h) => { const k = krHit(h.kr)?.k; if (!k || !h.expectedImpact) return null; const gap = Math.max(Math.abs(k.target - k.current), 1e-9); const r = Math.abs(h.expectedImpact) / gap; return { r, v: r >= 0.5 ? 10 : r >= 0.25 ? 8 : r >= 0.1 ? 6 : r >= 0.05 ? 4 : 2, k }; };
-const ANC = {
-  impact: (v) => (v <= 2 ? $t('barely moves the KR') : v <= 4 ? $t('a small contribution') : v <= 6 ? $t('a noticeable contribution') : v <= 8 ? $t('a strong contribution') : $t('closes most of the KR')),
-  confidence: (v) => (v <= 1 ? $t('just my opinion') : v <= 2 ? $t('the team agrees, no evidence') : v <= 4 ? $t('trends, other companies’ cases') : v <= 6 ? $t('our own past experience') : v <= 8 ? $t('data from our product / a small test') : $t('a clean experiment with a result')),
-  speed: (v) => (v >= 10 ? $t('a result within a week') : v >= 8 ? $t('in 2–3 weeks') : v >= 6 ? $t('in a month') : v >= 4 ? $t('in 2 months') : v >= 2 ? $t('in a quarter') : $t('longer than a quarter')),
-  costTime: (v) => (v <= 1 ? $t('≤ 1 person-day') : v <= 3 ? $t('≈ a week of work') : v <= 5 ? $t('2–3 weeks of work') : v <= 7 ? $t('≈ a month of work') : $t('> 2 person-months')),
-  costMoney: (v) => (v <= 1 ? '$0' : v <= 3 ? $t('up to $200') : v <= 5 ? $t('up to $1,000') : v <= 7 ? $t('up to $5,000') : $t('more than $5,000')),
-};
-
-/* ---------- goals: components ---------- */
-function alignChip(g) {
-  const pk = parentKr(g);
-  if (pk) { const { k, g: pg } = krHit(pk); return `<button class="al" data-a="goal" data-id="${pg.id}" title="${esc(pg.title)}">${ico('route', 12)}<span>${$t('contributes to')}: ${esc(k.title)} · ${esc(pg.level === 'project' ? prj(pg.project)?.name || '' : periodLabel(pg.period))}</span></button>`; }
-  if (g.unaligned?.reason === 'growth') return `<span class="al grow">${$t('Growth — not aligned on purpose')}</span>`;
-  if (g.unaligned?.reason === 'bau') return `<span class="al grow">${$t('Support / BAU')}</span>`;
-  if (g.level === 'team' && g.period.length === 4) return `<span class="al grow">${$t('Top level')}</span>`;
-  if (g.status !== 'active') return '';
-  return `<span class="al warn2">${ico('warn', 12)} ${$t('Not aligned')}</span>`;
-}
-const krRow = (k) => `<div class="kr"><div class="kn1"><i>KR</i>${esc(k.title)}</div><div class="num">${fnum(k.current, k.unit)} <span>/ ${fnum(k.target, k.unit)}</span></div>${pbar(k)}${cd(k.confidence)}${av(k.owner, 20)}</div>`;
-function goalCard(g, opts = {}) {
-  const closed = g.status === 'done' && g.score != null;
-  return `<div class="gcard ${S.goal === g.id ? 'sel' : ''}" data-a="goal" data-id="${g.id}">
-   <div class="ghead"><div class="gt"><b>${esc(g.title)}</b><div class="gmeta">${typeChip(g.type)}${opts.showLevel ? `<span>${esc(levelName(g))}</span>` : ''}${g.status === 'cancelled' ? `<span class="chip">${$t('Cancelled')}</span>` : ''}${av(g.owner, 18)}<span>${esc(pn(g.owner))}</span>${alignChip(g)}</div></div>
-   <div class="gpct">${closed ? Number(g.score).toFixed(1) : P100(gPct(g))}<small>${closed ? $t('score') : $t('progress')}</small></div></div>
-   <div class="krs">${(g.keyResults || []).map(krRow).join('')}</div>
-   ${closed && g.retro ? `<div class="ev" style="margin-top:10px">${esc(g.retro)}</div>` : ''}</div>`;
-}
-const periodSeg = () => `<span class="seg">${periodList().map((p) => `<button class="${curPeriod() === p ? 'on' : ''}" data-a="period" data-v="${p}">${periodLabel(p)}</button>`).join('')}</span>`;
-
-/* ---------- goals page ---------- */
-function pGoals() {
-  const p = curPeriod(), year = yearOf(p);
-  const annual = GL().filter((g) => g.level === 'team' && g.period === year);
-  const qGoals = GL().filter((g) => g.period === p);
-  const al = alignment(p);
-  const teamQ = qGoals.filter((g) => g.level === 'team' && g.status !== 'cancelled');
-  const risk = allKrs().filter(({ k, g }) => g.status === 'active' && (g.period === p || g.period === year) && k.confidence && k.confidence !== 'on_track').length;
-  const myCk = allKrs().filter(needsCheckin).length;
-  const unal = unalignedGoals(p).length;
-  const [w, n] = weekOfQuarter(p);
-  const head = `<div class="hd"><div><h1>${$t('Goals (OKR)')}</h1><div class="sub">${esc(teamName(S.d.team))} · ${$t('the team sees every goal: team, projects and members')}</div></div><div class="act">${periodSeg()}<button class="btn pri" data-a="newGoal">${ico('plus')} ${$t('Goal')}</button></div></div>`;
-  const stats = qGoals.length || annual.length ? `<div class="sumrow">
-    <button class="stat" data-a="gtab" data-v="tree"><div class="v">${al.total ? P100(al.pct) : '—'}</div><div class="l">${$t('Alignment · {n} of {total} closed tasks work toward OKRs', { n: al.aligned, total: al.total })}</div></button>
-    <div class="stat"><div class="v">${teamQ.length ? P100(teamQ.reduce((a, g) => a + gPct(g), 0) / teamQ.length) : '—'}</div><div class="l">${p === curQ() ? $t('Team OKR progress · week {w} of {n}', { w, n }) : $t('Team OKR progress')}</div></div>
-    <button class="stat ${risk ? 'warnv' : ''}" data-a="gtab" data-v="tree"><div class="v">${risk}</div><div class="l">${$t('KRs at risk or off track · {n} goals not aligned', { n: unal })}</div></button>
-    <button class="stat" data-a="gtab" data-v="checkin"><div class="v">${myCk}</div><div class="l">${$t('My KRs waiting for a check-in this week')}</div></button></div>` : '';
-  const tabs = `<div class="chips" style="margin:18px 0 0"><span class="seg">${[['okr', 'OKR'], ['tree', $t('Alignment tree')], ['checkin', 'Check-in']].map(([k, l]) => `<button class="${(S.gtab || 'okr') === k ? 'on' : ''}" data-a="gtab" data-v="${k}">${l}</button>`).join('')}</span></div>`;
-  let body;
-  if (!qGoals.length && !annual.length) body = emptyPeriod(p);
-  else if (S.gtab === 'tree') body = treeView(annual, p);
-  else if (S.gtab === 'checkin') body = checkinView(p);
-  else body = okrList(annual, qGoals, p);
-  return head + stats + tabs + body;
-}
-function emptyPeriod(p) {
-  return `<div class="card okr-empty"><h2 style="justify-content:center">${$t('No goals for {period} yet', { period: periodLabel(p) })}</h2><p class="hint">${$t('Start from the annual goal, then set 3–5 quarterly objectives with 2–5 measurable key results each.')}</p><div class="chips" style="justify-content:center;margin-top:14px">${canTeamGoal() ? `<button class="btn pri" data-a="newGoal" data-level="team">${ico('plus')} ${$t('Team goal')}</button>` : ''}<button class="btn" data-a="newGoal" data-level="member">${ico('plus')} ${$t('My goal')}</button></div></div>`;
-}
-function okrList(annual, qGoals, p) {
-  const year = yearOf(p);
-  const team = qGoals.filter((g) => g.level === 'team');
-  const projects = S.d.projects.map((x) => [x, qGoals.filter((g) => g.level === 'project' && g.project === x.id)]).filter(([, gs]) => gs.length);
-  const members = S.d.members.map((m) => [m.id, qGoals.filter((g) => g.level === 'member' && g.member === m.id)]).filter(([, gs]) => gs.length);
-  const many = team.filter((g) => g.status !== 'cancelled').length > 5;
-  let h = '';
-  if (annual.length) h += `<div class="gsec">${ico('target', 18)}<h2>${$t('Annual goal · {year}', { year })}</h2><span class="hint">${$t('where we are going this year')}</span><span class="line"></span></div>${annual.map((g) => goalCard(g)).join('')}`;
-  else if (canTeamGoal()) h += `<div class="gsec"><h2>${$t('Annual goal · {year}', { year })}</h2><span class="hint">${$t('not set yet')}</span><span class="line"></span><button class="btn sm" data-a="newGoal" data-level="team" data-period="${year}">${ico('plus', 13)} ${$t('Annual goal')}</button></div>`;
-  h += `<div class="gsec"><h2>${$t('Team · {period}', { period: periodLabel(p) })}</h2><span class="hint">${$t('what has to change in 3 months')}</span><span class="line"></span>${canTeamGoal() ? `<button class="btn sm" data-a="newGoal" data-level="team">${ico('plus', 13)} ${$t('Team goal')}</button>` : ''}</div>${many ? `<div class="awarn">${ico('warn', 13)} ${$t('More than 5 objectives are no longer priorities.')}</div>` : ''}${team.map((g) => goalCard(g)).join('') || `<div class="empty">${$t('No team goals')}</div>`}`;
-  if (projects.length) h += `<div class="gsec"><h2>${$t('Projects · {period}', { period: periodLabel(p) })}</h2><span class="hint">${$t('how projects contribute to team KRs')}</span><span class="line"></span></div>${projects.map(([x, gs]) => `<div class="persongrp"><span class="dot" style="--c:${x.color}"></span><button class="lnk" style="margin:0;color:var(--ink);font-size:14px" data-a="go" data-h="project-${x.id}">${esc(x.name)}</button></div>${gs.map((g) => goalCard(g)).join('')}`).join('')}`;
-  h += `<div class="gsec"><h2>${$t('Members · {period}', { period: periodLabel(p) })}</h2><span class="hint">${$t('personal goals for focus, not for performance reviews')}</span><span class="line"></span><button class="btn sm" data-a="newGoal" data-level="member">${ico('plus', 13)} ${$t('My goal')}</button></div>${members.map(([u, gs]) => `<div class="persongrp">${av(u, 22)}<button class="lnk" style="margin:0;color:var(--ink);font-size:14px" data-a="go" data-h="person-${u}">${esc(pn(u))}</button><span class="hint">${ROLE[M()[u]?.role] || ''}</span></div>${gs.map((g) => goalCard(g)).join('')}`).join('') || `<div class="empty">${$t('Nobody has set personal goals for this quarter yet')}</div>`}`;
-  return h;
-}
-function krRisk(k, g) {
-  if (g.level === 'member' || g.status !== 'active') return '';
-  const kids = childrenOfKr(k.id), hs = hypsOfKr(k.id);
-  if (g.level === 'project') return hs.length === 0 ? `<span class="rbadge r">${$t('no hypotheses — nobody moves this KR')}</span>` : hs.length === 1 ? `<span class="rbadge a">${$t('one bet — no alternatives')}</span>` : '';
-  if (g.level === 'team' && g.period.length > 4 && !kids.some((x) => x.level === 'project') && !hs.length) return `<span class="rbadge r">${$t('no project works on this KR')}</span>`;
-  return '';
-}
-const LV_ORDER = { team: 0, project: 1, member: 2 };
-function treeGoal(g, p, seen = new Set()) {
-  if (seen.has(g.id)) return ''; seen.add(g.id);
-  const lv = g.level === 'team' ? (g.period.length === 4 ? $t('Year') : $t('Quarter')) : g.level === 'project' ? prj(g.project)?.name || '' : pn(g.member);
-  const node = `<span class="tn goal ${g.level === 'team' ? 'team' : ''}" data-a="goal" data-id="${g.id}">${g.level === 'member' ? av(g.member, 18) : g.level === 'project' ? `<span class="dot" style="--c:${prj(g.project)?.color || '#888'}"></span>` : ''}<span class="lv">${esc(lv)}</span>${esc(g.title)} <b>${P100(gPct(g))}</b></span>`;
-  const krs = (g.keyResults || []).map((k) => {
-    const kids = childrenOfKr(k.id).filter((x) => x.period === p || x.period === yearOf(p)).sort((a, b) => LV_ORDER[a.level] - LV_ORDER[b.level]);
-    const hs = hypsOfKr(k.id).sort(byScore);
-    const inner = [...kids.map((x) => `<li>${treeGoal(x, p, seen)}</li>`), ...hs.map((h) => { const nt = tasks().filter((t) => t.hypothesis === h.id).length; return `<li><span class="tn hypn" data-a="go" data-h="hyp-${h.id}">${scb(h)}<b>${hcode(h.id)}</b> ${esc((h.then || '').slice(0, 60))}${(h.then || '').length > 60 ? '…' : ''} <span class="hint">· ${HST[h.status]} · ${$p(nt, 'task')}</span>${h.status === 'testing' && !nt ? `<span class="rbadge a">${$t('testing without tasks')}</span>` : ''}</span></li>`; })].join('');
-    return `<li><span class="tn krn" data-a="goal" data-id="${g.id}">${cd(k.confidence)}<span class="lv">KR</span>${esc(k.title)} <span class="hint">${fnum(k.current, k.unit)} / ${fnum(k.target, k.unit)}</span><span class="mini">${pbar(k)}</span>${krRisk(k, g)}</span>${inner ? `<ul>${inner}</ul>` : ''}</li>`;
-  }).join('');
-  return `${node}<ul>${krs}</ul>`;
-}
-function treeView(annual, p) {
-  const quarterTeam = GL().filter((g) => g.level === 'team' && g.period === p && !parentKr(g));
-  const roots = [...annual, ...quarterTeam];
-  const al = alignment(p);
-  const unal = unalignedGoals(p).filter((g) => !(g.level === 'team' && roots.includes(g)));
-  const conscious = GL().filter((g) => g.period === p && g.unaligned);
-  const empty = S.d.projects.filter((x) => x.status === 'active' && !GL().some((g) => g.level === 'project' && g.project === x.id && g.period === p));
-  const noKr = S.d.hypotheses.filter((h) => ['draft', 'testing'].includes(h.status) && !krHit(h.kr));
-  return `<div class="okr-grid">
-  <div class="card tree-wrap"><h2>${ico('tree')} ${$t('How everything flows into the main goal')}</h2><p class="hint" style="margin-top:-6px">${$t('Year → quarter → projects → hypotheses (with priority) and member goals. Click for details.')}</p><ul class="tree">${roots.map((g) => `<li>${treeGoal(g, p)}</li>`).join('') || `<li class="hint">${$t('No team goals in this period')}</li>`}</ul></div>
-  <div class="col">
-   <div class="card"><h2>${ico('warn')} ${$t('Not aligned')}</h2>
-    ${unal.map((g) => `<button class="crow" data-a="goal" data-id="${g.id}">${g.level === 'project' ? `<span class="dot" style="--c:${prj(g.project)?.color || '#888'}"></span>` : av(g.member || g.owner, 18)}<span class="x">${esc(g.title)}</span><span class="al warn2">${$t('no parent')}</span></button>`).join('') || `<div class="hint">${$t('Every goal is aligned')}</div>`}
-    ${empty.length ? `<div class="contrib"><div class="lbl2">${$t('Projects without goals')} · ${empty.length}</div>${empty.map((x) => `<button class="crow" data-a="go" data-h="project-${x.id}"><span class="dot" style="--c:${x.color}"></span><span class="x">${esc(x.name)}</span></button>`).join('')}</div>` : ''}
-    ${noKr.length ? `<div class="contrib"><div class="lbl2">${$t('Hypotheses without a KR')} · ${noKr.length}</div>${noKr.map((h) => `<button class="crow" data-a="go" data-h="hyp-${h.id}"><span class="chip">${hcode(h.id)}</span><span class="x">${esc(h.then)}</span>${tag(h.project)}</button>`).join('')}</div>` : ''}
-    <div class="contrib"><div class="lbl2">${$t('Closed tasks outside OKRs')} · ${al.orphans.length}</div>${al.orphans.slice(0, 12).map((t) => `<button class="crow" data-a="open" data-id="${t.id}">${av(t.owner, 18)}<span class="x">${esc(t.title)}</span><span class="hint">${taskKr(t) ? $t('KR without a parent') : $t('no goal')}</span></button>`).join('')}</div>
-    <p class="hint" style="margin-bottom:0">${$t('It is normal for 15–30% of work to be support. It is a problem when most work leads to no goal.')}</p></div>
-   <div class="card"><h2>${$t('Outside OKRs on purpose')}</h2>${conscious.map((g) => `<button class="crow" data-a="goal" data-id="${g.id}">${av(g.member || g.owner, 18)}<span class="x">${esc(g.title)}</span><span class="al grow">${g.unaligned.reason === 'growth' ? $t('Growth') : 'BAU'}</span></button>`).join('') || `<div class="hint">${$t('None')}</div>`}</div>
-  </div></div>`;
-}
-function checkinView(p) {
-  const krs = allKrs().filter(({ k, g }) => g.status === 'active' && (g.period === p || g.period === yearOf(p)) && (S.ckAll ? true : k.owner === uid()));
-  const rows = krs.map(({ k, g }) => {
-    const done = (k.checkins || []).some((c) => new Date(c.at) >= mondayOf() && c.by === uid());
-    const can = canCheckin(g, k);
-    const conf = S.ckc[k.id] || k.confidence || 'on_track';
-    return `<div class="ck ${done ? 'done' : ''}"><div><div class="g">${esc(levelName(g))} · ${esc(g.title)}</div><div class="k">${esc(k.title)}</div><div class="hint">${$t('target {target} · now {current}', { target: fnum(k.target, k.unit), current: fnum(k.current, k.unit) })} · ${av(k.owner, 16)} ${esc(pn(k.owner))}</div></div>
-     <input class="in" type="number" step="any" id="ckv-${k.id}" value="${k.current}" ${can ? '' : 'disabled'} aria-label="${$t('New value')}">
-     <span class="cseg">${Object.keys(CONF).map((c) => `<button class="${conf === c ? 'on' : ''}" data-a="ckc" data-k="${k.id}" data-v="${c}" ${can ? '' : 'disabled'} title="${CONFL[c]}" aria-label="${CONFL[c]}">${cd(c)}</button>`).join('')}</span>
-     <input class="in" id="ckn-${k.id}" placeholder="${$t('Comment: what changed, what blocks')}" ${can ? '' : 'disabled'}>
-     ${can ? `<button class="btn ${done ? '' : 'pri'} sm" data-a="ckSave" data-g="${g.id}" data-k="${k.id}">${done ? $t('Update') : $t('Save')}</button>` : `<span class="lock-who">${ico('lock', 13)} ${esc(pn(k.owner))}</span>`}
-    </div>`;
-  }).join('');
-  const [a] = [mondayOf()]; const b = new Date(a); b.setDate(b.getDate() + 6);
-  return `<div class="card" style="margin-top:16px;padding:0"><div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap"><h2 style="margin:0">${$t('Check-in · week {from} – {to}', { from: fds(isoDay(a)), to: fds(isoDay(b)) })}</h2><span class="hint">${$t('KR value + confidence 🟢🟡🔴 + a comment')}</span><span class="seg sm" style="margin-left:auto"><button class="${!S.ckAll ? 'on' : ''}" data-a="ckAll" data-v="0">${$t('My KRs')}</button><button class="${S.ckAll ? 'on' : ''}" data-a="ckAll" data-v="1">${$t('All team KRs')}</button></span></div>
-  ${rows || `<div class="empty">${S.ckAll ? $t('No key results in this period') : $t('You own no key results in this period')}</div>`}</div>`;
-}
-
-/* ---------- goal drawer ---------- */
-function spark(k) {
-  const pts = [{ v: k.start }, ...(k.checkins || []).map((c) => ({ v: c.value, c: c.confidence }))]; if (pts.length < 2) return '';
-  const w = 400, h = 46, lo = Math.min(k.start, k.target, ...pts.map((x) => x.v)), hi = Math.max(k.start, k.target, ...pts.map((x) => x.v));
-  const x = (i) => 4 + (i / (pts.length - 1)) * (w - 8), y = (v) => h - 4 - ((v - lo) / (hi - lo || 1)) * (h - 8);
-  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><line x1="4" x2="${w - 4}" y1="${y(k.target)}" y2="${y(k.target)}" stroke="var(--line2)" stroke-dasharray="4 4"/><path d="${path}" fill="none" stroke="var(--ink)" stroke-width="2"/>${pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" fill="${p.c === 'off_track' ? 'var(--red)' : p.c === 'at_risk' ? '#e0a11b' : p.c ? 'var(--green)' : 'var(--line2)'}"/>`).join('')}</svg>`;
-}
-function goalDrawer(el) {
-  const g = goalById(S.goal);
-  if (!g) { S.goal = null; el.classList.remove('on'); el.innerHTML = ''; return; }
-  const pk = parentKr(g); const chain = pk ? chainFromKr(pk) : [];
-  const ed = canEditGoal(g);
-  const krBlocks = (g.keyResults || []).map((k) => {
-    const kids = childrenOfKr(k.id), hs = hypsOfKr(k.id).sort(byScore), last = (k.checkins || []).at(-1);
-    return `<div class="dkr"><div class="top2">${cd(k.confidence)}<b>${esc(k.title)}</b>${av(k.owner, 20)}</div>
-     <div class="big">${fnum(k.current, k.unit)} <span>/ ${fnum(k.target, k.unit)} · ${$t('start')} ${fnum(k.start, k.unit)} · ${P100(krPct(k))}</span></div>${pbar(k)}${spark(k)}
-     ${k.note ? `<div class="ev">${esc(k.note)}</div>` : ''}
-     <div class="hint" style="margin-top:6px">${last ? $t('Last check-in {date}', { date: fds(last.at) }) : $t('No check-in yet')}${canCheckin(g, k) && g.status === 'active' ? ` · <button class="lnk" style="margin:0;display:inline" data-a="toCheckin" data-p="${g.period.length === 4 ? curQ() : g.period}">${$t('Check in')}</button>` : ''}</div>
-     ${kids.length || hs.length ? `<div class="contrib">${kids.length ? `<div class="lbl2">${$t('Goals that flow into this KR')}</div>${kids.map((x) => `<button class="crow" data-a="goal" data-id="${x.id}">${x.level === 'project' ? `<span class="dot" style="--c:${prj(x.project)?.color || '#888'}"></span>` : av(x.member || x.owner, 18)}<span class="x">${esc(x.title)}</span><span class="hint">${P100(gPct(x))}</span></button>`).join('')}` : ''}${hs.length ? `<div class="lbl2">${$t('Hypotheses that move this KR')}</div>${hs.map((h) => `<button class="crow" data-a="go" data-h="hyp-${h.id}">${scb(h)}<span class="x"><b>${hcode(h.id)}</b> ${esc(h.then)}</span><span class="hint">${HST[h.status]}${h.expectedImpact ? ` · +${fnum(h.expectedImpact, k.unit)}` : ''}</span></button>`).join('')}` : ''}</div>` : g.level !== 'member' && g.status === 'active' ? `<div class="contrib"><span class="rbadge r" style="justify-self:start">${$t('Nobody works on this KR yet')}</span></div>` : ''}
-    </div>`;
-  }).join('');
-  const hist = (g.keyResults || []).flatMap((k) => (k.checkins || []).map((c) => ({ ...c, k }))).sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 8);
-  el.innerHTML = `<div class="dw"><div class="dwh"><span class="chip">${esc(levelName(g))}</span><span class="chip">${periodLabel(g.period)}</span>${typeChip(g.type)}<span class="task-drawer-actions">${ed ? `<button class="btn sm" data-a="editGoal" data-id="${g.id}">${$t('Edit')}</button><button class="btn ghost sm" data-a="delGoal" data-id="${g.id}" title="${$t('Delete')}">${ico('trash')}</button>` : `<span class="lockhint">${ico('lock', 13)} ${g.level === 'project' ? $t('Project Owner / Admin') : g.level === 'team' ? 'Owner / Admin' : $t('Goal author')}</span>`}<button class="btn ghost sm" data-a="closeD" aria-label="${$t('Close')}">${ico('x')}</button></span></div>
-   <div class="dwt" style="padding:0;margin:4px 0 8px">${esc(g.title)}</div>
-   ${g.description ? `<p style="margin:0 0 8px;white-space:pre-wrap">${esc(g.description)}</p>` : ''}
-   <div class="kv"><span>${$t('Goal owner')}</span><span class="inl">${av(g.owner)} ${esc(pn(g.owner))}</span><span>${$t('Progress')}</span><span><b>${g.status === 'done' && g.score != null ? `${$t('score')} ${Number(g.score).toFixed(1)}` : P100(gPct(g))}</b> <span class="hint">· ${g.type === 'aspirational' ? $t('for aspirational goals 70% is a success') : $t('committed: we expect 100%')}</span></span>
-   <span>${$t('Contributes to')}</span><span>${chain.length ? `<div class="path">${chain.map((x) => `<button data-a="goal" data-id="${x.g.id}"><span class="arr">↳</span> <b>${esc(x.k.title)}</b> <span class="hint">· ${esc(x.g.title)}</span></button>`).join('')}</div>` : alignChip(g) || '—'}</span></div>
-   ${krBlocks || `<div class="empty">${$t('No key results')}</div>`}
-   <div class="box"><h3>${$t('End of the period')}</h3>${g.status === 'done' ? `<div><b style="font-size:20px">${g.score != null ? Number(g.score).toFixed(1) : '—'}</b> <span class="hint">/ 1.0</span></div>${g.retro ? `<div class="ev">${esc(g.retro)}</div>` : ''}` : `<div class="hint">${$t('A 0.0–1.0 score and a short retro at the end of the period. Committed: we expect 1.0 and explain any shortfall. Aspirational: 0.7 is a good result.')}</div>${ed && g.status === 'active' ? `<button class="btn sm" style="margin-top:8px" data-a="editGoal" data-id="${g.id}" data-close="1">${$t('Close the period')}</button>` : ''}`}</div>
-   <div class="box"><h3>${$t('History')}</h3><div class="hist">${hist.map((c) => `<div>${fds(c.at)} · ${esc(pn(c.by))}: ${esc(c.k.title)} → ${fnum(c.value, c.k.unit)} ${cd(c.confidence)}${c.note ? ` <span>— ${esc(c.note)}</span>` : ''}</div>`).join('') || `<div>${$t('No check-ins yet')}</div>`}</div></div>
-  </div>`;
-  el.classList.add('on'); el.setAttribute('aria-hidden', 'false');
-}
-
-/* ---------- goal modal ---------- */
-const ACTIVITY = /^(запустити|зробити|підготувати|написати|створити|провести|налаштувати|launch|build|ship|make|create|write|prepare|set up)(?=\s|$)/i;
-function alignOptions(m) {
-  const opts = [];
-  const add = (label, g) => g.keyResults?.length && g.status !== 'cancelled' && g.id !== m.id && opts.push([label, g.keyResults]);
-  const year = yearOf(m.period);
-  if (m.level === 'team' && m.period.length > 4) GL().filter((g) => g.level === 'team' && g.period === year).forEach((g) => add(`${$t('Annual goal {year}', { year })} · ${g.title}`, g));
-  if (m.level === 'project') GL().filter((g) => g.level === 'team' && (g.period === m.period || g.period === year)).forEach((g) => add(`${periodLabel(g.period)} · ${g.title}`, g));
-  if (m.level === 'member') {
-    S.d.projects.filter((x) => (x.members || []).includes(uid())).forEach((x) => GL().filter((g) => g.level === 'project' && g.project === x.id && (g.period === m.period)).forEach((g) => add(`${x.name} · ${g.title}`, g)));
-    GL().filter((g) => g.level === 'team' && (g.period === m.period || g.period === year)).forEach((g) => add(`${$t('Team')} · ${g.title}`, g));
-  }
-  return opts;
-}
-function goalModalHtml(m, close, cancel) {
-  const myProjects = S.d.projects.filter((x) => x.status !== 'archived' && canProjectGoal(x));
-  const levels = [['team', $t('Team'), canTeamGoal(), 'Owner / Admin'], ['project', $t('Project'), myProjects.length > 0, $t('Project Owner / Admin')], ['member', $t('My goal'), true, '']];
-  const opts = alignOptions(m);
-  const top = m.level === 'team' && m.period.length === 4;
-  const periods = [...new Set([...(m.level === 'team' ? [yearOf(curQ()), String(+yearOf(curQ()) + 1)] : []), ...periodList(), m.period])].sort();
-  const owners = S.d.members.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
-  return `<div class="md wide"><div class="mdh"><h2>${m.id ? $t('Edit goal') : $t('New goal')}</h2>${close}</div>
-  ${m.id ? `<div class="hint">${esc(levelName({ ...goalById(m.id), period: m.period }))}</div>` : `<div class="mrow2" style="margin-top:0"><span class="lbl3">${$t('Level')}</span><div class="rad">${levels.map(([k, l, ok, whoCan]) => `<label class="${m.level === k ? 'on' : ''} ${ok ? '' : 'dis'}" title="${ok ? '' : esc($t('Only {who}', { who: whoCan }))}"><input type="radio" name="glvl" value="${k}" data-f="g.level" ${m.level === k ? 'checked' : ''} ${ok ? '' : 'disabled'}>${l}${ok ? '' : ` ${ico('lock', 12)}`}</label>`).join('')}
-   ${m.level === 'project' ? `<select class="in" style="width:auto" data-f="g.project" aria-label="${$t('Project')}">${myProjects.map((x) => `<option value="${x.id}" ${m.project === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : ''}</div></div>`}
-  <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:14px;margin-top:14px"><label class="fl">${$t('Period')}<select class="in" data-f="g.period">${periods.map((x) => `<option value="${x}" ${m.period === x ? 'selected' : ''}>${periodLabel(x)}</option>`).join('')}</select></label>
-   <div class="fl">${$t('Type')}<div class="rad">${[['committed', 'Committed', $t('we deliver 100%')], ['aspirational', 'Aspirational', $t('70% is a success')]].map(([k, l, s]) => `<label class="${m.type === k ? 'on' : ''}"><input type="radio" name="gtyp" value="${k}" data-f="g.type" ${m.type === k ? 'checked' : ''}>${l} <span class="hint">${s}</span></label>`).join('')}</div></div></div>
-  <label class="fl" style="margin-top:14px">${$t('Objective — a qualitative goal')}<input class="in" id="gTitle" value="${esc(m.title)}" placeholder="${m.level === 'member' ? $t('E.g. Launch 3 sequences people reply to') : $t('E.g. Prove that outreach sells')}"></label>
-  <div class="mrow2"><span class="lbl3">${$t('Contributes to (a KR one level higher)')}</span>
-   ${opts.length ? `<select class="in" data-f="g.align"><option value="">${$t('— choose a KR —')}</option>${opts.map(([lbl, krs]) => `<optgroup label="${esc(lbl)}">${krs.map((k) => `<option value="${k.id}" ${m.align === k.id ? 'selected' : ''}>${esc(k.title)} · ${fnum(k.current, k.unit)} / ${fnum(k.target, k.unit)}</option>`).join('')}</optgroup>`).join('')}</select>` : `<div class="hint">${top ? $t('The annual team goal is the top level. Organization goals will come later.') : $t('No goals one level higher in this period')}</div>`}
-   ${top ? '' : `<div class="rad" style="margin-top:4px"><span class="hint" style="align-self:center">${$t('or not aligned on purpose:')}</span>${[['growth', $t('Growth')], ['bau', $t('Support / BAU')]].map(([k, l]) => `<label class="${m.reason === k ? 'on' : ''}"><input type="checkbox" data-f="g.reason" value="${k}" ${m.reason === k ? 'checked' : ''}>${l}</label>`).join('')}</div>`}
-   ${!m.align && !m.reason && !top ? `<div class="awarn">${ico('warn', 13)} ${$t('Without alignment the goal is marked “Not aligned” and does not count toward Alignment.')}</div>` : ''}</div>
-  <div class="mrow2"><span class="lbl3">${$t('Key Results — 2–5 measurable outcomes')}</span>
-   <div class="krrow hint" style="font-size:12px;font-weight:600"><span>${$t('What we measure')}</span><span>${$t('Unit')}</span><span>${$t('From')}</span><span>${$t('To (target)')}</span><span>${$t('KR owner')}</span><span></span></div>
-   ${m.krs.map((k, i) => `<div class="krrow"><input value="${esc(k.title)}" data-kr="${i}" data-kk="title" placeholder="${$t('E.g. MRR from outreach')}" aria-label="${$t('What we measure')}"><input value="${esc(k.unit)}" data-kr="${i}" data-kk="unit" placeholder="$" aria-label="${$t('Unit')}"><input type="number" step="any" value="${k.start}" data-kr="${i}" data-kk="start" aria-label="${$t('From')}"><input type="number" step="any" value="${k.target}" data-kr="${i}" data-kk="target" aria-label="${$t('To (target)')}"><select data-kr="${i}" data-kk="owner" aria-label="${$t('KR owner')}">${owners.replace(`value="${k.owner}"`, `value="${k.owner}" selected`)}</select><button class="btn ghost sm" data-a="krDel" data-v="${i}" aria-label="${$t('Remove')}">${ico('x', 13)}</button></div><div class="awarn" id="kw-${i}" style="${ACTIVITY.test(k.title.trim()) ? '' : 'display:none'}">${ico('warn', 13)} ${$t('This looks like a task, not an outcome. What will change in numbers once it is done?')}</div>`).join('')}
-   <button class="btn sm" style="justify-self:start" data-a="krAdd">${ico('plus', 13)} Key Result</button></div>
-  ${m.id ? `<div class="mrow2"><span class="lbl3">${$t('Status and end of the period')}</span><div class="grid" style="grid-template-columns:minmax(0,1fr) 110px;gap:10px"><select class="in" id="gStatus">${[['active', $t('Active')], ['done', $t('Period closed')], ['cancelled', $t('Cancelled')]].map(([k, l]) => `<option value="${k}" ${m.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select><input class="in" id="gScore" type="number" min="0" max="1" step="0.1" value="${m.score ?? ''}" placeholder="0.0–1.0" aria-label="${$t('Score')}"></div><textarea class="in" id="gRetro" rows="2" placeholder="${$t('Retro: why this result, what we carry over')}">${esc(m.retro || '')}</textarea></div>` : ''}
-  <div class="mdf"><span class="hint" style="margin-right:auto">${m.level === 'member' ? $t('Personal goals help you focus. The whole team sees them; they are not used to assess work.') : ''}</span>${cancel}<button class="btn pri" data-a="goalSave">${m.id ? $t('Save') : $t('Create goal')}</button></div></div>`;
-}
-function syncGoalModal() {
-  const m = S.modal; if (!m || m.k !== 'goal') return;
-  const t = document.getElementById('gTitle'); if (t) m.title = t.value;
-  document.querySelectorAll('[data-kr]').forEach((el) => { const k = m.krs[Number(el.dataset.kr)]; if (k) k[el.dataset.kk] = el.value; });
-  for (const [id, key] of [['gStatus', 'status'], ['gScore', 'score'], ['gRetro', 'retro']]) { const el = document.getElementById(id); if (el) m[key] = el.value; }
-}
-const blankKr = () => ({ title: '', unit: '', start: 0, target: 0, owner: uid() });
-function openGoalModal(opts = {}) {
-  if (opts.id) {
-    const g = goalById(opts.id); if (!g) return;
-    S.modal = { k: 'goal', id: g.id, level: g.level, project: g.project, period: g.period, type: g.type, title: g.title, align: parentKr(g) || '', reason: g.unaligned?.reason || '', status: opts.close ? 'done' : g.status, score: g.score ?? (opts.close ? Math.round(gPct(g) * 10) / 10 : ''), retro: g.retro || '', krs: (g.keyResults || []).map((k) => ({ ...k })) };
-  } else {
-    let level = opts.level || (canTeamGoal() ? 'team' : 'member');
-    if (level === 'team' && !canTeamGoal()) level = 'member';
-    const project = opts.project || S.d.projects.find((x) => x.status !== 'archived' && canProjectGoal(x))?.id || null;
-    if (level === 'project' && !canProjectGoal(prj(project))) { toast($t('Project goals are set by the project Owner or an Admin')); return; }
-    const period = opts.period && (level === 'team' || opts.period.length > 4) ? opts.period : curPeriod();
-    S.modal = { k: 'goal', level, project, period, type: 'committed', title: '', align: '', reason: '', krs: [blankKr()] };
-    // A personal goal started from a project aligns with that project's first KR by default.
-    if (opts.project && level === 'member') { const g = GL().find((x) => x.level === 'project' && x.project === opts.project && x.period === period); if (g?.keyResults?.[0]) S.modal.align = g.keyResults[0].id; }
-  }
-  S.drawer = null; S.goal = null; render();
-}
-async function saveGoalModal() {
-  syncGoalModal(); const m = S.modal;
-  if (!m.title.trim()) throw new Error($t('Write the objective'));
-  const keyResults = m.krs.filter((k) => String(k.title).trim()).map((k) => ({ ...(k.id ? { id: k.id } : {}), title: k.title, unit: k.unit, start: Number(k.start) || 0, target: Number(k.target) || 0, owner: k.owner || uid() }));
-  if (m.period.length > 4 && !keyResults.length) throw new Error($t('A quarterly goal needs at least one key result'));
-  const body = { title: m.title, period: m.period, type: m.type, alignedTo: m.align ? [m.align] : [], unaligned: m.align ? null : m.reason || null, keyResults };
-  let g;
-  if (m.id) {
-    Object.assign(body, { status: m.status, score: m.status === 'done' ? m.score : m.score === '' ? null : m.score, retro: m.retro });
-    g = await api('PATCH', T(`/goals/${m.id}`), body);
-    S.d.goals = GL().map((x) => (x.id === g.id ? g : x));
-  } else {
-    g = await api('POST', T('/goals'), { ...body, level: m.level, project: m.level === 'project' ? m.project : undefined });
-    S.d.goals = [...GL(), g];
-  }
-  S.modal = null; if (g.period.length > 4) S.period = g.period; S.goal = g.id; render();
-}
-
 /* ---------- project ---------- */
-function hypCard(h) {
-  const ts = tasks().filter((t) => t.hypothesis === h.id), dn = ts.filter((t) => t.status === 'done').length;
-  const k = krHit(h.kr)?.k; const [r] = rankIn(h);
-  return `<div class="hyp" data-a="go" data-h="hyp-${h.id}"><div class="hc"><b>${hcode(h.id)}</b>${hypChip(h)}${h.from || h.to ? `<span class="hint">${fds(h.from)} – ${fds(h.to)}</span>` : ''}${h.priority && r ? `<span class="hint" style="margin-left:auto">#${r}</span>` : ''}${scb(h)}</div>
-   ${stmt(h)}<div class="chips" style="margin-top:10px;align-items:center">${av(h.owner, 20)}<span class="hint">${esc(pn(h.owner))}</span>${h.metric ? `<span class="chip">${esc(h.metric)}: ${esc(h.current || '—')} / ${esc(h.target || '—')}</span>` : ''}<span class="chip">${$t('{done}/{total} tasks', { done: dn, total: ts.length })}</span>${k ? `<span class="al krchip">${ico('target', 12)}<span>${esc(k.title)}${h.expectedImpact ? ` +${fnum(h.expectedImpact, k.unit)}` : ''}</span></span>` : `<span class="al warn2">${$t('no KR')}</span>`}${qchip(h)}</div></div>`;
-}
-function projOverview(p) {
-  const p0 = curPeriod();
-  const gs = GL().filter((g) => g.level === 'project' && g.project === p.id && g.status !== 'cancelled').sort((a, b) => (a.period < b.period ? 1 : -1));
-  const current = gs.filter((g) => g.period === p0);
-  const memberGoals = GL().filter((g) => g.level === 'member' && g.status !== 'cancelled' && (g.project === p.id || current.some((x) => (x.keyResults || []).some((k) => (g.alignedTo || []).some((a) => a.krId === k.id)))));
-  const can = canProjectGoal(p);
-  const byPeriod = [...new Set(gs.map((g) => g.period))];
-  const goalsHtml = byPeriod.map((per) => `<div class="persongrp">${periodLabel(per)}${per === curQ() ? ` <span class="hint">· ${$t('current quarter')}</span>` : ''}</div>${gs.filter((g) => g.period === per).map((g) => `<div class="gcard" data-a="goal" data-id="${g.id}"><div class="ghead"><div class="gt"><b>${esc(g.title)}</b><div class="gmeta">${typeChip(g.type)}${alignChip(g)}</div></div><div class="gpct">${P100(gPct(g))}<small>${$t('progress')}</small></div></div>
-    <div class="krs">${(g.keyResults || []).map((k) => `${krRow(k)}<div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 6px 8px 36px;align-items:center"><span class="hint">${$t('Moved by:')}</span>${hypsOfKr(k.id).sort(byScore).map((h) => `<button class="al" data-a="go" data-h="hyp-${h.id}">${scb(h)} ${hcode(h.id)} · ${HST[h.status]}</button>`).join('') || `<span class="rbadge r">${$t('no hypotheses')}</span>`}</div>`).join('')}</div></div>`).join('')}`).join('');
-  const contrib = current.filter((g) => parentKr(g)).map((g) => { const { k, g: tg } = krHit(parentKr(g)); return `<div class="dk" data-a="goal" data-id="${tg.id}" style="cursor:pointer"><span class="x">${ico('route', 13)} <b>${esc(k.title)}</b> <span class="hint">· ${esc(tg.title)}</span></span>${pbar(k, '90px')}<span class="hint">${P100(krPct(k))}</span></div>`; }).join('');
-  return `<div class="gsec" style="margin-top:22px"><h2>${$t('Project goals')}</h2><span class="line"></span>${can ? `<button class="btn sm" data-a="newGoal" data-level="project" data-proj="${p.id}">${ico('plus', 13)} ${$t('Project goal')}</button>` : `<span class="lockhint">${ico('lock', 13)} ${$t('Project goals are added by the project Owner or an Admin')}</span>`}</div>
-   ${current.length ? `<div class="card" style="margin-bottom:12px"><h2>${$t('Contribution to team goals')} · ${periodLabel(p0)}</h2>${contrib || `<div class="al warn2">${$t('The project’s goals are not aligned with team goals')}</div>`}</div>` : ''}
-   ${goalsHtml || `<div class="card"><div class="empty">${ico('warn')} ${$t('The project has no goals yet — it is not visible how it helps the team')}</div></div>`}
-   <div class="gsec"><h2>${$t('Member goals in the project')}</h2><span class="line"></span>${(p.members || []).includes(uid()) ? `<button class="btn sm" data-a="newGoal" data-level="member" data-proj="${p.id}">${ico('plus', 13)} ${$t('My goal')}</button>` : ''}</div>
-   ${memberGoals.map((g) => goalCard(g, { showLevel: true })).join('') || `<div class="empty">${$t('Members haven’t set goals that flow into this project yet')}</div>`}`;
-}
-function projHypsView(p, hs) {
-  const testing = hs.filter((h) => h.status === 'testing').length;
-  const view = S.hview || 'cards';
-  const sorted = [...hs].sort(S.hsort === 'status' ? (a, b) => HYP_ORDER[a.status] - HYP_ORDER[b.status] || byScore(a, b) : S.hsort === 'date' ? (a, b) => (a.createdAt < b.createdAt ? 1 : -1) : byScore);
-  const top2 = `<div class="chips" style="margin-bottom:14px;align-items:center"><button class="btn pri" data-a="newHyp" data-id="${p.id}">${ico('plus')}${$t('New hypothesis')}</button>
-    <span class="seg sm">${[['cards', $t('Cards')], ['matrix', $t('2×2 matrix')], ['rank', $t('Ranking')]].map(([k, l]) => `<button class="${view === k ? 'on' : ''}" data-a="hview" data-v="${k}">${l}</button>`).join('')}</span>
-    ${view === 'cards' ? `<span class="seg sm">${[['score', $t('By priority')], ['status', $t('By status')], ['date', $t('By date')]].map(([k, l]) => `<button class="${(S.hsort || 'score') === k ? 'on' : ''}" data-a="hsort" data-v="${k}">${l}</button>`).join('')}</span>` : ''}
-    <span class="wip" style="margin-left:auto" title="${$t('No more than 3 hypotheses in “Testing” at once')}">${$t('Testing')} ${[0, 1, 2].map((i) => `<i class="${i < testing ? 'f' : ''}"></i>`).join('')} ${testing} / ${WIP_LIMIT} · ${$t('WIP limit')}</span></div>`;
-  if (!hs.length) return top2 + `<div class="empty">${$t('No hypotheses yet')}</div>`;
-  if (view === 'cards') return top2 + `<div class="grid g2">${sorted.map(hypCard).join('')}</div>`;
-  if (view === 'rank') {
-    const rows = [...hs].sort(byScore); const mx = Math.max(1, ...rows.map((h) => hscore(h) || 0));
-    return top2 + `<div class="card" style="padding:4px 8px;overflow-x:auto"><table class="rk"><thead><tr><th>#</th><th>${$t('Hypothesis')}</th><th>${$t('Moves KR')}</th><th class="c" title="${$t('Impact')}">I</th><th class="c" title="${$t('Confidence')}">C</th><th class="c" title="${$t('Speed')}">S</th><th class="c">${$t('Cost')}</th><th>${$t('Priority')}</th></tr></thead><tbody>${rows.map((h, i) => `<tr class="click" data-a="go" data-h="hyp-${h.id}"><td>${h.priority ? i + 1 : '—'}</td><td><b>${hcode(h.id)}</b> ${esc(h.then)} <span class="hint">· ${HST[h.status]}</span></td><td class="hint">${esc(krHit(h.kr)?.k.title || '—')}</td>${h.priority ? `<td class="c">${h.priority.impact}</td><td class="c">${h.priority.confidence}</td><td class="c">${h.priority.speed}</td><td class="c">${hcost(h.priority)}</td><td style="white-space:nowrap"><span class="sbar" style="width:${Math.round((hscore(h) / mx) * 90)}px"></span> <b>${hscore(h)}</b></td>` : `<td class="c hint" colspan="5">${$t('not scored yet')}</td>`}</tr>`).join('')}</tbody></table></div>
-    <p class="hint">${$t('Priority = Impact × Confidence × Speed ÷ Cost. Change it with the sliders on the hypothesis page.')}</p>`;
-  }
-  const scored = hs.filter((h) => h.priority);
-  const bubbles = scored.map((h) => { const x = ((hcost(h.priority) - 1) / 9) * 100, y = Math.min(1, hvalue(h) / 50) * 88 + 4; const sz = 30 + h.priority.speed * 4; return `<div class="bub" data-a="go" data-h="hyp-${h.id}" style="left:${x}%;bottom:${y}%;width:${sz}px;height:${sz}px;background:${h.status === 'testing' ? 'var(--ink)' : '#8a8a85'}" title="${esc(h.then)}">${hcode(h.id)}<span>${hscore(h)}${krHit(h.kr) ? ' · ' + esc(krHit(h.kr).k.title) : ''}</span></div>`; }).join('');
-  const vx = ((5 - 1) / 9) * 100, hy = (25 / 50) * 88 + 4;
-  return top2 + `<div class="mxax"><div class="mxw">
-    <div class="qd" style="left:0;top:0">Quick wins<small>${$t('high value, low cost — do first')}</small></div>
-    <div class="qd" style="right:0;top:0;text-align:right">${$t('Big bets')}<small>${$t('valuable but costly — split into a cheaper test')}</small></div>
-    <div class="qd" style="left:0;bottom:0">${$t('Cheap experiments')}<small>${$t('little evidence — check quickly')}</small></div>
-    <div class="qd" style="right:0;bottom:0;text-align:right">${$t('Costly, little evidence')}<small>${$t('make it cheaper first or postpone')}</small></div>
-    <div class="vl" style="left:${vx}%"></div><div class="hl2" style="bottom:${hy}%"></div>${bubbles}</div>
-    <div class="ax" style="left:28px;right:0;bottom:6px;text-align:center">${$t('Cost: team time + money →')}</div><div class="ax" style="left:-4px;top:200px;transform:rotate(-90deg);transform-origin:left top">${$t('Value: Impact × Confidence →')}</div></div>
-    <p class="hint">${$t('Bubble size is speed (bigger = sooner). Black ones are in “Testing”.')}${scored.length < hs.length ? ' ' + $t('{n} not scored yet.', { n: hs.length - scored.length }) : ''}</p>`;
-}
-const HYP_ORDER = { testing: 0, draft: 1, validated: 2, invalidated: 3 };
-const WIP_LIMIT = 3;
+function hypCard(h) { const ts = tasks().filter((t) => t.hypothesis === h.id), dn = ts.filter((t) => t.status === 'done').length; return `<div class="hyp" data-a="go" data-h="hyp-${h.id}"><div class="chips" style="margin-bottom:8px;align-items:center"><b>${hcode(h.id)}</b>${hypChip(h)}${h.from || h.to ? `<span class="hint">${fds(h.from)} – ${fds(h.to)}</span>` : ''}</div>${stmt(h)}<div class="chips" style="margin-top:10px;align-items:center">${av(h.owner, 20)}<span class="hint">${esc(pn(h.owner))}</span>${h.metric ? `<span class="chip">${esc(h.metric)}: ${esc(h.current || '—')} / ${esc(h.target || '—')}</span>` : ''}<span class="chip">${$t('{done}/{total} tasks', { done: dn, total: ts.length })}</span></div></div>`; }
 function pProject(id) {
   const p = prj(id); if (!p) return `<div class="empty">${$t('Project not found')}</div>`;
   const ts = tasks().filter((t) => t.project === id), dn = ts.filter((t) => t.status === 'done').length;
-  const hs = projHyps(id), ks = S.d.knowledge.filter((k) => k.project === id && !k.supersededBy);
+  const hs = S.d.hypotheses.filter((h) => h.project === id), ks = S.d.knowledge.filter((k) => k.project === id && !k.supersededBy);
   const ed = isAdmin();
   let b = '';
   if (S.ptab === 'overview') b = `<div class="grid g2"><div class="card"><h2>Vision ${ed ? `<button class="lnk" data-a="editProject" data-id="${id}">${$t('Edit')}</button>` : ''}</h2><p style="margin:0;font-size:16px;white-space:pre-wrap">${esc(p.vision || '—')}</p><div class="chips" style="margin-top:14px;align-items:center"><span class="hint">Owner</span>${av(p.owner)} ${esc(pn(p.owner))}<span class="hint" style="margin-left:10px">${$t('Members')}</span><span class="avs">${(p.members || []).map((m) => av(m)).join('')}</span></div></div>
   <div class="card"><h2>${$t('Task progress')}</h2><div style="font:800 36px Archivo,system-ui,sans-serif;font-stretch:112%">${dn}<span class="hint" style="font-size:18px"> / ${ts.length}</span></div><div class="prog"><i style="width:${ts.length ? (dn / ts.length) * 100 : 0}%"></i></div><div class="chips" style="margin-top:10px">${['open', 'progress', 'waiting'].map((s) => `<span class="chip">${STL[s]}: ${ts.filter((t) => t.status === s).length}</span>`).join('')}</div></div></div>
-  ${projOverview(p)}`;
-  else if (S.ptab === 'hyps') b = projHypsView(p, hs);
+  <div class="card" style="margin-top:16px"><h2>${$t('Goals')} ${ed ? `<button class="lnk" data-a="editProject" data-id="${id}">${$t('Edit')}</button>` : ''}</h2>${(p.goals || []).length ? `<div style="overflow-x:auto"><table class="gtable"><thead><tr><th>${$t('Goal')}</th><th>${$t('Metric')}</th><th style="text-align:right">${$t('Current')}</th><th style="text-align:right">${$t('Target')}</th><th>${$t('Progress')}</th><th>${$t('By')}</th></tr></thead><tbody>${p.goals.map((g) => { const pc = Number(g.target) ? Math.min(100, (Number(g.current) / Number(g.target)) * 100) : 0; return `<tr style="cursor:default"><td><b style="font-weight:600">${esc(g.goal)}</b></td><td>${esc(g.metric)}</td><td style="text-align:right">${esc(g.current)}</td><td style="text-align:right">${esc(g.target)}</td><td style="width:160px"><div class="prog"><i style="width:${pc || 0}%"></i></div></td><td>${fds(g.by)}</td></tr>`; }).join('')}</tbody></table></div>` : `<div class="empty">${$t('No goals yet')}</div>`}</div>`;
+  else if (S.ptab === 'hyps') b = `<div class="chips" style="margin-bottom:12px"><button class="btn pri" data-a="newHyp" data-id="${id}">${ico('plus')}${$t('New hypothesis')}</button></div><div class="grid g2">${hs.map(hypCard).join('') || `<div class="empty">${$t('No hypotheses yet')}</div>`}</div>`;
   else if (S.ptab === 'tasks') b = `<div class="card">${ts.map(trow).join('') || `<div class="empty">${$t('No tasks you can see')}</div>`}</div>`;
   else b = ks.map(knCard).join('') || `<div class="empty">${$t('No knowledge yet')}</div>`;
-  return `<div class="hd"><div><div class="hint">${personal() ? $t('My space') : 'Team Space'} · ${$t('project')}</div><h1 style="display:flex;gap:10px;align-items:center"><span class="dot" style="--c:${p.color};width:14px;height:14px"></span>${esc(p.name)} ${prjChip(p)}</h1></div><div class="act"><button class="btn" data-a="newNote" data-proj="${id}">${ico('plus')} ${$t('Add note')}</button>${ed ? `<select class="in" data-f="pst" data-id="${id}" aria-label="${$t('Project status')}">${Object.entries(PST).map(([k, l]) => `<option value="${k}" ${k === p.status ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}<span class="seg">${[['overview', $t('Overview')], ['hyps', $t('Hypotheses') + ' · ' + hs.length], ['tasks', $t('Tasks') + ' · ' + ts.length], ['kn', $t('Knowledge') + ' · ' + ks.length]].map(([k, l]) => `<button class="${S.ptab === k ? 'on' : ''}" data-a="ptab" data-v="${k}">${l}</button>`).join('')}</span></div></div>${b}`;
+  return `<div class="hd"><div><div class="hint">${personal() ? $t('My space') : 'Team Space'} · ${$t('project')}</div><h1 style="display:flex;gap:10px;align-items:center"><span class="dot" style="--c:${p.color};width:14px;height:14px"></span>${esc(p.name)} ${prjChip(p)}</h1></div><div class="act">${ed ? `<select class="in" data-f="pst" data-id="${id}" aria-label="${$t('Project status')}">${Object.entries(PST).map(([k, l]) => `<option value="${k}" ${k === p.status ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}<span class="seg">${[['overview', $t('Overview')], ['hyps', $t('Hypotheses') + ' · ' + hs.length], ['tasks', $t('Tasks') + ' · ' + ts.length], ['kn', $t('Knowledge') + ' · ' + ks.length]].map(([k, l]) => `<button class="${S.ptab === k ? 'on' : ''}" data-a="ptab" data-v="${k}">${l}</button>`).join('')}</span></div></div>${b}`;
 }
 
 /* ---------- hypothesis ---------- */
-const PNAMES = () => ({ impact: [$t('Impact'), $t('how much it moves the KR')], confidence: [$t('Confidence'), $t('how sure we are — by evidence')], speed: [$t('Speed'), $t('how soon we see a result')], costTime: [$t('Team time'), $t('person-days')], costMoney: [$t('Money'), $t('budget, services')] });
-function sliderRow(h, key, dis) {
-  const [name, sub] = PNAMES()[key]; const v = prOf(h)[key];
-  return `<div class="row"><div class="nm">${name}<small>${sub}</small></div><input type="range" min="1" max="10" step="1" value="${v}" data-r="${key}" ${dis ? 'disabled' : ''} aria-label="${name}"><div class="val" id="v-${key}">${v}</div><div class="anc" id="a-${key}">${ANC[key](v)}</div></div>`;
-}
-function formulaHtml(h) {
-  const p = prOf(h);
-  return `<span class="pill">${$t('Impact')} <b>${p.impact}</b></span><span class="op">×</span><span class="pill">${$t('Confidence')} <b>${p.confidence}</b></span><span class="op">×</span><span class="pill">${$t('Speed')} <b>${p.speed}</b></span><span class="op">=</span><span>${$t('value')} <b>${p.impact * p.confidence * p.speed}</b></span><span class="op">÷</span><span class="pill">${$t('Cost')} <b>${hcost(p)}</b></span><span class="op">=</span>${h.priority ? scb(h) : `<span class="scb">${Math.round((p.impact * p.confidence * p.speed) / hcost(p))}</span>`}`;
-}
-function cmpBars(h) {
-  const list = projHyps(h.project).filter((x) => x.priority || x === h).sort((a, b) => (hscore(b) ?? 0) - (hscore(a) ?? 0)); const mx = Math.max(1, ...list.map((x) => hscore(x) || 0));
-  return list.map((x) => `<div class="${x === h ? 'me2' : ''}"><span>${hcode(x.id)}</span><div class="pb"><i style="width:${((hscore(x) || 0) / mx) * 100}%;background:${x === h ? 'var(--ink)' : 'var(--line2)'}"></i></div><span>${hscore(x) ?? '—'}</span></div>`).join('');
-}
 function pHyp(id) {
   const h = hyp(id); if (!h) return `<div class="empty">${$t('Hypothesis not found')}</div>`;
-  const ts = tasks().filter((t) => t.hypothesis === id), ks = S.d.knowledge.filter((k) => k.hypothesis === id), ed = canEditHyp(h);
+  const ts = tasks().filter((t) => t.hypothesis === id), ed = isAdmin() || h.owner === uid();
   const verdict = h.verdict ? esc(h.verdict) : h.status === 'testing' ? (h.to ? $t('Still testing — verdict after {date}', { date: fds(h.to) }) : $t('Still testing')) : h.status === 'draft' ? $t('The hypothesis hasn’t started yet') : HST[h.status];
-  const hit = krHit(h.kr), k = hit?.k, chain = k ? chainFromKr(h.kr) : [], ai = aiImpact(h), [r, n] = rankIn(h);
-  const projKrs = GL().filter((g) => g.level === 'project' && g.project === h.project && g.status !== 'cancelled').flatMap((g) => (g.keyResults || []).map((x) => ({ x, g })));
-  return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="project-${h.project}">${ico('back', 14)} ${esc(prj(h.project)?.name || $t('Project'))}</button><div class="chips" style="margin-top:10px;align-items:center"><b>${hcode(id)}</b>${hypChip(h)}${h.priority ? scb(h) : ''}</div></div><div class="act">${ed ? `<select class="in" data-f="hst" data-id="${id}" aria-label="${$t('Status')}">${Object.entries(HST).map(([k2, l]) => `<option value="${k2}" ${k2 === h.status ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn" data-a="editHyp" data-id="${id}">${$t('Edit')}</button><button class="btn ghost" data-a="delHyp" data-id="${id}" title="${$t('Delete')}">${ico('trash')}</button>` : `<span class="hint">${ico('lock', 13)} ${$t('{name} or an Admin can edit', { name: esc(pn(h.owner)) })}</span>`}</div></div>
+  return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="project-${h.project}">${ico('back', 14)} ${esc(prj(h.project)?.name || $t('Project'))}</button><div class="chips" style="margin-top:10px;align-items:center"><b>${hcode(id)}</b>${hypChip(h)}</div></div><div class="act">${ed ? `<select class="in" data-f="hst" data-id="${id}" aria-label="${$t('Status')}">${Object.entries(HST).map(([k, l]) => `<option value="${k}" ${k === h.status ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn" data-a="editHyp" data-id="${id}">${$t('Edit')}</button><button class="btn ghost" data-a="delHyp" data-id="${id}" title="${$t('Delete')}">${ico('trash')}</button>` : `<span class="hint">${ico('lock', 13)} ${$t('{name} or an Admin can edit', { name: esc(pn(h.owner)) })}</span>`}</div></div>
   <div class="bigstmt" style="margin-bottom:24px">${stmtHtml(h)}</div>
-  <div class="chips" style="margin-bottom:6px"><span class="chip big">${$t('Responsible:')} <b>${esc(pn(h.owner))}</b></span><span class="chip big">${esc(h.metric || $t('No metric set'))}: <b>${esc(h.current || '—')}</b> / ${esc(h.target || '—')}</span><span class="chip big">${h.from || h.to ? `${fds(h.from)} – ${fds(h.to)}` : $t('No timeframe set')}</span></div>
-  <div class="hyp-grid">
-   <div class="card prio"><h2>${ico('chart')} ${$t('Prioritization')} ${qchip(h, 'qchip')}<span style="margin-left:auto;display:flex;align-items:center;gap:10px"><span class="hint" id="rank">${h.priority ? $t('#{r} of {n} in the project', { r, n }) : $t('not scored yet')}</span><span id="bigscore">${scb(h, true)}</span></span></h2>
-    ${ed ? '' : `<div class="lock">${ico('lock', 14)} ${$t('The estimates are changed by the responsible person ({name}) or an Admin', { name: esc(pn(h.owner)) })}</div>`}
-    ${h.forecast ? `<div class="hint" style="margin-top:4px">${$t('Forecast fixed when testing started ({date}): priority {score}', { date: fds(h.forecast.at), score: h.forecast.score })}</div>` : ''}
-    <div class="formula" id="formula">${formulaHtml(h)}</div>
-    ${sliderRow(h, 'impact', !ed)}
-    ${ai ? `<div class="aisug">${ico('spark', 13)} ${$t('Suggestion: +{imp} = {pct} of what is left to the KR target → {v}', { imp: fnum(h.expectedImpact, ai.k.unit), pct: P100(ai.r), v: ai.v })}${ed && ai.v !== prOf(h).impact ? ` <button class="btn sm" data-a="aiImp" data-id="${h.id}" data-v="${ai.v}">${$t('Accept {v}', { v: ai.v })}</button>` : ''}</div>` : ''}
-    ${sliderRow(h, 'confidence', !ed)}
-    ${sliderRow(h, 'speed', !ed)}
-    <div class="row" style="margin-top:16px"><div class="nm">${$t('Cost')}<small>${$t('the average of the two below')}</small></div><div class="hint">${$t('the higher, the more expensive')}</div><div class="val" id="v-cost">${hcost(prOf(h))}</div></div>
-    <div class="sub2">${sliderRow(h, 'costTime', !ed)}${sliderRow(h, 'costMoney', !ed)}</div>
-    <details style="margin-top:16px"><summary style="cursor:pointer;font-weight:650">${$t('How to read the priority?')}</summary><div class="explain">
-     <p><b>${$t('Priority shows how much progress toward the team goal we get per unit of time and money spent.')}</b></p>
-     <p>${$t('The top is value: how much the hypothesis moves the KR (impact), how sure we are (confidence) and how soon we see the result (speed). The bottom is the price: team time and money.')}</p>
-     <p>${$t('Multiplication means that one weak factor keeps a hypothesis from the top even with a big impact. The easiest way to raise priority is a cheap test that raises confidence.')}</p>
-     <p class="hint">${$t('Based on ICE (Sean Ellis), RICE (Intercom), the Confidence Meter (Itamar Gilad) and Cost of Delay.')}</p></div></details>
-    <div class="box"><h3>${$t('Comparison in the project')}</h3><div class="cmpbars" id="cmp">${cmpBars(h)}</div></div>
-   </div>
-   <div class="col">
-    <div class="card"><h2>${ico('target')} ${$t('Moves the goal')}</h2>
-     <div class="kv" style="margin-top:0"><span>${$t('Project KR')}</span>${projKrs.length ? `<select class="in" data-f="hkr" data-id="${h.id}" ${ed ? '' : 'disabled'}><option value="">${$t('— choose a KR —')}</option>${projKrs.map(({ x, g }) => `<option value="${x.id}" ${x.id === h.kr ? 'selected' : ''}>${esc(x.title)} · ${esc(g.title)} · ${periodLabel(g.period)}</option>`).join('')}</select>` : `<span class="hint">${$t('The project has no goals yet')}</span>`}
-      <span>${$t('Expected contribution')}</span><span class="inl"><input class="in" style="width:110px" type="number" step="any" value="${h.expectedImpact ?? ''}" data-f="himp" data-id="${h.id}" ${ed ? '' : 'disabled'} aria-label="${$t('Expected contribution')}"> <span class="hint">${esc(k?.unit || $t('units'))} ${$t('over the hypothesis period')}</span></span></div>
-     ${k ? `<div class="dk" data-a="goal" data-id="${hit.g.id}" style="cursor:pointer"><span class="x">${cd(k.confidence)} <b>${esc(k.title)}</b> <span class="hint">${fnum(k.current, k.unit)} / ${fnum(k.target, k.unit)}</span></span>${pbar(k, '90px')}</div>` : ''}
-     <div class="path" style="margin-top:8px">${chain.slice(1).map((x) => `<button data-a="goal" data-id="${x.g.id}"><span class="arr">↳</span> <b>${esc(x.k.title)}</b> <span class="hint">· ${esc(x.g.title)}</span></button>`).join('')}</div>
-     ${k ? (reachesTeam(h.kr) ? `<div class="route">${ico('check', 13)} ${$t('Reaches the team’s main goal')}</div>` : `<div class="al warn2">${$t('The KR is not aligned with team goals')}</div>`) : `<div class="al warn2">${$t('Choose the KR this hypothesis moves')}</div>`}</div>
-    <div class="card"><h2>${$t('Criteria')}</h2><div class="kv" style="margin:0"><span>${$t('Signal')}</span><span>${esc(h.metric || '—')}: <b>${esc(h.current || '—')}</b> / ${esc(h.target || '—')}</span><span>${$t('Success')}</span><span>${esc(h.successCriteria || '—')}</span><span>${$t('Stop')}</span><span style="color:var(--red)">${esc(h.killCriteria || '—')}</span></div><p class="hint" style="margin-bottom:0">${$t('The signal is the hypothesis’s fast (leading) metric. The KR is the result it has to move.')}</p></div>
-   </div></div>
-  <div class="grid g2" style="margin-top:16px"><div class="card"><h2>${$t('Hypothesis tasks')} · ${ts.length}<button class="lnk" data-a="newTask" data-proj="${h.project}" data-hyp="${id}">${$t('+ Task')}</button></h2>${ts.map(trow).join('') || `<div class="empty">${$t('Link tasks from Review or from a task card')}</div>`}</div>
-  <div class="card"><h2>${$t('Hypothesis knowledge')} · ${ks.length}<button class="lnk" data-a="newNote" data-proj="${h.project}" data-hyp="${id}">${$t('+ Note')}</button><button class="lnk" style="margin-left:0" data-a="newKn" data-proj="${h.project}" data-hyp="${id}">${$t('+ Knowledge')}</button></h2>${ks.map(knCard).join('') || `<div class="empty">${$t('No knowledge linked to this hypothesis yet')}</div>`}</div></div>
-  <div class="card" style="margin-top:16px"><h2>Learnings</h2><div class="inl" style="margin-bottom:10px"><input class="in" id="learnTxt" style="flex:1" placeholder="${$t('What did we learn?')}"><button class="btn sm pri" data-a="addLearn" data-id="${id}">${$t('Add')}</button></div>${(h.learnings || []).map((l) => `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="hint">${fds(l.at)} · ${esc(pn(l.by))}</div>${esc(l.text)}</div>`).join('') || `<div class="empty">${$t('Learnings will appear here')}</div>`}<h3 style="margin:16px 0 6px">${$t('Verdict')}</h3><div class="hint">${verdict}</div></div>`;
-}
-// Live update of the prioritization block while a slider moves; the value is saved when it is released.
-function onPriorityInput(el) {
-  const h = hyp(R().slice(4)); if (!h) return;
-  h.priority = { ...prOf(h), [el.dataset.r]: Number(el.value) };
-  const set = (id, v, html) => { const e = document.getElementById(id); if (e) e[html ? 'innerHTML' : 'textContent'] = v; };
-  set('v-' + el.dataset.r, el.value); set('a-' + el.dataset.r, ANC[el.dataset.r](Number(el.value)));
-  set('v-cost', hcost(h.priority)); set('formula', formulaHtml(h), true); set('bigscore', scb(h, true), true); set('cmp', cmpBars(h), true);
-  const [r, n] = rankIn(h); set('rank', $t('#{r} of {n} in the project', { r, n }));
-  const q = document.getElementById('qchip'); if (q) { q.className = 'qchip ' + quad(h); q.textContent = QUAD[quad(h)]; }
-}
-async function saveHyp(id, body, ok) {
-  return act(async () => { const h = await api('PATCH', T(`/hypotheses/${id}`), body); S.d.hypotheses = S.d.hypotheses.map((x) => (x.id === id ? h : x)); render(); return h; }, ok);
+  <div class="chips" style="margin-bottom:22px"><span class="chip big">${$t('Responsible:')} <b>${esc(pn(h.owner))}</b></span><span class="chip big">${esc(h.metric || $t('No metric set'))}: <b>${esc(h.current || '—')}</b> / ${esc(h.target || '—')}</span><span class="chip big">${h.from || h.to ? `${fds(h.from)} – ${fds(h.to)}` : $t('No timeframe set')}</span></div>
+  <div class="grid g2"><div class="card"><h2>${$t('Hypothesis tasks')} · ${ts.length}<button class="lnk" data-a="newTask" data-proj="${h.project}" data-hyp="${id}">${$t('+ Task')}</button></h2>${ts.map(trow).join('') || `<div class="empty">${$t('Link tasks from Review or from a task card')}</div>`}</div>
+  <div class="card"><h2>Learnings</h2><div class="inl" style="margin-bottom:10px"><input class="in" id="learnTxt" style="flex:1" placeholder="${$t('What did we learn?')}"><button class="btn sm pri" data-a="addLearn" data-id="${id}">${$t('Add')}</button></div>${(h.learnings || []).map((l) => `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="hint">${fds(l.at)} · ${esc(pn(l.by))}</div>${esc(l.text)}</div>`).join('') || `<div class="empty">${$t('Learnings will appear here')}</div>`}<h3 style="margin:16px 0 6px">${$t('Verdict')}</h3><div class="hint">${verdict}</div></div></div>`;
 }
 
 /* ---------- person ---------- */
@@ -1015,17 +580,7 @@ function pPerson(id) {
   const m = M()[id]; if (!m) return `<div class="empty">${$t('Person not found')}</div>`;
   const iOwe = tasks().filter((t) => isOpen(t) && t.owner === uid() && t.requester === id), theyOwe = tasks().filter((t) => isOpen(t) && t.owner === id && t.requester === uid());
   return `<div class="hd"><div style="display:flex;gap:14px;align-items:center">${av(id, 52)}<div><h1>${esc(m.name)}</h1><div class="sub">${ROLE[m.role]} · ${esc(m.email || '')}</div></div></div></div>
-  ${personGoals(id)}
-  <div class="grid g2" style="margin-top:16px"><div class="card"><h2>${$t('Delegated to {name}', { name: esc(m.name) })} · ${theyOwe.length}</h2>${theyOwe.map(trow).join('') || `<div class="empty">${$t('Nothing')}</div>`}</div><div class="card"><h2>${$t('My tasks from {name}', { name: esc(m.name) })} · ${iOwe.length}</h2>${iOwe.map(trow).join('') || `<div class="empty">${$t('Nothing')}</div>`}</div></div>`;
-}
-
-function personGoals(id) {
-  const p = curQ(), self = id === uid();
-  const gs = GL().filter((g) => g.level === 'member' && g.member === id && g.period === p);
-  const owned = allKrs().filter(({ k, g }) => k.owner === id && g.level !== 'member' && g.status === 'active' && (g.period === p || g.period === yearOf(p)));
-  return `<div class="member-note">${ico('user', 16)} ${$t('Personal goals help to focus and show how a person helps projects. They are not used to assess work.')}</div>
-  <div class="gsec" style="margin-top:8px"><h2>${$t('Goals · {period}', { period: periodLabel(p) })}</h2><span class="line"></span>${self ? `<button class="btn sm" data-a="newGoal" data-level="member">${ico('plus', 13)} ${$t('My goal')}</button>` : ''}</div>${gs.map((g) => goalCard(g)).join('') || `<div class="card"><div class="empty">${self ? $t('You have no goals for the quarter yet') : $t('No goals yet')}</div></div>`}
-  ${owned.length ? `<div class="gsec"><h2>${$t('Key results they own')}</h2><span class="line"></span></div><div class="card">${owned.map(({ k, g }) => `<div class="dk" style="cursor:pointer" data-a="goal" data-id="${g.id}"><span class="x">${cd(k.confidence)} <b>${esc(k.title)}</b> <span class="hint">· ${esc(levelName(g))}</span></span>${pbar(k, '90px')}<span class="hint">${P100(krPct(k))}</span></div>`).join('')}</div>` : ''}`;
+  <div class="grid g2"><div class="card"><h2>${$t('Delegated to {name}', { name: esc(m.name) })} · ${theyOwe.length}</h2>${theyOwe.map(trow).join('') || `<div class="empty">${$t('Nothing')}</div>`}</div><div class="card"><h2>${$t('My tasks from {name}', { name: esc(m.name) })} · ${iOwe.length}</h2>${iOwe.map(trow).join('') || `<div class="empty">${$t('Nothing')}</div>`}</div></div>`;
 }
 
 /* ---------- members ---------- */
@@ -1033,17 +588,11 @@ function pMembers() {
   const ad = isAdmin(), own = role() === 'owner';
   const inv = S.d.team.invites || [];
   const yes = '✓', no = '—', own2 = $t('only tasks they set');
-  const rights = [['', 'Owner', 'Admin', 'Member'], [$t('Invite, change roles'), yes, yes, no], [$t('Transfer ownership'), yes, no, no], [$t('See shared tasks between other people'), yes, yes, no], [$t('Create projects, edit Team vision'), yes, yes, no], [$t('Create hypotheses'), yes, yes, $t('own')], [$t('Set team goals'), yes, yes, no], [$t('Set project goals'), yes, yes, $t('project Owner')], [$t('Set personal goals (visible to the team)'), yes, yes, yes], [$t('Change a task’s status'), own2, own2, own2], [$t('See other people’s raw transcripts'), no, no, no]];
+  const rights = [['', 'Owner', 'Admin', 'Member'], [$t('Invite, change roles'), yes, yes, no], [$t('Transfer ownership'), yes, no, no], [$t('See shared tasks between other people'), yes, yes, no], [$t('Create projects, edit Team vision'), yes, yes, no], [$t('Create hypotheses'), yes, yes, $t('own')], [$t('Change a task’s status'), own2, own2, own2], [$t('See other people’s raw transcripts'), no, no, no]];
   return `<div class="hd"><div><h1>${$t('Members')}</h1><div class="sub">${esc(teamName(S.d.team))} · ${$p(S.d.members.length, 'member')}</div></div><div class="act">${own && S.d.members.length > 1 ? `<button class="btn" data-a="transfer">${$t('Transfer ownership')}</button>` : ''}${ad ? `<button class="btn pri" data-a="invite">${ico('plus')}${$t('Invite')}</button>` : ''}</div></div>
   <div class="card" style="padding:4px 6px;overflow-x:auto"><table class="mtable"><thead><tr><th>${$t('Person')}</th><th>Email</th><th>${$t('Role')}</th><th style="text-align:right">${$t('Open commitments')}</th><th></th></tr></thead><tbody>${S.d.members.map((m) => `<tr data-a="go" data-h="person-${m.id}"><td>${av(m.id, 26)} <b style="font-weight:600">${esc(m.name)}</b>${m.id === uid() ? ` <span class="hint">(${$t('you')})</span>` : ''}</td><td>${esc(m.email || '')}</td><td>${ad && m.role !== 'owner' && m.id !== uid() ? `<select class="in" data-f="role" data-id="${m.id}" aria-label="${$t('Role')}"><option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Admin</option><option value="member" ${m.role === 'member' ? 'selected' : ''}>Member</option></select>` : ROLE[m.role]}</td><td style="text-align:right">${tasks().filter((t) => isOpen(t) && t.owner === m.id).length}</td><td style="text-align:right">${m.role !== 'owner' && (ad || m.id === uid()) ? `<button class="btn ghost sm" data-a="removeMember" data-id="${m.id}">${m.id === uid() ? $t('Leave') : $t('Remove')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
   ${ad ? `<div class="card" style="margin-top:16px"><h2>${$t('Invite links')}</h2>${inv.length ? inv.map((i) => `<div class="lnkbox">${ico('link')}<code>${esc(location.origin)}/join/${esc(i.token)}</code><span class="chip">${ROLE[i.role]}</span>${i.email ? `<span class="hint">${esc(i.email)}</span>` : `<span class="hint">${$t('reusable')}</span>`}<button class="btn sm" data-a="copyInv" data-v="${esc(i.token)}">${$t('Copy')}</button><button class="btn ghost sm" data-a="revokeInv" data-v="${esc(i.token)}">${$t('Revoke')}</button></div>`).join('') : `<div class="hint">${$t('No active invites. Create a link and send it to people through any channel.')}</div>`}</div>` : ''}
-  ${orgCard()}
   <div class="card" style="margin-top:16px"><h2>${$t('Who sees what')}</h2><table><tbody style="cursor:default">${rights.map((r, ri) => `<tr style="cursor:default">${r.map((c, i) => `<td${i ? ' style="color:var(--mut)"' : ''}>${ri === 0 ? `<b>${c}</b>` : c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-}
-
-function orgCard() {
-  const o = S.d.org && S.orgs.find((x) => x.id === S.d.org.id); if (!o) return '';
-  return `<div class="card" style="margin-top:16px"><h2>${ico('org')} ${$t('Organization')} · ${esc(o.name)}${o.role ? `<button class="lnk" data-a="renameOrg" data-id="${o.id}">${$t('Rename')}</button>` : ''}</h2><p class="hint" style="margin-top:0">${o.role ? $t('You are {role} of the organization: you can create teams in it and see its teams. This gives no access to their content.', { role: ROLE[o.role] }) : $t('The organization groups the company’s teams. You see only the teams you are on.')}</p><div class="org-teams">${o.teams.map((t) => `<div>${ico('users', 14)} <b>${esc(t.name)}</b> <span class="hint">· Owner: ${esc(t.owner)}${t.member ? '' : ' · ' + $t('you are not on this team')}</span></div>`).join('')}</div>${o.role ? `<button class="btn sm" style="margin-top:10px" data-a="newTeam">${ico('plus', 13)} ${$t('Team')}</button>` : ''}</div>`;
 }
 
 /* ---------- profile ---------- */
@@ -1113,7 +662,6 @@ function pJoin() {
 /* ---------- drawer ---------- */
 function drawer() {
   const el = document.getElementById('drawer');
-  if (S.goal && S.d && !S.drawer) return goalDrawer(el);
   const t = S.drawer && tasks().find((x) => x.id === S.drawer);
   if (!t || !S.d) { el.classList.remove('on'); el.setAttribute('aria-hidden', 'true'); el.innerHTML = ''; return; }
   const ce = t.canEdit, ro = ce ? '' : 'disabled';
@@ -1126,24 +674,13 @@ function drawer() {
   <span>${$t('Deadline')}</span><span style="display:flex;gap:8px;align-items:center"><input type="date" class="in" data-f="t.due" value="${t.due || ''}" ${ro} aria-label="${$t('Deadline')}">${dueChip(t)}</span>
   <span>${$t('Priority')}</span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="t.important" ${t.important ? 'checked' : ''} ${ro}> ${$t('Important')} ${urgent(t) && isOpen(t) ? `<span class="chip red">${$t('Urgent')}</span>` : ''}</label>
   <span>${$t('Project')}</span>${selProj(`class="in" data-f="t.project" ${ro} aria-label="${$t('Project')}"`, t.project)}
-  <span>${$t('Hypothesis')}</span>${selHyp(`class="in" data-f="t.hypothesis" ${ro} aria-label="${$t('Hypothesis')}"`, t.hypothesis, t.project)}
-  ${t.hypothesis && krHit(hyp(t.hypothesis)?.kr) ? '' : `<span>${$t('Key result')}</span>${selKr(`class="in" data-f="t.kr" ${ro} aria-label="${$t('Key result')}"`, t.kr)}`}
-  <span>${$t('Works toward')}</span><span>${worksToward(t)}</span></div>
+  <span>${$t('Hypothesis')}</span>${selHyp(`class="in" data-f="t.hypothesis" ${ro} aria-label="${$t('Hypothesis')}"`, t.hypothesis, t.project)}</div>
   <label class="fl">${$t('Description')}<textarea class="in" rows="3" data-f="t.description" ${ce ? '' : 'readonly'}>${esc(t.description || '')}</textarea></label>
   ${t.source ? `<div class="box"><h3>${$t('Source')}</h3>${t.source.quote ? `<div class="quote">“${esc(t.source.quote)}”</div>` : ''}<div class="hint" style="margin-top:6px">${esc(t.source.itemTitle)}${t.source.ts ? ' · ' + esc(t.source.ts) : ''} · ${srcOf(t.source.sourceId) ? `<button class="btn ghost sm" data-a="go" data-h="source-${t.source.sourceId}">${ico(srcIco(srcOf(t.source.sourceId).kind), 13)} ${$t('Open source')}</button>` : srcOwn ? `<button class="btn ghost sm" data-a="go" data-h="review-${t.source.itemId}">${$t('View')}</button>` : `${ico('lock', 12)} ${$t('only the person who added it sees the full text')}`}</div></div>` : ''}
   <div class="box"><h3>${$t('Comments')} · ${t.comments.length}</h3>${t.comments.map((c) => `<div class="cm">${av(c.author, 26)}<div><b>${esc(pn(c.author))}</b> <span class="when">${fdt(c.at)}</span><div style="white-space:pre-wrap">${esc(c.text)}</div></div></div>`).join('')}<textarea class="in" id="cmt" rows="2" placeholder="${ce ? $t('Comment…') : $t('Write what’s done or what’s blocking…')}"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" data-a="comment">${$t('Send')}</button></div></div>
   <div class="box"><h3>${$t('History')}</h3><div class="hist">${t.history.slice().reverse().map((h) => `<div><b style="color:var(--ink)">${fdt(h.at)}</b> · ${esc(pn(h.by))}: ${esc(h.text)}${h.source ? ` <span>(${esc(h.source)})</span>` : ''}</div>`).join('')}</div></div></div>`;
   el.classList.add('on'); el.setAttribute('aria-hidden', 'false');
 }
-
-// "Works toward": task → hypothesis → project KR → team KR. Computed, not edited.
-function worksToward(t) {
-  const k = taskKr(t); if (!k) return `<span class="al warn2">${$t('not linked to a goal')}</span>`;
-  const chain = chainFromKr(k);
-  const parts = [...(t.hypothesis && hyp(t.hypothesis)?.kr === k ? [`<b>${hcode(t.hypothesis)}</b>`] : []), ...chain.map((x) => `<button class="lnk" style="margin:0" data-a="goal" data-id="${x.g.id}">${esc(x.k.title)}</button>${x.g.level === 'team' ? ` <span class="hint">(${$t('team goal')})</span>` : ''}`)];
-  return `<span class="inl" style="flex-wrap:wrap">${parts.join(' → ')}${reachesTeam(k) ? '' : ` <span class="al warn2">${$t('does not reach a team goal')}</span>`}</span>`;
-}
-const selKr = (attrs, val) => `<select ${attrs}><option value="">${$t('No key result')}</option>${GL().filter((g) => g.status === 'active').map((g) => `<optgroup label="${esc(periodLabel(g.period) + ' · ' + g.title)}">${(g.keyResults || []).map((k) => `<option value="${k.id}" ${k.id === val ? 'selected' : ''}>${esc(k.title)}</option>`).join('')}</optgroup>`).join('')}</select>`;
 
 /* ---------- modals ---------- */
 function taskShareContent(m) {
@@ -1280,28 +817,20 @@ function modal() {
     <p class="hint" style="margin:10px 0 0">${S.ai ? `${ico('spark', 13)} ${$t('AI will extract tasks, status updates and knowledge. Nothing is saved without your confirmation.')}` : `${ico('warn', 13)} ${$t('AI analysis is off — the item will be saved and you can add proposals manually.')}`}</p>
     <div class="mdf">${cancel}<button class="btn pri" data-a="addGo">${ico('spark')}${S.ai ? $t('Analyze') : $t('Save')}</button></div></div>`;
   } else if (m.k === 'task') {
-    h = `<div class="md"><div class="mdh"><h2>${$t('New task')}</h2>${close}</div><div class="grid" style="gap:12px"><label class="fl">${$t('What to do')}<input class="in" id="ntT" placeholder="${$t('E.g. Prepare the investor report')}"></label><div class="grid g2" style="gap:12px"><label class="fl">${$t('Owner')}${selWho('class="in" id="ntO" data-f="ntWho"', m.owner || uid())}</label><label class="fl">${$t('Requester')}<select class="in" id="ntR" data-f="ntWho"><option value="${uid()}">${$t('Me')}</option>${isExt(m.requester) ? `<option value="${esc(m.requester)}" selected>${esc(m.requester.slice(4))} (${$t('ext.')})</option>` : ''}<option value="__ext">${$t('+ External contact…')}</option></select></label><label class="fl">${$t('Deadline')}<input type="date" class="in" id="ntD"></label><label class="fl">${$t('Project')}${selProj('class="in" id="ntP" data-f="placementProject" data-target="ntH"', m.proj || '')}</label><label class="fl">${$t('Hypothesis')}${selHyp('class="in" id="ntH"', m.hyp || '', m.proj)}</label><label style="display:flex;gap:8px;align-items:center;padding-top:20px"><input type="checkbox" id="ntI" checked> ${$t('Important')}</label></div><label class="fl">${$t('Description')}<textarea class="in" id="ntDesc" rows="2"></textarea></label><p class="hint" style="margin:0">${$t('The requester changes the status. If the requester is external, you change it.')}</p></div><div class="mdf">${cancel}<button class="btn pri" data-a="ntGo">${$t('Create')}</button></div></div>`;
+    h = `<div class="md"><div class="mdh"><h2>${$t('New task')}</h2>${close}</div><div class="grid" style="gap:12px"><label class="fl">${$t('What to do')}<input class="in" id="ntT" placeholder="${$t('E.g. Prepare the investor report')}"></label><div class="grid g2" style="gap:12px"><label class="fl">${$t('Owner')}${selWho('class="in" id="ntO" data-f="ntWho"', m.owner || uid())}</label><label class="fl">${$t('Requester')}<select class="in" id="ntR" data-f="ntWho"><option value="${uid()}">${$t('Me')}</option>${isExt(m.requester) ? `<option value="${esc(m.requester)}" selected>${esc(m.requester.slice(4))} (${$t('ext.')})</option>` : ''}<option value="__ext">${$t('+ External contact…')}</option></select></label><label class="fl">${$t('Deadline')}<input type="date" class="in" id="ntD"></label><label class="fl">${$t('Project')}${selProj('class="in" id="ntP"', m.proj || '')}</label><label class="fl">${$t('Hypothesis')}${selHyp('class="in" id="ntH"', m.hyp || '', m.proj)}</label><label style="display:flex;gap:8px;align-items:center;padding-top:20px"><input type="checkbox" id="ntI" checked> ${$t('Important')}</label></div><label class="fl">${$t('Description')}<textarea class="in" id="ntDesc" rows="2"></textarea></label><p class="hint" style="margin:0">${$t('The requester changes the status. If the requester is external, you change it.')}</p></div><div class="mdf">${cancel}<button class="btn pri" data-a="ntGo">${$t('Create')}</button></div></div>`;
   } else if (m.k === 'project') {
     const p = m.id ? prj(m.id) : { name: '', vision: '', goals: [], members: [uid()], owner: uid() };
     h = `<div class="md wide"><div class="mdh"><h2>${m.id ? $t('Edit project') : $t('New project')}</h2>${close}</div><div class="grid" style="gap:12px"><label class="fl">${$t('Project name')}<input class="in" id="pjN" value="${esc(p.name)}"></label><label class="fl">Vision<textarea class="in" id="pjV" rows="3">${esc(p.vision || '')}</textarea></label><label class="fl">Owner${selWho('class="in" id="pjO"', p.owner, false)}</label><div class="fl">${$t('Members')}<div class="cklist" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">${S.d.members.map((x) => `<label><input type="checkbox" class="pjM" value="${x.id}" ${(p.members || []).includes(x.id) ? 'checked' : ''}>${esc(x.name)}</label>`).join('')}</div></div>
-    <p class="hint" style="margin:0">${ico('target', 13)} ${$t('Project goals with key results are set on the project page, in the Goals section.')}</p></div>
+    <div class="fl">${$t('Goals (goal · metric · current · target · date)')}<div id="pjGoals">${[...(p.goals || []), { id: '', goal: '', metric: '', current: '', target: '', by: '' }].map((g) => goalRow(g)).join('')}</div><button class="btn sm" style="justify-self:start" data-a="addGoal">${ico('plus', 13)} ${$t('Another goal')}</button></div></div>
     <div class="mdf">${m.id ? `<button class="btn ghost danger" style="margin-right:auto" data-a="delProject" data-id="${m.id}">${$t('Delete')}</button>` : ''}${cancel}<button class="btn pri" data-a="pjGo">${m.id ? $t('Save') : $t('Create')}</button></div></div>`;
   } else if (m.k === 'hyp') {
-    const x = m.id ? hyp(m.id) : { if: '', then: '', because: '', project: m.project, owner: uid(), metric: '', target: '', current: '', from: '', to: '', verdict: '', kr: '', expectedImpact: '', successCriteria: '', killCriteria: '' };
-    const krOpts = GL().filter((g) => g.level === 'project' && g.project === x.project && g.status !== 'cancelled').flatMap((g) => (g.keyResults || []).map((k) => `<option value="${k.id}" ${k.id === x.kr ? 'selected' : ''}>${esc(k.title)} · ${esc(g.title)}</option>`)).join('');
+    const x = m.id ? hyp(m.id) : { if: '', then: '', because: '', project: m.project, owner: uid(), metric: '', target: '', current: '', from: '', to: '', verdict: '' };
     h = `<div class="md"><div class="mdh"><h2>${m.id ? $t('Edit hypothesis') : $t('New hypothesis')}</h2>${close}</div><div class="grid" style="gap:12px"><label class="fl">${$t('If… (action)')}<input class="in" id="hyIf" value="${esc(x.if)}" placeholder="${$t('we give 100 free calls a month')}"></label><label class="fl">${$t('then… (result)')}<input class="in" id="hyThen" value="${esc(x.then)}" placeholder="${$t('≥ 30% will move to a paid plan')}"></label><label class="fl">${$t('because… (assumption)')}<input class="in" id="hyBo" value="${esc(x.because || '')}"></label>
-    <div class="grid g2" style="gap:12px"><label class="fl">${$t('Project')}${selProj('class="in" id="hyP"', x.project)}</label><label class="fl">${$t('Responsible')}${isAdmin() ? selWho('class="in" id="hyO"', x.owner, false) : `<input class="in" disabled value="${esc(pn(x.owner))}">`}</label><label class="fl">${$t('Success metric')}<input class="in" id="hyM" value="${esc(x.metric || '')}"></label><label class="fl">${$t('Target')}<input class="in" id="hyT" value="${esc(x.target || '')}"></label><label class="fl">${$t('Current value')}<input class="in" id="hyC" value="${esc(x.current || '')}"></label><span></span><label class="fl">${$t('Start')}<input class="in" type="date" id="hyF" value="${x.from || ''}"></label><label class="fl">${$t('End')}<input class="in" type="date" id="hyTo" value="${x.to || ''}"></label>
-    <label class="fl">${$t('Moves the project KR')}<select class="in" id="hyKr"><option value="">${krOpts ? $t('— choose a KR —') : $t('The project has no goals yet')}</option>${krOpts}</select></label><label class="fl">${$t('Expected contribution to the KR')}<input class="in" type="number" step="any" id="hyImp" value="${x.expectedImpact ?? ''}"></label>
-    <label class="fl">${$t('Success criterion')}<input class="in" id="hySc" value="${esc(x.successCriteria || '')}" placeholder="${$t('≥ 20 good replies a month')}"></label><label class="fl">${$t('Stop criterion')}<input class="in" id="hyKc" value="${esc(x.killCriteria || '')}" placeholder="${$t('< 5 replies in the first 2 weeks')}"></label></div>
-    <p class="hint" style="margin:0">${$t('Score the priority with the sliders on the hypothesis page once it is created.')}</p>
+    <div class="grid g2" style="gap:12px"><label class="fl">${$t('Project')}${selProj('class="in" id="hyP"', x.project)}</label><label class="fl">${$t('Responsible')}${isAdmin() ? selWho('class="in" id="hyO"', x.owner, false) : `<input class="in" disabled value="${esc(pn(x.owner))}">`}</label><label class="fl">${$t('Success metric')}<input class="in" id="hyM" value="${esc(x.metric || '')}"></label><label class="fl">${$t('Target')}<input class="in" id="hyT" value="${esc(x.target || '')}"></label><label class="fl">${$t('Current value')}<input class="in" id="hyC" value="${esc(x.current || '')}"></label><span></span><label class="fl">${$t('Start')}<input class="in" type="date" id="hyF" value="${x.from || ''}"></label><label class="fl">${$t('End')}<input class="in" type="date" id="hyTo" value="${x.to || ''}"></label></div>
     ${m.id ? `<label class="fl">${$t('Verdict')}<textarea class="in" id="hyV" rows="2">${esc(x.verdict || '')}</textarea></label>` : ''}</div><div class="mdf">${cancel}<button class="btn pri" data-a="hyGo">${m.id ? $t('Save') : $t('Create')}</button></div></div>`;
-  } else if (m.k === 'goal') {
-    h = goalModalHtml(m, close, cancel);
-  } else if (m.k === 'note') {
-    h = `<div class="md"><div class="mdh"><h2>${$t('Add note')}</h2>${close}</div><label class="fl">${$t('Note')}<textarea class="in" id="noteText" rows="5" maxlength="1000" placeholder="${$t('Write your note…')}"></textarea></label><p class="hint">${$t('The note will be saved as knowledge in this context.')}</p>${personal() ? '' : `<label class="fl">${$t('Visibility')}<select class="in" id="noteScope"><option value="team">${$t('Team')}</option><option value="private">${$t('Only me')}</option></select></label>`}<div class="mdf">${cancel}<button class="btn pri" data-a="saveNote">${$t('Save')}</button></div></div>`;
   } else if (m.k === 'kn') {
-    const k = m.id ? S.d.knowledge.find((x) => x.id === m.id) : { type: 'decision', text: '', why: '', scope: 'team', project: m.proj || '', hypothesis: m.hyp || '' };
-    h = `<div class="md"><div class="mdh"><h2>${m.id ? $t('Edit knowledge') : $t('Add knowledge')}</h2>${close}</div><div class="grid" style="gap:12px"><label class="fl">${$t('Type')}<select class="in" id="nkT">${Object.entries(KT).map(([a, l]) => `<option value="${a}" ${a === k.type ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">${$t('Text')}<textarea class="in" id="nkX" rows="3">${esc(k.text)}</textarea></label><label class="fl">${$t('Why (optional)')}<input class="in" id="nkW" value="${esc(k.why || '')}"></label><div class="grid g2" style="gap:12px">${personal() ? '' : `<label class="fl">${$t('Visibility')}<select class="in" id="nkS"><option value="team">${$t('Team')}</option><option value="private" ${k.scope === 'private' ? 'selected' : ''}>${$t('Only me')}</option></select></label>`}<label class="fl">${$t('Project')}${selProj('class="in" id="nkP" data-f="placementProject" data-target="nkH"', k.project)}</label><label class="fl">${$t('Hypothesis')}${selHyp('class="in" id="nkH"', k.hypothesis, k.project)}</label></div></div><div class="mdf">${cancel}<button class="btn pri" data-a="nkGo">${$t('Save')}</button></div></div>`;
+    const k = m.id ? S.d.knowledge.find((x) => x.id === m.id) : { type: 'decision', text: '', why: '', scope: 'team', project: '' };
+    h = `<div class="md"><div class="mdh"><h2>${m.id ? $t('Edit knowledge') : $t('Add knowledge')}</h2>${close}</div><div class="grid" style="gap:12px"><label class="fl">${$t('Type')}<select class="in" id="nkT">${Object.entries(KT).map(([a, l]) => `<option value="${a}" ${a === k.type ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">${$t('Text')}<textarea class="in" id="nkX" rows="3">${esc(k.text)}</textarea></label><label class="fl">${$t('Why (optional)')}<input class="in" id="nkW" value="${esc(k.why || '')}"></label><div class="grid g2" style="gap:12px">${personal() ? '' : `<label class="fl">${$t('Visibility')}<select class="in" id="nkS"><option value="team">${$t('Team')}</option><option value="private" ${k.scope === 'private' ? 'selected' : ''}>${$t('Only me')}</option></select></label>`}<label class="fl">${$t('Project')}${selProj('class="in" id="nkP"', k.project)}</label><label class="fl">${$t('Hypothesis')}${selHyp('class="in" id="nkH"', k.hypothesis)}</label></div></div><div class="mdf">${cancel}<button class="btn pri" data-a="nkGo">${$t('Save')}</button></div></div>`;
   } else if (m.k === 'taskShare') {
     h = `<div class="md" id="task-share-dialog" role="dialog" aria-modal="true" aria-labelledby="task-share-heading" tabindex="-1"><div class="mdh"><h2 id="task-share-heading">${$t('Share task')}</h2>${close}</div>${taskShareContent(m)}</div>`;
   } else if (m.k === 'invite') {
@@ -1309,17 +838,14 @@ function modal() {
   } else if (m.k === 'transfer') {
     h = `<div class="md"><div class="mdh"><h2>${$t('Transfer ownership')}</h2>${close}</div><p class="hint" style="font-size:14.5px">${$t('The new Owner gets full control, and you become an Admin.')}</p><label class="fl">${$t('To')}<select class="in" id="trTo">${S.d.members.filter((x) => x.id !== uid()).map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label><label class="fl" style="margin-top:12px">${$t('Type the team name “{team}” to confirm', { team: esc(S.d.team.name) })}<input class="in" id="trC" data-f="trC" autocomplete="off"></label><div class="mdf">${cancel}<button class="btn pri" id="trBtn" data-a="trGo" disabled>${$t('Transfer')}</button></div></div>`;
   } else if (m.k === 'team') {
-    const orgs = S.orgs.filter((o) => o.role);
-    const sel = m.org || orgs[0]?.id || 'new';
-    h = `<div class="md"><div class="mdh"><h2>${$t('New team')}</h2>${close}</div><label class="fl">${$t('Team name')}<input class="in" id="ntmN" value="${esc(m.name || '')}" placeholder="${$t('E.g. Linxa Team')}"></label>
-    ${orgs.length ? `<div class="mrow2"><span class="lbl3">${$t('Organization')}</span>${orgs.map((o) => `<label class="opt ${sel === o.id ? 'on' : ''}" style="margin-bottom:8px"><input type="radio" name="torg" value="${o.id}" data-f="torg" ${sel === o.id ? 'checked' : ''} style="accent-color:var(--ink)"><span>${ico('org')} <b>${esc(o.name)}</b><br><span class="hint">${o.teams.map((t) => esc(t.name)).join(' · ')}</span></span></label>`).join('')}<label class="opt ${sel === 'new' ? 'on' : ''}"><input type="radio" name="torg" value="new" data-f="torg" ${sel === 'new' ? 'checked' : ''} style="accent-color:var(--ink)"><span style="flex:1">${ico('plus')} <b>${$t('New organization')}</b>${sel === 'new' ? `<input class="in" id="ntmOrg" style="margin-top:8px;width:100%" value="${esc(m.orgName || '')}" placeholder="${$t('Organization name')}">` : `<br><span class="hint">${$t('a separate company or client')}</span>`}</span></label></div><p class="hint">${$t('An organization only groups teams. It gives no access to other teams’ tasks, knowledge or goals.')}</p>` : `<p class="hint">${$t('An organization with the same name is created together with your first team. You can rename it later.')}</p>`}
-    <p class="hint">${$t('You become the Owner. The team gets its own folder, and your folder gets a subfolder for it.')}</p><div class="mdf">${cancel}<button class="btn pri" data-a="ntmGo">${$t('Create')}</button></div></div>`;
+    h = `<div class="md"><div class="mdh"><h2>${$t('New team')}</h2>${close}</div><label class="fl">${$t('Team name')}<input class="in" id="ntmN" placeholder="${$t('E.g. Linxa Team')}"></label><p class="hint">${$t('You become the Owner. The team gets its own folder, and your folder gets a subfolder for it.')}</p><div class="mdf">${cancel}<button class="btn pri" data-a="ntmGo">${$t('Create')}</button></div></div>`;
   } else if (m.k === 'ask') {
     h = `<div class="md wide"><div style="display:flex;gap:10px;align-items:center">${ico('search', 18)}<input class="in" id="askq" data-f="askq" style="flex:1;border:0;font-size:17px" placeholder="${$t('Find a task, decision, hypothesis…')}" value="${esc(m.q || '')}" autocomplete="off"><kbd>Esc</kbd></div><div id="askr">${askRes(m.q || '')}</div></div>`;
   }
   el.innerHTML = `<div class="ov" data-a="ovClose">${h}</div>`;
-  const f = el.querySelector('#askq,#addTxt,#ntT,#ntmN,#nkX,#noteText,#pjN,#hyIf,#gTitle'); if (f && !m.focused) { m.focused = true; setTimeout(() => f.focus(), 20); }
+  const f = el.querySelector('#askq,#addTxt,#ntT,#ntmN,#nkX,#pjN,#hyIf'); if (f && !m.focused) { m.focused = true; setTimeout(() => f.focus(), 20); }
 }
+const goalRow = (g) => `<div class="goal-row" data-goal="${esc(g.id || '')}"><input class="in" placeholder="${$t('Goal')}" value="${esc(g.goal)}"><input class="in" placeholder="${$t('Metric')}" value="${esc(g.metric)}"><input class="in" placeholder="${$t('Current')}" value="${esc(g.current)}"><input class="in" placeholder="${$t('Target')}" value="${esc(g.target)}"><input class="in" type="date" value="${g.by || ''}"><button class="btn ghost sm" data-a="rmGoal" title="${$t('Remove')}">${ico('x', 13)}</button></div>`;
 function askRes(q) {
   q = q.trim().toLowerCase();
   if (!q) return `<div class="res"><div class="hint" style="padding:8px">${$t('Search tasks, knowledge, hypotheses and projects')}</div></div>`;
@@ -1342,7 +868,7 @@ function render() {
   else if (r.startsWith('join-')) c = pJoin();
   else if (r === 'onboarding' || !S.d) c = pOnboarding();
   else {
-    const pg = r === 'assistant' ? pAssistant() : r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r.startsWith('knowledge-') ? pKnowledge(r.slice(10)) : r.startsWith('source-') ? pSource(r.slice(7)) : r === 'vision' ? pVision() : r === 'goals' ? pGoals() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
+    const pg = r === 'assistant' ? pAssistant() : r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r.startsWith('knowledge-') ? pKnowledge(r.slice(10)) : r.startsWith('source-') ? pSource(r.slice(7)) : r === 'vision' ? pVision() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
     c = `<div class="app${S.navOpen ? ' nav-open' : ''}"><aside class="side" id="side-nav">${nav()}</aside><div class="scrim" data-a="navClose" aria-hidden="true"></div><main class="main"><header class="top">${top()}</header><div class="page page-${r.split('-')[0] || 'dashboard'}${r === 'assistant' ? ' assistant-page' : ''}">${pg}</div></main>${tabbar()}</div>`;
   }
   document.documentElement.lang = LANG;
@@ -1363,7 +889,7 @@ function askExternal(sel, prev) {
 async function patchTask(id, body, okMsg) {
   return act(async () => { const t = await api('PATCH', T(`/tasks/${id}`), body); const i = S.d.tasks.findIndex((x) => x.id === id); if (i >= 0) S.d.tasks[i] = t; render(); return t; }, okMsg);
 }
-async function switchTeam(id) { S.tid = id; S.drawer = null; S.goal = null; S.ckc = {}; S.review = null; S.applied = null; S.person = ''; S.proj = ''; S.kproj = ''; await reload(); }
+async function switchTeam(id) { S.tid = id; S.drawer = null; S.review = null; S.applied = null; S.person = ''; S.proj = ''; S.kproj = ''; await reload(); }
 
 /* ---------- actions ---------- */
 const A = {
@@ -1373,36 +899,8 @@ const A = {
   lang: (el) => { void setLang(el.dataset.v); },
   tmenu: () => { S.tmenu = !S.tmenu; render(); },
   team: (el) => { S.tmenu = false; act(() => switchTeam(el.dataset.v)); },
-  newTeam: () => { S.tmenu = false; S.modal = { k: 'team', org: S.orgs.find((o) => o.id === S.d?.org?.id && o.role)?.id }; render(); },
-  renameOrg: (el) => { const o = S.orgs.find((x) => x.id === el.dataset.id); const name = prompt($t('Organization name'), o?.name || ''); if (!name || !name.trim()) return; act(async () => { await api('PATCH', `/api/orgs/${encodeURIComponent(el.dataset.id)}`, { name: name.trim() }); await reloadMe(); await reload(); }, () => $t('Saved')); },
-  goal: (el) => { S.goal = el.dataset.id; S.drawer = null; S.modal = null; render(); },
-  period: (el) => { S.period = el.dataset.v; render(); },
-  gtab: (el) => { S.gtab = el.dataset.v; if (R() !== 'goals') go('goals'); else render(); },
-  toCheckin: (el) => { S.gtab = 'checkin'; S.goal = null; if (el?.dataset?.p) S.period = el.dataset.p; if (R() !== 'goals') go('goals'); else render(); },
-  treeGo: () => { S.gtab = 'tree'; S.goal = null; go('goals'); },
-  ckAll: (el) => { S.ckAll = el.dataset.v === '1'; render(); },
-  ckc: (el) => { S.ckc[el.dataset.k] = el.dataset.v; el.parentElement.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === el)); },
-  ckSave: (el) => act(async () => {
-    const id = el.dataset.k, body = { value: val('ckv-' + id), confidence: S.ckc[id] || krHit(id)?.k.confidence || 'on_track', note: val('ckn-' + id) };
-    const g = await api('POST', T(`/goals/${el.dataset.g}/krs/${id}/checkins`), body);
-    S.d.goals = GL().map((x) => (x.id === g.id ? g : x)); delete S.ckc[id]; render();
-  }, () => $t('Check-in saved')),
-  newGoal: (el) => openGoalModal({ level: el?.dataset?.level, project: el?.dataset?.proj, period: el?.dataset?.period }),
-  editGoal: (el) => openGoalModal({ id: el.dataset.id, close: el.dataset.close === '1' }),
-  delGoal: (el) => { if (!confirm($t('Delete the goal? Goals and hypotheses that contribute to its key results will lose the link.'))) return; act(async () => { await api('DELETE', T(`/goals/${el.dataset.id}`)); S.goal = null; await reload(); }, () => $t('Goal deleted')); },
-  krAdd: () => { syncGoalModal(); if (S.modal.krs.length >= 5) return toast($t('No more than 5 KRs — otherwise they are no longer priorities')); S.modal.krs.push(blankKr()); modal(); },
-  krDel: (el) => { syncGoalModal(); S.modal.krs.splice(Number(el.dataset.v), 1); if (!S.modal.krs.length) S.modal.krs.push(blankKr()); modal(); },
-  goalSave: () => act(saveGoalModal, () => $t('Goal saved')),
-  hview: (el) => { S.hview = el.dataset.v; render(); },
-  hsort: (el) => { S.hsort = el.dataset.v; render(); },
-  aiImp: (el) => { const h = hyp(el.dataset.id); saveHyp(h.id, { priority: { ...prOf(h), impact: Number(el.dataset.v) } }, $t('Priority updated')); },
-  ntmGo: () => act(async () => {
-    const name = val('ntmN').trim(); if (!name) throw new Error($t('Enter a name'));
-    const orgs = S.orgs.filter((o) => o.role); const sel = S.modal.org || orgs[0]?.id || 'new';
-    const body = { name };
-    if (sel !== 'new') body.orgId = sel; else if (document.getElementById('ntmOrg')) { body.newOrgName = val('ntmOrg').trim(); if (!body.newOrgName) throw new Error($t('Enter the organization name')); }
-    const t = await api('POST', '/api/teams', body); S.modal = null; await reloadMe(); await switchTeam(t.id); go('dashboard');
-  }, () => $t('Team created')),
+  newTeam: () => { S.tmenu = false; S.modal = { k: 'team' }; render(); },
+  ntmGo: () => act(async () => { const name = val('ntmN').trim(); if (!name) throw new Error($t('Enter a name')); const t = await api('POST', '/api/teams', { name }); S.modal = null; await reloadMe(); await switchTeam(t.id); go('dashboard'); }, () => $t('Team created')),
   logout: () => act(async () => { await api('POST', '/auth/logout'); S.me = null; S.d = null; S.assistant.clear(); location.hash = 'login'; render(); }),
   emailAgain: () => { S.loginSent = false; S.loginError = ''; render(); document.querySelector('#email-login input')?.focus(); },
   devLogin: () => act(async () => { await api('POST', '/auth/dev', { email: val('devEmail'), name: val('devName') }); await boot(); }),
@@ -1414,10 +912,10 @@ const A = {
   }),
   joinGo: () => act(async () => { const r = await api('POST', `/api/invites/${encodeURIComponent(S.join.token)}/accept`); S.pendingJoin = null; await reloadMe(); await switchTeam(r.teamId); go('dashboard'); }, () => $t('Welcome to the team')),
   joinSkip: async () => { S.pendingJoin = null; await reloadMe(); if (!S.tid) S.tid = S.teams[0]?.id; await reload(); go('dashboard'); },
-  open: (el) => { S.drawer = el.dataset.id; S.goal = null; S.modal = null; const t = tasks().find((x) => x.id === S.drawer); if (t?.unread) { t.unread = 0; api('POST', T(`/tasks/${t.id}/read`)).catch(() => {}); } render(); },
-  closeD: () => { S.drawer = null; S.goal = null; render(); },
+  open: (el) => { S.drawer = el.dataset.id; S.modal = null; const t = tasks().find((x) => x.id === S.drawer); if (t?.unread) { t.unread = 0; api('POST', T(`/tasks/${t.id}/read`)).catch(() => {}); } render(); },
+  closeD: () => { S.drawer = null; render(); },
   dash: (el) => { S.dash = el.dataset.v; render(); },
-  tasksTab: (el) => { S.tab = el.dataset.v; if (S.tab in S.taskDirs) S.dir = S.taskDirs[S.tab]; go('tasks'); },
+  tasksTab: (el) => { S.tab = el.dataset.v; go('tasks'); },
   grp: (el) => { S.grp = el.dataset.v; render(); },
   itab: (el) => { S.itab = el.dataset.v; render(); },
   ptab: (el) => { S.ptab = el.dataset.v; render(); },
@@ -1450,7 +948,7 @@ const A = {
     if (kind === 'knowledge') return go('knowledge-' + id);
     if (kind === 'source') return go('source-' + id);
     if (kind === 'inbox') return go('review-' + id);
-    if (kind === 'goal') { if (goalById(id)) { S.goal = id; return go('goals'); } S.ptab = 'overview'; return go('project-' + id); }
+    if (kind === 'goal') { S.ptab = 'overview'; return go('project-' + id); }
     if (kind === 'hypothesis') go('hyp-' + id);
   },
   closeM: () => { recReset(); S.modal = null; modal(); },
@@ -1504,15 +1002,7 @@ const A = {
   comment: () => { const c = val('cmt').trim(); if (!c) return; const t = tasks().find((x) => x.id === S.drawer); act(async () => { const r = await api('POST', T(`/tasks/${t.id}/comments`), { text: c }); Object.assign(t, r); render(); }, t.canEdit ? $t('Comment added') : $t('{name} will see the comment on their dashboard', { name: pnx(t.controller) })); },
 
   /* knowledge */
-  newNote: (el) => { S.modal = { k: 'note', proj: el.dataset.proj, hyp: el.dataset.hyp || null }; modal(); },
-  saveNote: () => act(async () => {
-    const m = S.modal;
-    await api('POST', T('/knowledge'), { type: 'context', text: val('noteText'), scope: val('noteScope') || 'private', project: m.proj, hypothesis: m.hyp });
-    S.modal = null;
-    if (!m.hyp) S.ptab = 'kn';
-    await reload();
-  }, () => $t('Note saved')),
-  newKn: (el) => { S.modal = { k: 'kn', proj: el?.dataset?.proj || '', hyp: el?.dataset?.hyp || '' }; modal(); },
+  newKn: () => { S.modal = { k: 'kn' }; modal(); },
   editKn: (el) => { S.modal = { k: 'kn', id: el.dataset.id }; modal(); },
   nkGo: () => act(async () => { const body = { type: val('nkT'), text: val('nkX'), why: val('nkW'), scope: val('nkS') || 'private', project: val('nkP') || null, hypothesis: val('nkH') || null }; if (S.modal.id) await api('PATCH', T(`/knowledge/${S.modal.id}`), body); else await api('POST', T('/knowledge'), body); S.modal = null; await reload(); }, () => $t('Saved')),
   delKn: (el) => { if (!confirm($t('Delete the knowledge entry?'))) return; act(async () => { await api('DELETE', T(`/knowledge/${el.dataset.id}`)); await reload(); }, () => $t('Deleted')); },
@@ -1525,8 +1015,11 @@ const A = {
   /* projects & hypotheses */
   newProject: () => { S.modal = { k: 'project' }; render(); },
   editProject: (el) => { S.modal = { k: 'project', id: el.dataset.id }; modal(); },
+  addGoal: () => { document.getElementById('pjGoals').insertAdjacentHTML('beforeend', goalRow({ id: '', goal: '', metric: '', current: '', target: '', by: '' })); },
+  rmGoal: (el) => el.closest('.goal-row').remove(),
   pjGo: () => act(async () => {
-    const body = { name: val('pjN'), vision: val('pjV'), owner: val('pjO'), members: [...document.querySelectorAll('.pjM:checked')].map((x) => x.value) };
+    const goals = [...document.querySelectorAll('#pjGoals .goal-row')].map((r) => { const [g, m, c, t, b] = r.querySelectorAll('input'); return { id: r.dataset.goal || undefined, goal: g.value, metric: m.value, current: c.value, target: t.value, by: b.value || null }; }).filter((g) => g.goal.trim());
+    const body = { name: val('pjN'), vision: val('pjV'), owner: val('pjO'), members: [...document.querySelectorAll('.pjM:checked')].map((x) => x.value), goals };
     const p = S.modal.id ? await api('PATCH', T(`/projects/${S.modal.id}`), body) : await api('POST', T('/projects'), body);
     S.modal = null; await reload(); go(`project-${p.id}`);
   }, () => $t('Project saved')),
@@ -1534,9 +1027,7 @@ const A = {
   newHyp: (el) => { S.modal = { k: 'hyp', project: el.dataset.id }; modal(); },
   editHyp: (el) => { S.modal = { k: 'hyp', id: el.dataset.id }; modal(); },
   hyGo: () => act(async () => {
-    const body = { if: val('hyIf'), then: val('hyThen'), because: val('hyBo'), project: val('hyP'), metric: val('hyM'), target: val('hyT'), current: val('hyC'), from: val('hyF') || null, to: val('hyTo') || null, successCriteria: val('hySc'), killCriteria: val('hyKc'), expectedImpact: val('hyImp') === '' ? null : Number(val('hyImp')) };
-    // The KR list belongs to the project the form opened with; moving to another project drops the link on the server.
-    if (body.project === (S.modal.id ? hyp(S.modal.id).project : S.modal.project)) body.kr = val('hyKr') || null;
+    const body = { if: val('hyIf'), then: val('hyThen'), because: val('hyBo'), project: val('hyP'), metric: val('hyM'), target: val('hyT'), current: val('hyC'), from: val('hyF') || null, to: val('hyTo') || null };
     if (document.getElementById('hyO')) body.owner = val('hyO');
     if (document.getElementById('hyV')) body.verdict = val('hyV');
     const h = S.modal.id ? await api('PATCH', T(`/hypotheses/${S.modal.id}`), body) : await api('POST', T('/hypotheses'), body);
@@ -1571,7 +1062,7 @@ async function applyReview() {
 }
 
 const F = {
-  dir: (el) => { S.dir = el.value; S.taskDirs[S.tab] = el.value; render(); }, fperson: (el) => { S.person = el.value; render(); }, fproj: (el) => { S.proj = el.value; render(); }, fst: (el) => { S.fst = el.value; render(); },
+  dir: (el) => { S.dir = el.value; render(); }, fperson: (el) => { S.person = el.value; render(); }, fproj: (el) => { S.proj = el.value; render(); }, fst: (el) => { S.fst = el.value; render(); },
   kscope: (el) => { S.kscope = el.value; render(); }, kproj: (el) => { S.kproj = el.value; render(); },
   addTeam: (el) => { S.modal.team = el.value; },
   recLang: (el) => { VREC.lang = el.value; try { localStorage.setItem('teamos.recLang', el.value); } catch { /* per-browser convenience only */ } },
@@ -1587,36 +1078,11 @@ const F = {
     rd.onload = () => { S.modal.pdf = null; S.modal.fileText = String(rd.result); S.modal.fileName = f.name; S.modal.title = val('addTitle') || f.name.replace(/\.[^.]+$/, ''); modal(); document.getElementById('addTitle').value = S.modal.title; };
     rd.readAsText(f);
   },
-  placementProject: (el) => {
-    const select = document.getElementById(el.dataset.target);
-    const selected = select.value;
-    const keep = !el.value || hyp(selected)?.project === el.value ? selected : '';
-    const replacement = document.createElement('div');
-    replacement.innerHTML = selHyp(`class="in" id="${el.dataset.target}"`, keep, el.value);
-    select.replaceWith(replacement.firstElementChild);
-  },
   ntWho: (el) => { if (el.value === '__ext') { const v = askExternal(el, uid()); if (v) { el.insertAdjacentHTML('afterbegin', `<option value="${esc(v)}">${esc(v.slice(4))} (${$t('ext.')})</option>`); el.value = v; } } },
   'p.on': (el) => { prop(el.dataset.p).on = el.checked; S.review.dirty = true; render(); },
   'p.important': (el) => { prop(el.dataset.p).important = el.checked; S.review.dirty = true; },
   pst: (el) => act(async () => { await api('PATCH', T(`/projects/${el.dataset.id}`), { status: el.value }); await reload(); }, () => $t('Project status changed')),
-  hst: (el) => {
-    const h = hyp(el.dataset.id);
-    if (el.value === 'testing' && h.status !== 'testing') {
-      const busy = projHyps(h.project).filter((x) => x.status === 'testing' && x.id !== h.id).length;
-      if (busy >= WIP_LIMIT && !confirm($t('The project already tests {n} hypotheses (WIP limit {limit}). Finish or stop one first. Start anyway?', { n: busy, limit: WIP_LIMIT }))) { el.value = h.status; return; }
-      if (!h.killCriteria && !confirm($t('The hypothesis has no stop criterion. Define in advance when you stop it. Start testing anyway?'))) { el.value = h.status; return; }
-    }
-    act(async () => { await api('PATCH', T(`/hypotheses/${el.dataset.id}`), { status: el.value }); await reload(); }, () => $t('Hypothesis status: {status}', { status: HST[el.value] }));
-  },
-  hkr: (el) => saveHyp(el.dataset.id, { kr: el.value || null }, $t('Saved')),
-  himp: (el) => saveHyp(el.dataset.id, { expectedImpact: el.value === '' ? null : Number(el.value) }, $t('Saved')),
-  torg: (el) => { S.modal.name = val('ntmN'); S.modal.orgName = val('ntmOrg'); S.modal.org = el.value; modal(); },
-  'g.level': (el) => { syncGoalModal(); const m = S.modal; m.level = el.value; m.align = ''; if (el.value !== 'team' && m.period.length === 4) m.period = curPeriod(); if (el.value === 'project' && !m.project) m.project = S.d.projects.find((x) => canProjectGoal(x))?.id; modal(); },
-  'g.project': (el) => { syncGoalModal(); S.modal.project = el.value; modal(); },
-  'g.period': (el) => { syncGoalModal(); S.modal.period = el.value; S.modal.align = ''; modal(); },
-  'g.type': (el) => { syncGoalModal(); S.modal.type = el.value; modal(); },
-  'g.align': (el) => { syncGoalModal(); S.modal.align = el.value; if (el.value) S.modal.reason = ''; modal(); },
-  'g.reason': (el) => { syncGoalModal(); S.modal.reason = el.checked ? el.value : ''; if (S.modal.reason) S.modal.align = ''; modal(); },
+  hst: (el) => act(async () => { await api('PATCH', T(`/hypotheses/${el.dataset.id}`), { status: el.value }); await reload(); }, () => $t('Hypothesis status: {status}', { status: HST[el.value] })),
   role: (el) => act(async () => { await api('PATCH', T(`/members/${el.dataset.id}`), { role: el.value }); await reload(); }, () => $t('Role changed')),
 };
 // Proposal fields: data-f="p.<field>"
@@ -1636,13 +1102,13 @@ function onTaskField(el) {
   const k = el.dataset.f.slice(2);
   let v = el.type === 'checkbox' ? el.checked : el.value;
   if (k === 'owner' && v === '__ext') { v = askExternal(el, t.owner); if (!v) return; }
-  if (['project', 'hypothesis', 'due', 'kr'].includes(k)) v = v || null;
-  if (v === (t[k] ?? null)) return;
+  if (['project', 'hypothesis', 'due'].includes(k)) v = v || null;
+  if (v === t[k]) return;
   patchTask(t.id, { [k]: v }, k === 'status' ? $t('Status: {status}', { status: STL[v] }) : k === 'owner' ? $t('{name} will get the task', { name: pnx(v) }) : null);
 }
 
 document.addEventListener('click', (e) => { const el = e.target.closest('[data-a]'); if (!el) return; if (el.tagName === 'INPUT' && el.type !== 'button') return; const a = el.dataset.a; if (a === 'ovClose' && e.target !== el) return; if (A[a]) { e.preventDefault(); A[a](el, e); } });
-document.addEventListener('change', (e) => { if (e.target.dataset?.r && R().startsWith('hyp-')) { const h = hyp(R().slice(4)); if (h) saveHyp(h.id, { priority: prOf(h) }); return; } const f = e.target.dataset?.f; if (!f) return; if (f.startsWith('p.')) return onPropField(e.target); if (f.startsWith('t.')) return onTaskField(e.target); if (F[f]) F[f](e.target); });
+document.addEventListener('change', (e) => { const f = e.target.dataset?.f; if (!f) return; if (f.startsWith('p.')) return onPropField(e.target); if (f.startsWith('t.')) return onTaskField(e.target); if (F[f]) F[f](e.target); });
 document.addEventListener('input', (e) => { const f = e.target.dataset?.f; if (f === 'askq') { S.modal.q = e.target.value; document.getElementById('askr').innerHTML = askRes(e.target.value); } if (f === 'trC') document.getElementById('trBtn').disabled = e.target.value.trim() !== S.d.team.name; if (f && f.startsWith('p.') && e.target.tagName !== 'SELECT' && e.target.type !== 'checkbox' && e.target.type !== 'date') { const p = prop(e.target.dataset.p); if (p) { p[f.slice(2)] = e.target.value; S.review.dirty = true; } } });
 document.addEventListener('mouseover', (e) => {
   const p = e.target.closest('.prop'); document.querySelectorAll('.ln.hl').forEach((x) => x.classList.remove('hl'));
@@ -1691,14 +1157,12 @@ document.addEventListener('keydown', (e) => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
   if (!S.d) return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); A.ask(); }
-  else if (e.key === 'Escape') { if (S.navOpen) { S.navOpen = false; render(); } else if (S.modal) { recReset(); S.modal = null; modal(); } else if (S.drawer || S.goal) { S.drawer = null; S.goal = null; render(); } }
+  else if (e.key === 'Escape') { if (S.navOpen) { S.navOpen = false; render(); } else if (S.modal) { recReset(); S.modal = null; modal(); } else if (S.drawer) { S.drawer = null; render(); } }
   else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && R().startsWith('review-') && !S.modal) { e.preventDefault(); applyReview(); }
   else if (!typing && !S.modal && !e.metaKey && !e.ctrlKey && ['i', 'I', 'ш', 'Ш'].includes(e.key)) { e.preventDefault(); A.add(); }
 });
 document.addEventListener('input', (e) => {
   if (e.target.id === 'assistant-question') assistantState().draft = e.target.value;
-  if (e.target.dataset?.r) onPriorityInput(e.target);
-  if (e.target.dataset?.kk === 'title' && S.modal?.k === 'goal') { const w = document.getElementById('kw-' + e.target.dataset.kr); if (w) w.style.display = ACTIVITY.test(e.target.value.trim()) ? '' : 'none'; }
 });
 window.addEventListener('hashchange', () => {
   S.tmenu = false; S.navOpen = false;

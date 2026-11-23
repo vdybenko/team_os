@@ -52,10 +52,8 @@ async function teamCtx(s, args) {
   if (s.grant.teams && !s.grant.teams.includes(tid)) D.fail(403, 'This connection has no access to this workspace');
   const c = await D.ctxFor(s.user, store.assertId(tid, 'team id'), s.lang);
   c.names = new Map((await D.memberList(c.team)).map((m) => [m.id, m.name]));
-  c.goalList = await D.listGoals(c);
   return c;
 }
-const refreshGoals = async (c) => { c.goalList = await store.goals.list(c.tid); };
 const who = (c, id) => (!id ? null : D.isExternal(id) ? { external: id.slice(4) } : { id, name: c.names.get(id) || id });
 const ACTIVE = ['open', 'progress', 'waiting'];
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && !v.length)));
@@ -76,16 +74,8 @@ function taskOut(c, t, full = false) {
   return out;
 }
 const knOut = (c, k) => clean({ id: k.id, type: k.type, text: k.text, why: k.why, scope: k.scope, project_id: k.project, date: k.date, author: who(c, k.author), source: k.source, quote: k.quote, replaces: k.supersedes, superseded_by: k.supersededBy, you_can_edit: D.canEditKn(c, k) });
-const projectOut = (c, p) => clean({ id: p.id, name: p.name, status: p.status, owner: who(c, p.owner), vision: p.vision, members: (p.members || []).map((m) => who(c, m)), goals: (c.goalList || []).filter((g) => g.level === 'project' && g.project === p.id).map((g) => clean(D.legacyGoalView(g))) });
-const krOut = (c, k) => clean({ id: k.id, title: k.title, unit: k.unit, start: k.start, current: k.current, target: k.target, progress: Math.round(D.krProgress(k) * 100) / 100, owner: who(c, k.owner), confidence: k.confidence, note: k.note, last_checkin: k.checkins?.at(-1)?.at });
-const goalOut = (c, g) => clean({
-  id: g.id, level: g.level, period: g.period, type: g.type, status: g.status, title: g.title, description: g.description, owner: who(c, g.owner),
-  project_id: g.project, member: g.member ? who(c, g.member) : undefined, progress: Math.round(D.goalProgress(g) * 100) / 100,
-  contributes_to: (g.alignedTo || []).map((a) => a.krId), unaligned_reason: g.unaligned?.reason, score: g.score, retro: g.retro,
-  key_results: (g.keyResults || []).map((k) => krOut(c, k)),
-});
-const hypOut = (c, h) => clean({ id: h.id, project_id: h.project, statement: h.statement, if: h.if, then: h.then, because: h.because, status: h.status, owner: who(c, h.owner), metric: h.metric, target: h.target, current: h.current, from: h.from, to: h.to, verdict: h.verdict,
-  moves_key_result: h.kr, expected_impact: h.expectedImpact, success_criteria: h.successCriteria, kill_criteria: h.killCriteria, priority: h.priority ? { ...h.priority, score: D.hypScore(h) } : undefined, learnings: (h.learnings || []).map((l) => ({ at: l.at, by: who(c, l.by), text: l.text })), you_can_edit: D.canEditHyp(c, h) });
+const projectOut = (c, p) => clean({ id: p.id, name: p.name, status: p.status, owner: who(c, p.owner), vision: p.vision, members: (p.members || []).map((m) => who(c, m)), goals: (p.goals || []).map((g) => clean(g)) });
+const hypOut = (c, h) => clean({ id: h.id, project_id: h.project, statement: h.statement, if: h.if, then: h.then, because: h.because, status: h.status, owner: who(c, h.owner), metric: h.metric, target: h.target, current: h.current, from: h.from, to: h.to, verdict: h.verdict, learnings: (h.learnings || []).map((l) => ({ at: l.at, by: who(c, l.by), text: l.text })), you_can_edit: D.canEditHyp(c, h) });
 const inboxOut = (c, i) => clean({ id: i.id, title: i.title, type: i.type, date: i.date, status: i.status, origin: i.origin, summary: i.summary, result: D.inboxView(c.lang, i).result, error: i.error ? D.inboxView(c.lang, i).error : undefined, proposals: D.countProps(i.proposals) });
 const joinLink = (inv) => `${origin}/join/${inv.token}`;
 const tokens = (q) => String(q || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 1);
@@ -126,8 +116,7 @@ const TOOLS = [
         members: c.team.members.map((m) => ({ id: m.userId, name: c.names.get(m.userId), role: m.role })),
         vision: vision.length > 6000 ? vision.slice(0, 6000) + '\n…' : vision,
         projects: projects.map((p) => projectOut(c, p)),
-        hypotheses: hypotheses.map((h) => clean({ id: h.id, project_id: h.project, statement: h.statement, status: h.status, priority_score: D.hypScore(h), moves_key_result: h.kr })),
-        goals_this_quarter: c.goalList.filter((g) => g.status !== 'cancelled' && (g.period === D.currentQuarter() || g.period === D.currentQuarter().slice(0, 4)) && g.level !== 'member').map((g) => goalOut(c, g)),
+        hypotheses: hypotheses.map((h) => ({ id: h.id, project_id: h.project, statement: h.statement, status: h.status })),
         counts: {
           tasks_i_owe: active.filter((t) => t.owner === c.uid).length,
           tasks_owed_to_me: active.filter((t) => t.requester === c.uid && t.owner !== c.uid).length,
@@ -362,9 +351,7 @@ const TOOLS = [
     }, ['name']),
     async run(s, a) {
       const c = await teamCtx(s, a);
-      const p = await D.createProject(c, clean({ name: a.name, vision: a.vision, owner: a.owner_id, status: a.status, members: a.member_ids ? [...new Set([c.uid, ...a.member_ids])] : undefined, goals: a.goals }));
-      await refreshGoals(c);
-      return projectOut(c, p);
+      return projectOut(c, await D.createProject(c, clean({ name: a.name, vision: a.vision, owner: a.owner_id, status: a.status, members: a.member_ids ? [...new Set([c.uid, ...a.member_ids])] : undefined, goals: a.goals })));
     },
   },
   {
@@ -378,12 +365,11 @@ const TOOLS = [
   },
   {
     name: 'save_goal', title: 'Add or change a goal', scope: 'write', annotations: W,
-    description: 'Simple project goal with one key result (metric, current, target). Adds one, or updates it when goal_id is given (project Owner or team Owner/Admin). For full OKRs use list_goals and checkin_key_result.',
+    description: 'Adds a goal to a project, or updates an existing one when goal_id is given (Owner/Admin). Use it to move a goal’s current value toward its target.',
     inputSchema: obj({ team_id: S.team, project_id: S.str('Project id'), goal_id: S.str('Existing goal id to change'), goal: S.str('Goal'), metric: S.str('Metric'), target: S.str('Target value'), current: S.str('Current value'), by: S.date('Target date') }, ['project_id']),
     async run(s, a) {
       const c = await teamCtx(s, a);
       const { project, goal } = await D.saveGoal(c, a.project_id, { id: a.goal_id, goal: a.goal, metric: a.metric, target: a.target, current: a.current, by: a.by });
-      await refreshGoals(c);
       return { goal: clean(goal), project: projectOut(c, project) };
     },
   },
@@ -391,35 +377,7 @@ const TOOLS = [
     name: 'remove_goal', title: 'Remove a goal', scope: 'write', annotations: DEL,
     description: 'Removes a goal from a project (Owner/Admin).',
     inputSchema: obj({ team_id: S.team, project_id: S.str('Project id'), goal_id: S.str('Goal id') }, ['project_id', 'goal_id']),
-    async run(s, a) { const c = await teamCtx(s, a); const p = await D.removeGoal(c, a.project_id, a.goal_id); await refreshGoals(c); return projectOut(c, p); },
-  },
-  {
-    name: 'list_goals', title: 'List goals (OKR)', scope: 'read', annotations: RO,
-    description: 'Goals of a workspace on every level (team annual/quarterly, project, member) with key results, progress, confidence and alignment: contributes_to lists the parent key result ids. Hypotheses move key results (see moves_key_result in list_hypotheses).',
-    inputSchema: obj({ team_id: S.team, period: S.str('Period: "2027" or "2027Q1" (default: all)'), level: S.enum(D.GOAL_LEVELS, 'Only this level') }),
-    async run(s, a) {
-      const c = await teamCtx(s, a);
-      return c.goalList.filter((g) => (!a.period || g.period === a.period || g.period === String(a.period).slice(0, 4)) && (!a.level || g.level === a.level)).map((g) => goalOut(c, g));
-    },
-  },
-  {
-    name: 'checkin_key_result', title: 'Check in a key result', scope: 'write', annotations: W,
-    description: 'Records a weekly check-in for a key result: its new value, confidence (on_track / at_risk / off_track) and a note. The key result owner or whoever edits the goal can do it.',
-    inputSchema: obj({ team_id: S.team, goal_id: S.str('Goal id'), key_result_id: S.str('Key result id'), value: { type: 'number', description: 'New current value' }, confidence: S.enum(D.KR_CONF, 'Confidence'), note: S.str('What changed, what blocks') }, ['goal_id', 'key_result_id']),
-    async run(s, a) { const c = await teamCtx(s, a); return goalOut(c, await D.checkinKr(c, a.goal_id, a.key_result_id, { value: a.value, confidence: a.confidence, note: a.note })); },
-  },
-  {
-    name: 'set_hypothesis_priority', title: 'Set hypothesis priority', scope: 'write', annotations: W,
-    description: 'Scores a hypothesis 1–10 on impact, confidence (by strength of evidence), speed (how soon the key result moves) and cost (team time and money). Priority = impact × confidence × speed ÷ ((cost_time + cost_money) / 2). Optionally links the project key result it moves and the expected contribution.',
-    inputSchema: obj({
-      team_id: S.team, hypothesis_id: S.str('Hypothesis id'), impact: { type: 'integer', minimum: 1, maximum: 10 }, confidence: { type: 'integer', minimum: 1, maximum: 10 }, speed: { type: 'integer', minimum: 1, maximum: 10 },
-      cost_time: { type: 'integer', minimum: 1, maximum: 10 }, cost_money: { type: 'integer', minimum: 1, maximum: 10 }, key_result_id: S.str('Key result of a goal of the same project'), expected_impact: { type: 'number', description: 'Expected contribution to the key result' },
-    }, ['hypothesis_id']),
-    async run(s, a) {
-      const c = await teamCtx(s, a);
-      const priority = clean({ impact: a.impact, confidence: a.confidence, speed: a.speed, costTime: a.cost_time, costMoney: a.cost_money });
-      return hypOut(c, await D.updateHypothesis(c, a.hypothesis_id, clean({ priority: Object.keys(priority).length ? priority : undefined, kr: a.key_result_id, expectedImpact: a.expected_impact })));
-    },
+    async run(s, a) { const c = await teamCtx(s, a); return projectOut(c, await D.removeGoal(c, a.project_id, a.goal_id)); },
   },
   {
     name: 'create_hypothesis', title: 'Create a hypothesis', scope: 'write', annotations: W,
