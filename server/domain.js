@@ -85,7 +85,7 @@ function hist(t, by, m, source) {
 }
 const histView = (lang, h) => ({ ...h, ...(h.msg ? { text: render(lang, h.msg) } : {}), ...(h.sourceMsg ? { source: render(lang, h.sourceMsg) } : {}) });
 
-export function taskView(c, t) {
+export function taskView(c, { shareToken, ...t }) {
   return {
     ...t,
     history: t.history.map((h) => histView(c.lang, h)),

@@ -413,13 +413,31 @@ export async function saveTask(tid, task, previous) {
   task.updatedAt = now();
   if (S3_RECORDS) return putJson(taskKey(tid, task), task);
   const file = taskFile(tid, task);
-  if (previous) {
-    const old = taskFile(tid, previous);
-    if (old !== file) { rm(old); touchIndexesFor(tid, previous); }
-  }
+  const old = previous ? taskFile(tid, previous) : file;
+  // Local task edits can start before a link is regenerated. Keep the currently stored link.
+  const current = readJson(old);
+  if (current?.shareToken) task.shareToken = current.shareToken;
+  else delete task.shareToken;
+  if (old !== file) { rm(old); touchIndexesFor(tid, previous); }
   writeJson(file, task);
   touchIndexesFor(tid, task);
   return task;
+}
+export async function saveTaskShare(tid, task, token) {
+  if (S3_RECORDS) {
+    if (token) task.shareToken = token;
+    else delete task.shareToken;
+    await putJson(taskKey(tid, task), task);
+    return;
+  }
+  const file = taskFile(tid, task);
+  const current = readJson(file);
+  if (!current || current.shareToken !== task.shareToken) {
+    throw Object.assign(new Error('The record has changed. Refresh the page and try again.'), { status: 409 });
+  }
+  if (token) current.shareToken = token;
+  else delete current.shareToken;
+  writeJson(file, current);
 }
 export async function removeTask(tid, task) {
   if (S3_RECORDS) return s3.remove(task);
