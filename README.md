@@ -203,3 +203,23 @@ Done: the remote MCP server with OAuth (see [Connecting Claude and Codex (MCP)](
 - A queue for AI analysis with retries (currently in process memory).
 - Mobile layout for key screens.
 - Success metrics from the specification: time to process a meeting, precision and recall of proposals, active members.
+
+## Release checks
+
+Run `npm test` before release. The S3 startup integration test uses a simulated S3 service and checks authenticated loading and migration of an existing team and project goal. It cannot verify the production IAM policy.
+
+From a clean checkout of the exact remote `main` commit, run `scripts/release.sh`. It runs the tests and invokes the production deploy over SSH. The production server also runs the tests before activating each new build.
+
+For releases that change storage permissions or data layout, verify access for the production service before switching releases. If an isolated HTTPS staging environment has matching permissions, the release script can also check authenticated profile and workspace loading there. Seed staging with a legacy team and project goal, then provide `TEAMOS_STAGING_URL`, `TEAMOS_STAGING_COOKIE`, `TEAMOS_STAGING_TEAM`, and `TEAMOS_STAGING_GOAL`. Use a staging account and reset the fixture before each migration check.
+
+### Preparing existing workspaces for the OKR release
+
+The new version also migrates legacy organizations and project goals on first read. For a controlled migration, first verify a backup, pause application writes, and run the new release's code with the intended storage configuration and credentials:
+
+```bash
+node --env-file-if-exists=.env server/migrate-okr.js
+node --env-file-if-exists=.env server/migrate-okr.js --apply
+node --env-file-if-exists=.env server/migrate-okr.js
+```
+
+The first command is read-only and reports counts. Apply only after reviewing the plan and verifying S3 access; the final dry run should show no remaining organizations or legacy goals. The migration can be repeated after a failure while writes remain paused. A dry run reads existing data but does not prove write permissions. Test the migration against an isolated copy with production-equivalent permissions before running it on production. The deployment SSH account only supports `deploy` and `status`; running this migration on the production host requires an authorized operational access path.

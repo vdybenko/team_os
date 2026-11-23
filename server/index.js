@@ -397,10 +397,10 @@ app.get('/join/:token', (req, res) => res.redirect(`/#join-${encodeURIComponent(
 app.use(express.static(path.join(here, '..', 'public'), { index: 'index.html' }));
 app.use('/api', (req, res) => res.status(404).json({ error: tr(langOf(req), 'Not found') }));
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = process.env.PORT === undefined ? 3000 : Number(process.env.PORT);
 const HOST = process.env.TEAMOS_HOST || undefined;
 store.initializeLocalStorage();
-app.listen(PORT, HOST, () => {
+export const server = app.listen(PORT, HOST, () => {
   console.log(`TeamOS → http://${HOST || 'localhost'}:${PORT}`);
   console.log(`  data:   ${store.S3_RECORDS ? 'Amazon S3' : store.DATA_DIR}`);
   console.log(`  email sign-in: ${magicLinkConfigured() ? 'SendGrid' : 'not configured'}`);

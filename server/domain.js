@@ -315,8 +315,8 @@ const canCheckinKr = async (c, g, k) => k.owner === c.uid || await canEditGoal(c
 // Projects created before goals became their own entity kept them in project.goals; they move into goals/ on first read.
 async function migrateProjectGoals(c, p) {
   if (!p?.goals?.length) return;
-  for (const old of p.goals) {
-    const id = /^[\w-]{1,80}$/.test(old.id || '') ? old.id : store.newId('g');
+  for (const [index, old] of p.goals.entries()) {
+    const id = /^[\w-]{1,80}$/.test(old.id || '') ? old.id : `g_legacy_${crypto.createHash('sha256').update(JSON.stringify([c.tid, p.id, index])).digest('hex').slice(0, 32)}`;
     if (await store.goals.get(c.tid, id)) continue;
     const owner = isMember(c.team, p.owner) ? p.owner : c.uid;
     await store.goals.save(c.tid, {

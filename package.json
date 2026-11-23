@@ -2,7 +2,7 @@
   "name": "teamos",
   "version": "0.1.0",
   "private": true,
-  "description": "TeamOS — team second brain built from your meetings (v0.1)",
+  "description": "TeamOS \u2014 team second brain built from your meetings (v0.1)",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -10,7 +10,8 @@
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env server/index.js",
-    "dev": "node --watch --env-file-if-exists=.env server/index.js"
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "test": "node --test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",

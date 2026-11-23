@@ -157,6 +157,8 @@ async function boot() {
   const res = await fetch('/api/me', { credentials: 'same-origin', headers: { 'X-TeamOS-Lang': LANG } });
   if (res.status === 401) { if (!R().startsWith('join-')) location.hash = 'login'; return render(); }
   const me = await res.json();
+  if (!res.ok) throw new Error(me.error || $t('Error {status}', { status: res.status }));
+  if (!me.user || !Array.isArray(me.teams)) throw new Error($t('Could not load TeamOS.'));
   Object.assign(S, { me: me.user, teams: me.teams, orgs: me.orgs || [], ai: me.ai, transcribe: me.transcribe });
   if (S.me.lang !== LANG) api('PATCH', '/api/me', { lang: LANG }).then((u) => { S.me = u; }).catch(() => {});
   if (S.pendingJoin) { location.hash = 'join-' + S.pendingJoin; return render(); }
