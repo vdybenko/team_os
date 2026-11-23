@@ -9,6 +9,7 @@ Object.assign(process.env, { DATA_DIR: directory, S3_BUCKET: '', SESSION_SECRET:
 const store = await import('../server/store.js');
 const tasks = await import('../server/domain.js');
 const share = await import('../server/task-share.js');
+const { taskSharePage } = await import('../server/task-share-page.js');
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 async function workspace(id) {
@@ -19,19 +20,41 @@ async function workspace(id) {
   return Promise.all(team.members.map(({ userId }) => tasks.ctxFor({ id: userId }, id, 'en')));
 }
 
-test('a private task link exposes details and live comments and grants no workspace visibility', async () => {
+test('a private task link shows the read-only card and hides current and historic statuses', async () => {
   const [requester, teammate] = await workspace('private-tasks');
   await store.saveUser({ id: requester.uid, name: 'Report writer', email: 'writer@example.test' });
-  const task = await tasks.createTask(requester, { title: 'Review report', description: 'Compare the totals', due: '2026-11-27', status: 'progress' }, {
-    source: { quote: 'Internal transcript' },
-  });
+  const project = await store.projects.save(requester.tid, { id: 'report', name: 'Reporting', vision: 'Workspace plan' });
+  const hypothesis = await store.hypotheses.save(requester.tid, { id: 'quarterly', project: project.id, then: 'Reconcile the totals', learnings: ['Private learning'] });
+  const task = await tasks.createTask(requester, {
+    title: 'Review report', description: 'Compare the totals', due: '2026-11-27', status: 'progress', important: true,
+    project: project.id, hypothesis: hypothesis.id,
+  }, { source: { itemId: 'inbox-entry', sourceId: 'transcript-record', itemTitle: 'Reporting call', ts: '1:15', quote: 'Check the <totals>' } });
+  task.history.push(
+    { at: task.createdAt, by: requester.uid, text: 'виконавець: First writer → Report writer' },
+    { at: task.createdAt, by: requester.uid, text: 'Відкрито → В роботі', source: 'Private legacy status source' },
+  );
+  await store.saveTask(requester.tid, task);
   const token = await share.replaceTaskShare(requester, await share.taskForSharing(requester, task.id));
   assert.deepEqual((await share.getSharedTask(token)).comments, []);
   const updated = await tasks.commentOnTask(requester, task.id, 'Check the second column');
-  assert.deepEqual(await share.getSharedTask(token), {
-    title: task.title, description: task.description, due: task.due,
+  const changed = await tasks.updateTask(requester, updated, { status: 'done', due: '2026-11-28', urgent: true }, 'Private status source');
+  const card = await share.getSharedTask(token, 'uk');
+  assert.deepEqual(card, {
+    title: task.title, description: task.description, due: changed.due, owner: 'Report writer', requester: 'Report writer',
+    important: true, urgent: true, project: 'Reporting', hypothesis: 'Reconcile the totals',
+    source: { title: 'Reporting call', timestamp: '1:15', quote: 'Check the <totals>' },
     comments: [{ author: 'Report writer', text: 'Check the second column', at: updated.comments[0].at }],
+    history: [
+      { author: 'Report writer', at: task.history[0].at, text: 'Створено вручну', source: 'Reporting call' },
+      { author: 'Report writer', at: task.createdAt, text: 'виконавець: First writer → Report writer', source: undefined },
+      { author: 'Report writer', at: changed.history.at(-1).at, text: 'дедлайн → 2026-11-28', source: undefined },
+    ],
   });
+  const page = taskSharePage('uk', card);
+  assert.match(page, /Лише читання/);
+  assert.match(page, /Check the &lt;totals&gt;/);
+  assert.match(page, /Історія/);
+  assert.doesNotMatch(page, /<form|<button|<script|<select|<textarea|readBy|status source|В роботі|Готово|transcript-record|Workspace plan|Private learning/);
   const altered = (token[0] === 'A' ? 'B' : 'A') + token.slice(1);
   assert.equal(await share.getSharedTask(altered), null);
   assert.deepEqual(await tasks.visibleTasks(teammate), []);

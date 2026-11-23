@@ -214,14 +214,20 @@ code{font-size:13px;background:var(--soft);padding:1px 5px;border-radius:5px;ove
 .login-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
 .inv{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;font-size:14px}
 .ob{max-width:720px;margin:0 auto;padding:40px 24px}
-.task-share-page .card{padding:clamp(18px,4vw,32px);overflow-wrap:anywhere}
-.task-share-page h1{text-wrap:wrap}
-.task-share-description{margin:20px 0 0;white-space:pre-wrap}
-.task-share-comments{margin-top:14px}
-.task-share-comments ul{list-style:none;margin:14px 0 0;padding:0}
+.task-share-card{padding:clamp(18px,4vw,32px);overflow-wrap:anywhere}
+.task-share-card h1{text-wrap:wrap}
+.task-share-fields{margin:20px 0}
+.task-share-fields dt{font-size:13px;color:var(--mut)}
+.task-share-fields dd{margin:0}
+.task-share-person{display:inline-flex;align-items:center;gap:8px}
+.task-share-card .box h2{font-size:13px;color:var(--mut);margin-bottom:8px;font-stretch:100%}
+.task-share-card blockquote{margin:0 0 8px}
+.task-share-text{white-space:pre-wrap}
+.task-share-comments ul,.task-share-history ul{list-style:none;margin:0;padding:0}
 .task-share-comments li+li{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
 .task-share-comments time{margin-inline-start:8px}
-.task-share-comments li p{margin:4px 0 0;white-space:pre-wrap}
+.task-share-comments .task-share-text{margin-top:4px}
+.task-share-history b{color:var(--ink)}
 .steps{display:flex;gap:6px;margin-bottom:28px}
 .steps i{flex:1;height:4px;border-radius:4px;background:var(--line)}.steps i.on{background:var(--ink)}
 .opt{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;cursor:pointer;background:var(--card);width:100%;text-align:left}
@@ -391,6 +397,7 @@ code{font-size:13px;background:var(--soft);padding:1px 5px;border-radius:5px;ove
   #drawer{width:100vw;border-left:0}
   .dw{padding:max(14px,env(safe-area-inset-top)) 16px calc(40px + var(--safe-b))}
   .kv{grid-template-columns:92px minmax(0,1fr)}
+  .task-share-page{padding:22px 14px}
   .kv .in{width:100%}
   .kv span:has(>input[type=date]){flex-wrap:wrap}
   .kv input[type=date].in{flex:1 1 140px;width:auto}
