@@ -68,6 +68,27 @@ test('the viewer can ask about a private upload before review and a teammate can
   assert.deepEqual((await ask(owner)).sources, after);
 });
 
+
+test('text notes, emails and chats retain their original and respect source visibility', async () => {
+  const team = { id: 'text-sources', kind: 'team' };
+  const owner = { tid: team.id, uid: 'reader', me: { name: 'Reader' }, team };
+  for (const [type, scope] of [['note', 'private'], ['email', 'team'], ['chat', 'team']]) {
+    const item = { id: type, owner: owner.uid, type, title: type, date: '2026-01-01', status: 'review', sourceScope: scope,
+      proposals: [{ id: 'proposal', kind: 'kn', type: 'fact', text: `Knowledge from ${type}`, on: true, scope: 'team' }] };
+    const text = `Original ${type} text`;
+    await store.saveInboxItem(owner.uid, team.id, item, text);
+    await applyProposals(owner, item);
+    const source = await store.findSource(team.id, item.sourceId, owner.uid);
+    assert.equal(source.kind, type);
+    assert.equal(await store.getSourceText(team.id, source), text);
+    const knowledge = await store.findKnowledge(team.id, item.proposals[0].applied, owner.uid);
+    assert.equal(knowledge.sourceId, source.id);
+    assert.equal(knowledge.sourceItem, item.id);
+    assert.ok(source.derived.some((d) => d.kind === 'knowledge' && d.id === knowledge.id));
+    assert.equal(Boolean(await store.findSource(team.id, item.sourceId, 'visitor')), scope === 'team');
+  }
+});
+
 test('focused status reading uses dated primary evidence and excludes administrative dates and earlier guesses', async (t) => {
   const document = { id: 'vote', kind: 'source', title: 'Board notes', pdf: true, date: '2026-11-20',
     text: '[p. 1]\nOctober 5. Budget approval proposed.\n\n[p. 2]\nNovember 2. The board approved the budget.' };

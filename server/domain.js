@@ -643,10 +643,10 @@ export async function applyProposals(c, item) {
 }
 
 /* ================= sources ================= */
-// When an inbox item is applied, its original — a transcript or a PDF — is kept in the knowledge base as a source,
+// When an inbox item is applied, its original is kept in the knowledge base as a source,
 // and every task, knowledge entry, hypothesis and project created from it points back to it (sourceId).
 
-export const keepsSource = (item) => item.type !== 'routed' && Boolean(item.file || item.audio || ['transcript', 'doc'].includes(item.type));
+export const keepsSource = (item) => INBOX_TYPES.includes(item.type);
 export const SOURCE_SCOPES = ['team', 'private'];
 const sourceScope = (c, item) => (c.team.kind === 'personal' || item.sourceScope === 'private' ? 'private' : 'team');
 
