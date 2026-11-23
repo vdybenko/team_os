@@ -13,6 +13,7 @@ import { transcribeConfigured } from './transcribe.js';
 import { mountOAuth } from './oauth.js';
 import { mountMcp } from './mcp.js';
 import { getSharedTask, replaceTaskShare, taskForSharing } from './task-share.js';
+import { taskSharePage } from './task-share-page.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -347,7 +348,6 @@ app.get('/api/roadmap', requireUser, route(() => {
 
 /* ================= static + SPA ================= */
 
-const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 app.get('/share/task/:token', async (req, res) => {
   const lang = req.acceptsLanguages('en', 'uk') || 'en';
   const t = (key) => tr(lang, key);
@@ -361,36 +361,14 @@ app.get('/share/task/:token', async (req, res) => {
 
   let task, unavailable;
   try {
-    task = await getSharedTask(req.params.token);
+    task = await getSharedTask(req.params.token, lang);
     if (!task) { res.status(404); unavailable = t('This task link is unavailable'); }
   } catch (error) {
     console.error('[task share]', error);
     res.status(503);
     unavailable = t('Could not load the task. Please try again.');
   }
-  const date = task?.due && new Date(`${task.due}T00:00:00Z`);
-  const deadline = date && !Number.isNaN(+date)
-    ? new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(date)
-    : task?.due;
-  let comments = '';
-  if (task?.comments.length) {
-    const commentDate = new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeZone: 'UTC' });
-    comments = task.comments.map(({ author, at, text }) => {
-      const timestamp = Date.parse(at);
-      const time = Number.isNaN(timestamp) ? '' : `<time class="hint" datetime="${escapeHtml(at)}">${escapeHtml(commentDate.format(timestamp))}</time>`;
-      return `<li><b>${escapeHtml(author)}</b>${time}<p>${escapeHtml(text)}</p></li>`;
-    }).join('');
-  }
-  res.type('html').send(`<!doctype html>
-<html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${t('Shared task')} · TeamOS</title><link rel="stylesheet" href="/app.css"></head>
-<body><main class="ob task-share-page"><header class="login-brand"><span class="logo" aria-hidden="true">T</span>TeamOS</header>
-<article class="card"><h1>${escapeHtml(task?.title ?? unavailable)}</h1>
-${deadline ? `<p class="hint">${t('Deadline')} · <time datetime="${escapeHtml(task.due)}">${escapeHtml(deadline)}</time></p>` : ''}
-${task?.description ? `<p class="task-share-description">${escapeHtml(task.description)}</p>` : ''}
-</article>
-${comments ? `<section class="card task-share-comments"><h2>${t('Comments')}</h2><ul>${comments}</ul></section>` : ''}
-</main></body></html>`);
+  res.type('html').send(taskSharePage(lang, task, unavailable));
 });
 
 app.get('/join/:token', (req, res) => res.redirect(`/#join-${encodeURIComponent(req.params.token)}`));

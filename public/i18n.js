@@ -424,7 +424,7 @@ window.TEAMOS_I18N = {
     // task drawer
     'Share task': 'Поділитися задачею',
     'Loading…': 'Завантаження…',
-    'Anyone with the link can view the title, description, deadline and comments.': 'За посиланням доступні назва, опис, дедлайн і коментарі.',
+    'Anyone with the link can open the task in read-only mode, including its comments and history. The task status stays private.': 'За посиланням можна переглянути картку задачі, її коментарі та історію. Статус задачі залишається приватним.',
     'Task link': 'Посилання на задачу',
     'Creating a new link disables the previous one.': 'Після створення нового посилання попереднє перестане працювати.',
     'Disable link': 'Вимкнути посилання',
