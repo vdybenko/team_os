@@ -42,11 +42,20 @@ const ctx = (req) => D.ctxFor(req.user, req.params.tid, langOf(req));
 
 /* ================= API: me & teams ================= */
 
-app.get('/api/me', requireUser, route(async (req) => ({
-  user: req.user,
-  teams: (await store.teamsOfUser(req.user.id)).map((t) => ({ id: t.id, name: t.name, kind: t.kind, role: t.members.find((m) => m.userId === req.user.id).role })),
-  ai: aiConfigured(), model: MODEL, transcribe: transcribeConfigured(),
-})));
+app.get('/api/me', requireUser, route(async (req) => {
+  const all = await store.listTeams();
+  const orgs = await D.orgsFor(req.user, all);
+  return {
+    user: req.user,
+    teams: all.filter((t) => isMember(t, req.user.id)).map((t) => ({ id: t.id, name: t.name, kind: t.kind, orgId: t.orgId || null, role: t.members.find((m) => m.userId === req.user.id).role })),
+    orgs,
+    ai: aiConfigured(), model: MODEL, transcribe: transcribeConfigured(),
+  };
+}));
+
+/* ---------- organizations ---------- */
+app.get('/api/orgs', requireUser, route(async (req) => D.orgsFor(req.user, await store.listTeams())));
+app.patch('/api/orgs/:oid', requireUser, route((req) => D.renameOrg(req.user, req.params.oid, req.body.name)));
 
 app.patch('/api/me', requireUser, route(async (req) => {
   const u = req.user;
@@ -57,7 +66,7 @@ app.patch('/api/me', requireUser, route(async (req) => {
   return u;
 }));
 
-app.post('/api/teams', requireUser, route((req) => D.createTeam(req.user, req.body.name, langOf(req))));
+app.post('/api/teams', requireUser, route((req) => D.createTeam(req.user, req.body.name, langOf(req), { orgId: req.body.orgId, newOrgName: req.body.newOrgName })));
 
 // Everything the signed-in member may see in a team, in one payload.
 app.get('/api/teams/:tid/state', requireUser, route(async (req) => {
@@ -66,14 +75,17 @@ app.get('/api/teams/:tid/state', requireUser, route(async (req) => {
     D.memberList(c.team), D.visibleTasks(c), D.visibleKnowledge(c), store.projects.list(c.tid),
     store.hypotheses.list(c.tid), store.listInbox(c.uid, c.tid), store.getVision(c.tid), D.listSources(c),
   ]);
+  const goals = await D.listGoals(c, projects);
+  const org = c.team.orgId ? await store.getOrg(c.team.orgId) : null;
   return {
     team: { id: c.team.id, name: c.team.name, kind: c.team.kind, settings: c.team.settings || { urgentDays: 2 }, invites: c.admin ? c.team.invites : [] },
+    org: org ? { id: org.id, name: org.name, role: D.orgRole(org, c.uid) } : null,
     role: c.role, members,
-    projects, hypotheses,
+    projects: projects.map((p) => (p.goals?.length ? { ...p, goals: [] } : p)), hypotheses, goals,
     tasks: tasks.map((t) => D.taskView(c, t)),
     knowledge,
     sources: sources.map((s) => ({ ...s, canDelete: D.canDeleteSource(c, s) })),
-    inbox: inbox.map(({ proposals, ...i }) => ({ ...D.inboxView(c.lang, i), counts: D.countProps(proposals) })),
+    inbox: inbox.map(({ proposals, ...i }) => ({ ...D.inboxView(c.lang, i), counts: D.countProps(D.reviewProposals({ ...i, proposals })) })),
     vision,
   };
 }));
@@ -109,15 +121,15 @@ app.post(chatRoute + '/:cid/messages', requireUser, route(async (req) => {
   if (assistantRequests.has(lock)) fail(409, 'Wait for the answer to your previous question.');
   assistantRequests.add(lock);
   try {
-    const [tasks, knowledge, projects, hypotheses, members] = await Promise.all([
-      D.visibleTasks(c), D.visibleKnowledge(c), store.projects.list(c.tid), store.hypotheses.list(c.tid), D.teamMembers(c.team),
+    const [tasks, knowledge, projects, hypotheses, members, goals] = await Promise.all([
+      D.visibleTasks(c), D.visibleKnowledge(c), store.projects.list(c.tid), store.hypotheses.list(c.tid), D.teamMembers(c.team), store.goals.list(c.tid),
     ]);
     const names = new Map(members.map(({ userId, profile }) => [userId, profile?.name]));
     let reply;
     try {
       reply = await askAssistant({
         question, turns: chat.turns, team: c.team.name, lang: c.lang, viewerId: c.uid, today: today(), tasks, knowledge,
-        projects, hypotheses, documents: D.assistantDocuments(c), nameOf: (who) => isExternal(who) ? who.slice(4) : names.get(who) || '—',
+        projects, hypotheses, goals, documents: D.assistantDocuments(c), nameOf: (who) => isExternal(who) ? who.slice(4) : names.get(who) || '—',
       });
     } catch (error) { failWith(502, errorMessage(error)); }
     await ctx(req);
@@ -179,6 +191,16 @@ app.post('/api/teams/:tid/transfer', requireUser, route(async (req) => {
 app.post('/api/teams/:tid/projects', requireUser, route(async (req) => D.createProject(await ctx(req), req.body)));
 app.patch('/api/teams/:tid/projects/:pid', requireUser, route(async (req) => D.updateProject(await ctx(req), req.params.pid, req.body)));
 app.delete('/api/teams/:tid/projects/:pid', requireUser, route(async (req) => { await D.deleteProject(await ctx(req), req.params.pid); }));
+
+/* ---------- goals (OKR) ---------- */
+app.get('/api/teams/:tid/goals', requireUser, route(async (req) => {
+  const goals = await D.listGoals(await ctx(req));
+  return goals.filter((g) => (!req.query.period || g.period === req.query.period || g.period === String(req.query.period).slice(0, 4)) && (!req.query.level || g.level === req.query.level));
+}));
+app.post('/api/teams/:tid/goals', requireUser, route(async (req) => D.createGoal(await ctx(req), req.body)));
+app.patch('/api/teams/:tid/goals/:gid', requireUser, route(async (req) => D.updateGoal(await ctx(req), req.params.gid, req.body)));
+app.delete('/api/teams/:tid/goals/:gid', requireUser, route(async (req) => { await D.deleteGoal(await ctx(req), req.params.gid); }));
+app.post('/api/teams/:tid/goals/:gid/krs/:krId/checkins', requireUser, route(async (req) => D.checkinKr(await ctx(req), req.params.gid, req.params.krId, req.body)));
 
 app.post('/api/teams/:tid/hypotheses', requireUser, route(async (req) => D.createHypothesis(await ctx(req), req.body)));
 app.patch('/api/teams/:tid/hypotheses/:hid', requireUser, route(async (req) => D.updateHypothesis(await ctx(req), req.params.hid, req.body)));
@@ -308,12 +330,7 @@ app.post('/api/teams/:tid/inbox/:iid/ignore', requireUser, route(async (req) => 
 
 app.post('/api/teams/:tid/inbox/:iid/reanalyze', requireUser, route(async (req) => {
   const c = await ctx(req);
-  const item = await store.getInboxItem(c.uid, c.tid, req.params.iid) || fail(404, 'Item not found');
-  if (item.type === 'routed') fail(400, 'This item has no source to analyze');
-  if (item.status !== 'done' && item.proposals.some((p) => p.appliedKind)) fail(409, 'Finish saving this item first.');
-  item.status = 'processing'; item.error = null; item.errorMsg = null; await store.saveInboxItem(c.uid, c.tid, item);
-  D.runAnalysis(c, item.id).catch((error) => console.error('[analyze] Failed to persist analysis:', error.name));
-  return item;
+  return D.inboxView(c.lang, await D.reanalyzeInboxItem(c, req.params.iid));
 }));
 
 app.delete('/api/teams/:tid/inbox/:iid', requireUser, route(async (req) => {

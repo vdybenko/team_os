@@ -358,6 +358,22 @@ function collection(name) {
 }
 export const projects = collection('projects');
 export const hypotheses = collection('hypotheses');
+// Goals (Objective + Key Results) on every level: team, project and member. All of them are visible to the whole team.
+export const goals = collection('goals');
+
+/* ---------------- organizations ---------------- */
+// records/primary/orgs/<orgId>/org.json — a container that groups teams. A team points to it with team.orgId.
+
+const orgRoot = 'records/primary/orgs/';
+const orgKey = (oid) => `${orgRoot}${assertId(oid)}/org.json`;
+const orgFile = (oid) => path.join(DATA_DIR, orgKey(oid));
+export const getOrg = (oid) => S3_RECORDS ? getJson(orgKey(oid)) : readJson(orgFile(oid));
+export async function saveOrg(o) {
+  o.updatedAt = now();
+  if (S3_RECORDS) return putJson(orgKey(o.id), o);
+  writeJson(orgFile(o.id), o);
+  return o;
+}
 
 /* ---------------- tasks ---------------- */
 // A task lives in the team folder when two or more team members take part in it
@@ -724,6 +740,16 @@ export function rebuildTeamIndex(tid) {
     L.push(`- [${mdEsc(p.name)}](${rel(file, path.join(dir, 'projects', p.id + '.json'))}) — ${PSTATUS[p.status] || p.status}`);
     for (const h of hyp.filter((h) => h.project === p.id)) L.push(`  - hypothesis [${mdEsc(h.statement || h.if)}](${rel(file, path.join(dir, 'hypotheses', h.id + '.json'))}) — ${HSTATUS[h.status] || h.status}`);
   }
+  const gl = goals.localList(tid);
+  if (gl.length) {
+    const kr = new Map(gl.flatMap((g) => (g.keyResults || []).map((k) => [k.id, k])));
+    L.push('', `## Goals (${gl.length})`, '');
+    for (const g of gl.sort((a, b) => (a.period < b.period ? 1 : -1))) {
+      const parent = g.alignedTo?.[0] && kr.get(g.alignedTo[0].krId);
+      L.push(`- [${mdEsc(g.title)}](goals/${g.id}.json) — ${g.level}${g.project ? ' · ' + mdEsc(prj.find((p) => p.id === g.project)?.name || '') : ''} · ${g.period}${parent ? ` · contributes to “${mdEsc(parent.title)}”` : ''}`);
+      for (const k of g.keyResults || []) L.push(`  - KR ${mdEsc(k.title)}: ${k.current} / ${k.target}${k.unit ? ' ' + mdEsc(k.unit) : ''}`);
+    }
+  }
   const orphan = hyp.filter((h) => !prj.some((p) => p.id === h.project));
   if (orphan.length) { L.push('', '### Hypotheses without a project', ''); for (const h of orphan) L.push(`- [${mdEsc(h.statement || h.if)}](hypotheses/${h.id}.json) — ${HSTATUS[h.status]}`); }
   const tasks = localSharedTasks(tid), kn = localSharedKnowledge(tid);
@@ -821,6 +847,9 @@ export async function migrateToS3({ from }) {
   for (const user of users) {
     if (await copy(userKey(user.id), readText(P.profile(user.id)), JSON_TYPE)) counts.users++;
   }
+  for (const oid of listDirs(path.join(DATA_DIR, orgRoot)).filter((id) => SAFE_ID.test(id))) {
+    await copy(orgKey(oid), readText(orgFile(oid)), JSON_TYPE);
+  }
   const teams = localTeams();
   for (const team of teams) {
     const tid = team.id;
@@ -830,7 +859,7 @@ export async function migrateToS3({ from }) {
     if (await copy(visionKey(tid), readText(path.join(dir, 'vision.md')), MD_TYPE)) counts.visions++;
     await copyFolder(path.join(dir, 'projects'), prefix + 'projects/', '.json', JSON_TYPE, 'projects');
     await copyFolder(path.join(dir, 'hypotheses'), prefix + 'hypotheses/', '.json', JSON_TYPE, 'hypotheses');
-    counts.goals += projects.localList(tid).reduce((sum, project) => sum + (project.goals?.length || 0), 0);
+    await copyFolder(path.join(dir, 'goals'), prefix + 'goals/', '.json', JSON_TYPE, 'goals');
 
     for (const user of users) {
       const personal = userTeamPrefix(user.id, tid);
