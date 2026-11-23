@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as store from './store.js';
-import { mountAuthRoutes, sessionMiddleware, requireUser, magicLinkConfigured } from './auth.js';
+import { mountAuthRoutes, sessionMiddleware, requireUser, magicLinkConfigured, origin } from './auth.js';
 import { normalizeEmail } from './magic-link.js';
 import { aiConfigured, errorMessage, AI_PROVIDER, MODEL } from './ai.js';
 import { askAssistant } from './assistant.js';
@@ -12,6 +12,7 @@ import * as D from './domain.js';
 import { transcribeConfigured } from './transcribe.js';
 import { mountOAuth } from './oauth.js';
 import { mountMcp } from './mcp.js';
+import { getSharedTask, replaceTaskShare, taskForSharing } from './task-share.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -202,6 +203,26 @@ app.post('/api/teams/:tid/tasks/:id/read', requireUser, route(async (req) => {
   if (changed) await store.saveTask(c.tid, t);
 }));
 
+const taskShareRoute = '/api/teams/:tid/tasks/:id/share';
+const shareLink = (token) => token ? `${origin}/share/task/${token}` : null;
+app.use(taskShareRoute, (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+app.get(taskShareRoute, requireUser, route(async (req) => {
+  const task = await taskForSharing(await ctx(req), req.params.id);
+  return { link: shareLink(task.shareToken) };
+}));
+app.post(taskShareRoute, requireUser, route(async (req) => {
+  if (!req.is('application/json')) fail(403, 'Open TeamOS and try again.');
+  const c = await ctx(req);
+  const task = await taskForSharing(c, req.params.id);
+  return { link: shareLink(await replaceTaskShare(c, task)) };
+}));
+app.delete(taskShareRoute, requireUser, route(async (req) => {
+  const c = await ctx(req);
+  const task = await taskForSharing(c, req.params.id);
+  if (task.shareToken) await store.saveTaskShare(c.tid, task, null);
+  return { link: null };
+}));
+
 /* ================= API: knowledge ================= */
 
 app.post('/api/teams/:tid/knowledge', requireUser, route(async (req) => D.createKnowledge(await ctx(req), req.body)));
@@ -330,6 +351,41 @@ app.get('/api/roadmap', requireUser, route(() => {
 }));
 
 /* ================= static + SPA ================= */
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+app.get('/share/task/:token', async (req, res) => {
+  const lang = req.acceptsLanguages('en', 'uk') || 'en';
+  const t = (key) => tr(lang, key);
+  res.set({
+    'Cache-Control': 'private, no-store',
+    'Referrer-Policy': 'no-referrer',
+    'X-Robots-Tag': 'noindex, nofollow',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+  });
+
+  let task, unavailable;
+  try {
+    task = await getSharedTask(req.params.token);
+    if (!task) { res.status(404); unavailable = t('This task link is unavailable'); }
+  } catch (error) {
+    console.error('[task share]', error);
+    res.status(503);
+    unavailable = t('Could not load the task. Please try again.');
+  }
+  const date = task?.due && new Date(`${task.due}T00:00:00Z`);
+  const deadline = date && !Number.isNaN(+date)
+    ? new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(date)
+    : task?.due;
+  res.type('html').send(`<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${t('Shared task')} · TeamOS</title><link rel="stylesheet" href="/app.css"></head>
+<body><main class="ob task-share-page"><header class="login-brand"><span class="logo" aria-hidden="true">T</span>TeamOS</header>
+<article class="card"><h1>${escapeHtml(task?.title ?? unavailable)}</h1>
+${deadline ? `<p class="hint">${t('Deadline')} · <time datetime="${escapeHtml(task.due)}">${escapeHtml(deadline)}</time></p>` : ''}
+${task?.description ? `<p class="task-share-description">${escapeHtml(task.description)}</p>` : ''}
+</article></main></body></html>`);
+});
 
 app.get('/join/:token', (req, res) => res.redirect(`/#join-${encodeURIComponent(req.params.token)}`));
 app.use(express.static(path.join(here, '..', 'public'), { index: 'index.html' }));

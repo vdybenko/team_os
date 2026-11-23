@@ -666,7 +666,7 @@ function drawer() {
   if (!t || !S.d) { el.classList.remove('on'); el.setAttribute('aria-hidden', 'true'); el.innerHTML = ''; return; }
   const ce = t.canEdit, ro = ce ? '' : 'disabled';
   const srcOwn = t.source && t.source.owner === uid() && S.d.inbox.some((i) => i.id === t.source.itemId);
-  el.innerHTML = `<div class="dw"><div class="dwh"><span class="st ${t.status}"></span>${ce ? `<select class="in" data-f="t.status" aria-label="${$t('Status')}">${Object.entries(STL).map(([k, l]) => `<option value="${k}" ${k === t.status ? 'selected' : ''}>${l}</option>`).join('')}</select>` : `<span class="chip">${STL[t.status]}</span>`}${t.shared ? `<span class="chip">${ico('users', 12)} ${$t('shared')}</span>` : `<span class="chip">${ico('lock', 12)} ${$t('private')}</span>`}${ce ? `<button class="btn ghost sm" style="margin-left:auto" data-a="delTask" title="${$t('Delete')}">${ico('trash')}</button>` : ''}<button class="btn ghost sm" ${ce ? '' : 'style="margin-left:auto"'} data-a="closeD" aria-label="${$t('Close')}">${ico('x')}</button></div>
+  el.innerHTML = `<div class="dw"><div class="dwh"><span class="st ${t.status}"></span>${ce ? `<select class="in" data-f="t.status" aria-label="${$t('Status')}">${Object.entries(STL).map(([k, l]) => `<option value="${k}" ${k === t.status ? 'selected' : ''}>${l}</option>`).join('')}</select>` : `<span class="chip">${STL[t.status]}</span>`}${t.shared ? `<span class="chip">${ico('users', 12)} ${$t('shared')}</span>` : `<span class="chip">${ico('lock', 12)} ${$t('private')}</span>`}<div class="task-drawer-actions">${ce ? `<button class="btn ghost sm" data-a="shareTask" aria-label="${$t('Share task')}" title="${$t('Share task')}">${ico('link')}</button><button class="btn ghost sm" data-a="delTask" title="${$t('Delete')}">${ico('trash')}</button>` : ''}<button class="btn ghost sm" data-a="closeD" aria-label="${$t('Close')}">${ico('x')}</button></div></div>
   <textarea class="dwt" rows="2" data-f="t.title" ${ce ? '' : 'readonly'} aria-label="${$t('Title')}">${esc(t.title)}</textarea>
   ${ce ? '' : `<div class="lock">${ico('lock')}<span>${$t('<b>{name}</b>, who set the task, changes its status and fields. If you have an update, write a comment.', { name: esc(pnx(t.controller)) })}</span></div>`}
   <div class="kv"><span>${$t('Owner')}</span>${ce ? selWho(`class="in" data-f="t.owner" aria-label="${$t('Owner')}"`, t.owner) : `<span>${av(t.owner, 20)} ${esc(pnx(t.owner))}</span>`}
@@ -683,6 +683,36 @@ function drawer() {
 }
 
 /* ---------- modals ---------- */
+function taskShareContent(m) {
+  if (m.pending) return `<p class="hint" role="status">${$t('Loading…')}</p>`;
+  if (m.error) return `<p class="err" role="alert">${esc(m.error)}</p><div class="mdf"><button class="btn" data-a="retryTaskShare">${$t('Try again')}</button></div>`;
+  return `<p class="hint">${$t('Anyone with the link can view the title, description and deadline.')}</p>
+  ${m.link ? `<label class="fl" for="task-share-link">${$t('Task link')}</label><div class="task-share-link"><input class="in" id="task-share-link" type="url" value="${esc(m.link)}" readonly><button class="btn pri" data-a="copyTaskShare">${$t('Copy')}</button></div>
+  <p class="hint">${$t('Creating a new link disables the previous one.')}</p><div class="mdf"><button class="btn ghost" data-a="disableTaskShare">${$t('Disable link')}</button><button class="btn" data-a="replaceTaskShare">${$t('Regenerate link')}</button></div>` :
+  `<div class="mdf"><button class="btn pri" data-a="replaceTaskShare">${$t('Create link')}</button></div>`}`;
+}
+
+async function requestTaskShare(m, method) {
+  if (m?.k !== 'taskShare' || m.pending) return;
+  m.pending = true;
+  m.error = '';
+  modal();
+  document.getElementById('task-share-dialog')?.focus();
+  try {
+    const { link } = await api(method, m.url, method === 'POST' ? {} : undefined);
+    m.link = link;
+    if (S.modal === m && method !== 'GET') toast($t(link ? 'Task link created' : 'Task link disabled'));
+  } catch (e) {
+    m.error = e instanceof TypeError ? $t('Could not reach TeamOS. Please try again.') : e.message;
+  } finally {
+    m.pending = false;
+    if (S.modal === m) {
+      modal();
+      document.querySelector('#task-share-dialog .mdf button:last-child, #task-share-dialog [data-a="copyTaskShare"]')?.focus();
+    }
+  }
+}
+
 /* ---------- dictation ---------- */
 // MediaRecorder keeps the audio; the browser's speech recognition (where available) fills the transcript live.
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -801,6 +831,8 @@ function modal() {
   } else if (m.k === 'kn') {
     const k = m.id ? S.d.knowledge.find((x) => x.id === m.id) : { type: 'decision', text: '', why: '', scope: 'team', project: '' };
     h = `<div class="md"><div class="mdh"><h2>${m.id ? $t('Edit knowledge') : $t('Add knowledge')}</h2>${close}</div><div class="grid" style="gap:12px"><label class="fl">${$t('Type')}<select class="in" id="nkT">${Object.entries(KT).map(([a, l]) => `<option value="${a}" ${a === k.type ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">${$t('Text')}<textarea class="in" id="nkX" rows="3">${esc(k.text)}</textarea></label><label class="fl">${$t('Why (optional)')}<input class="in" id="nkW" value="${esc(k.why || '')}"></label><div class="grid g2" style="gap:12px">${personal() ? '' : `<label class="fl">${$t('Visibility')}<select class="in" id="nkS"><option value="team">${$t('Team')}</option><option value="private" ${k.scope === 'private' ? 'selected' : ''}>${$t('Only me')}</option></select></label>`}<label class="fl">${$t('Project')}${selProj('class="in" id="nkP"', k.project)}</label><label class="fl">${$t('Hypothesis')}${selHyp('class="in" id="nkH"', k.hypothesis)}</label></div></div><div class="mdf">${cancel}<button class="btn pri" data-a="nkGo">${$t('Save')}</button></div></div>`;
+  } else if (m.k === 'taskShare') {
+    h = `<div class="md" id="task-share-dialog" role="dialog" aria-modal="true" aria-labelledby="task-share-heading" tabindex="-1"><div class="mdh"><h2 id="task-share-heading">${$t('Share task')}</h2>${close}</div>${taskShareContent(m)}</div>`;
   } else if (m.k === 'invite') {
     h = `<div class="md"><div class="mdh"><h2>${$t('Invite to {team}', { team: esc(teamName(S.d.team)) })}</h2>${close}</div><label class="fl">${$t('Role')}<select class="in" id="invR"><option value="member">${$t('Member — sees their own tasks and team knowledge')}</option><option value="admin">${$t('Admin — sees everything, manages members')}</option></select></label><label class="fl" style="margin-top:12px">${$t('Email (optional — then the link works only for that address)')}<input class="in" id="invE" placeholder="name@company.com"></label><p class="hint">${$t('TeamOS doesn’t send emails in v0.1 — copy the link and send it yourself.')}</p>${m.link ? `<div class="lnkbox">${ico('link')}<code>${esc(m.link)}</code><button class="btn sm" data-a="copyText" data-v="${esc(m.link)}">${$t('Copy')}</button></div>` : ''}<div class="mdf"><button class="btn" data-a="closeM">${$t('Done')}</button><button class="btn pri" data-a="invGo">${$t('Create link')}</button></div></div>`;
   } else if (m.k === 'transfer') {
@@ -949,6 +981,19 @@ const A = {
 
   /* tasks */
   newTask: (el) => { S.modal = { k: 'task', proj: el?.dataset?.proj || '', hyp: el?.dataset?.hyp || '' }; S.drawer = null; render(); },
+  shareTask: () => {
+    S.modal = { k: 'taskShare', url: T(`/tasks/${S.drawer}/share`) };
+    void requestTaskShare(S.modal, 'GET');
+  },
+  retryTaskShare: () => { void requestTaskShare(S.modal, 'GET'); },
+  replaceTaskShare: () => { void requestTaskShare(S.modal, 'POST'); },
+  disableTaskShare: () => { void requestTaskShare(S.modal, 'DELETE'); },
+  copyTaskShare: async () => {
+    const link = document.getElementById('task-share-link');
+    if (!link) return;
+    try { await navigator.clipboard.writeText(link.value); toast($t('Link copied')); }
+    catch { link.focus(); link.select(); toast($t('Couldn’t copy')); }
+  },
   ntGo: () => act(async () => {
     const t = await api('POST', T('/tasks'), { title: val('ntT'), owner: val('ntO'), requester: val('ntR'), due: val('ntD') || null, project: val('ntP') || null, hypothesis: val('ntH') || null, important: document.getElementById('ntI').checked, description: val('ntDesc') });
     S.modal = null; S.d.tasks.unshift(t); render(); return t;
