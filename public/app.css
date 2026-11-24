@@ -746,3 +746,4 @@ button.stat:hover{border-color:var(--ink)}
 @media(max-width:760px){.dc .lv{grid-template-columns:repeat(2,minmax(0,1fr))}.dc .row{flex-wrap:wrap}.dc .row .rt{flex-direction:row;align-items:center;width:100%;justify-content:flex-start;flex-wrap:wrap}.diff,.alt .pc{grid-template-columns:minmax(0,1fr)}.tabs{margin:-4px -14px 14px}}
 .dc .lnk,.prop .lnk,.dcnote .lnk{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;font-size:inherit;font-weight:600;cursor:pointer}
 .dc .sec h3 .lnk,.dc .crumb .lnk{color:var(--mut)}
+.note.gen{flex-wrap:wrap;align-items:center;margin-bottom:16px}.note.gen b{color:var(--ink)}.gen-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.gen-row select{width:auto;max-width:260px}

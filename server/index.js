@@ -223,6 +223,7 @@ app.post(P_ + '/:id/amendments', requireUser, route(async (req) => { const c = a
 app.post(P_ + '/:id/amendments/accept', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.acceptProcessChanges(c, req.params.id, req.body.ids, req.body.edits)); }));
 app.post(P_ + '/:id/amendments/:aid/reject', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.rejectProcessChange(c, req.params.id, req.params.aid, req.body.reason)); }));
 app.delete(P_ + '/:id/amendments/:aid', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.withdrawProcessChange(c, req.params.id, req.params.aid)); }));
+app.post(P_ + '/:id/draft', requireUser, route(async (req) => { const c = await ctx(req); const r = await Docs.generateProcessDraft(c, req.params.id, req.body); return { process: await processOut(c, r.process), added: r.added }; }));
 app.post(P_ + '/:id/advocate', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.runAdvocate(c, 'process', req.params.id)); }));
 app.post(P_ + '/:id/advocate/dismiss', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.dismissAdvice(c, 'process', req.params.id, req.body.key)); }));
 

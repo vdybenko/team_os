@@ -77,7 +77,7 @@ const S = {
   knt: 'all', kscope: 'all', kproj: '', klog: false, ptab: 'overview', vEdit: false,
   review: null, applied: null, drawer: null, modal: null, pendingJoin: null, busy: false,
   orgs: [], period: null, gtab: 'okr', goal: null, hview: 'cards', hsort: 'score', ckAll: false, ckc: {},
-  plvl: 'all', agf: 'all', dtab: {}, dsel: {}, pver: null, advBusy: null,
+  plvl: 'all', agf: 'all', dtab: {}, dsel: {}, pver: null, advBusy: null, draftBusy: null, genFrom: null,
   assistant: new Map(),
 };
 const role = () => S.d?.role;
@@ -1371,6 +1371,22 @@ const procBadge = () => PCS().reduce((n, p) => n + p.needsMe, 0);
 const agrBadge = () => AGS().filter((a) => a.needsMe).length;
 const uncollected = () => { const done = new Set(PCS().flatMap((p) => p.fromKnowledge || [])); return S.d.knowledge.filter((k) => k.type === 'process' && (k.scope === 'team' || personal()) && !k.supersededBy && !done.has(k.id)); };
 
+// Sources the draft can be generated from: shared ones only, since everyone who sees the process sees the draft.
+const draftSources = () => (S.d.sources || []).filter((x) => personal() || x.scope === 'team');
+const draftOpts = (sel) => `<option value="knowledge" ${sel === 'knowledge' ? 'selected' : ''}>${$t('The whole knowledge base')}</option>${draftSources().map((x) => `<option value="src:${x.id}" ${sel === 'src:' + x.id ? 'selected' : ''}>${esc(x.title)} · ${fds(x.date)}</option>`).join('')}`;
+function draftBox(p) {
+  if (!p.canPropose || !S.ai) return '';
+  const busy = S.draftBusy === p.id;
+  return `<div class="note gen">${ico('spark')}<span style="flex:1;min-width:200px"><b>${$t('Generate a draft')}</b><br>${$t('AI fills in what is missing from a meeting, a document or the whole knowledge base. Everything arrives as proposed changes with quotes — nothing changes until it is accepted.')}</span>
+   <span class="gen-row"><select class="in" id="genFrom" ${busy ? 'disabled' : ''}>${draftOpts(S.genFrom || 'knowledge')}</select><button class="btn sm pri" data-a="genDraft" data-id="${p.id}" ${busy ? 'disabled' : ''}>${busy ? `<span class="spin"></span> ${$t('Generating…')}` : $t('Generate')}</button></span></div>`;
+}
+const runDraft = async (id, from) => {
+  const body = from === 'knowledge' ? { from: 'knowledge' } : { from: 'source', sourceId: from.slice(4) };
+  S.draftBusy = id; render();
+  try { const r = await api('POST', T(`/processes/${encodeURIComponent(id)}/draft`), body); putPc(r.process); S.dtab[id] = 'changes'; toast($t('{n} proposed — check them in “Changes”', { n: $p(r.added, 'change') })); }
+  catch (e) { toast(e.message); }
+  finally { S.draftBusy = null; render(); }
+};
 function procRow(p) {
   const me = p.needsMe;
   return `<button class="row ${me ? 'me' : ''}" data-a="go" data-h="process-${p.id}">
@@ -1428,7 +1444,7 @@ function pProcess(id) {
    <div class="act">${can ? `<button class="btn pri" data-a="proposeProc" data-id="${p.id}">${ico('edit')} ${$t('Propose a change')}</button>` : ''}${p.canApprove ? `<button class="btn ghost" data-a="renameProc" data-id="${p.id}" title="${$t('Rename')}">${ico('edit')}</button>${p.status === 'active' ? `<button class="btn ghost" data-a="retireProc" data-id="${p.id}" data-v="retired">${$t('Retire')}</button>` : ''}` : ''}</div></div>
   ${banner}${orgVis}
   <div class="split">
-   <div class="card">${p.summary || can ? `<div class="sec"><h3>${SECL.summary}${can ? `<button class="lnk" data-a="proposeProc" data-id="${p.id}" data-t="summary">${p.summary ? $t('Propose a change') : $t('+ Describe')}</button>` : ''}</h3>${p.summary ? `<div>${esc(p.summary)}</div>` : `<div class="miss">${$t('Not described')}</div>`}</div>` : ''}${secs}</div>
+   <div class="card">${p.coverage < 9 || !p.summary ? draftBox(p) : ''}${p.summary || can ? `<div class="sec"><h3>${SECL.summary}${can ? `<button class="lnk" data-a="proposeProc" data-id="${p.id}" data-t="summary">${p.summary ? $t('Propose a change') : $t('+ Describe')}</button>` : ''}</h3>${p.summary ? `<div>${esc(p.summary)}</div>` : `<div class="miss">${$t('Not described')}</div>`}</div>` : ''}${secs}</div>
    <div class="card"><div class="tabs">
      <button class="${tab === 'changes' ? 'on' : ''}" data-a="dtab" data-id="${p.id}" data-v="changes">${$t('Changes')} <span class="n ${p.pending && p.canApprove ? 'red' : ''}">${p.pending}</span></button>
      <button class="${tab === 'history' ? 'on' : ''}" data-a="dtab" data-id="${p.id}" data-v="history">${$t('Version history')}</button>
@@ -1448,11 +1464,11 @@ function changesTab(p) {
       ${!isPend ? `<span class="chip ${a.status === 'accepted' ? 'green' : 'red'}" style="margin-left:auto">${a.status === 'accepted' ? $t('Accepted in v{n}', { n: a.version }) : $t('Rejected')}</span>` : ''}</div>
      ${a.kind !== 'remove' ? `<div class="txt">${esc(a.text)}</div>` : ''}${a.proposedText ? `<div class="hint">${$t('Proposed:')} ${esc(a.proposedText)}</div>` : ''}${a.note ? `<div class="hint">${esc(a.note)}</div>` : ''}
      ${srcLine(a.source)}
-     <div class="by">${av(a.by, 18)} ${esc(pn(a.by))} · ${fds(a.at)}${a.advocate ? ` · ${$t('on the advocate’s advice')}` : ''}${a.source?.itemId ? ` · ${$t('from the inbox')}` : ''}${a.reason ? ` · ${$t('reason: “{text}”', { text: esc(a.reason) })}` : ''}${a.decidedBy && !isPend ? ` · ${esc(pn(a.decidedBy))}` : ''}</div>
+     <div class="by">${av(a.by, 18)} ${esc(pn(a.by))} · ${fds(a.at)}${a.advocate ? ` · ${$t('on the advocate’s advice')}` : ''}${a.generated ? ` · ${ico('spark', 12)} ${a.generated === 'source' ? $t('AI draft from a source') : $t('AI draft from the knowledge base')}` : ''}${a.source?.itemId ? ` · ${$t('from the inbox')}` : ''}${a.reason ? ` · ${$t('reason: “{text}”', { text: esc(a.reason) })}` : ''}${a.decidedBy && !isPend ? ` · ${esc(pn(a.decidedBy))}` : ''}</div>
      ${isPend ? (p.canApprove && p.status === 'active' ? `<div class="acts"><button class="btn sm ok" data-a="acceptAm" data-id="${p.id}" data-am="${a.id}">${ico('check', 14)} ${$t('Accept')}</button><button class="btn sm" data-a="editAm" data-id="${p.id}" data-am="${a.id}">${$t('Edit and accept')}</button><button class="btn sm ghost" data-a="rejectAm" data-id="${p.id}" data-am="${a.id}">${$t('Reject')}</button>${a.by === uid() ? `<button class="btn sm ghost" data-a="withdrawAm" data-id="${p.id}" data-am="${a.id}">${$t('Withdraw')}</button>` : ''}</div>` : `<div class="by">${ico('bell', 13)} ${p.status === 'draft' ? $t('Waits until the draft process is approved') : $t('Waiting for a decision: {who}', { who: approverLabel(p) })}${a.by === uid() ? ` <button class="lnk" data-a="withdrawAm" data-id="${p.id}" data-am="${a.id}">${$t('Withdraw')}</button>` : ''}</div>`) : ''}
     </div>`;
   };
-  return `${multi ? `<div class="note" style="align-items:center"><span style="flex:1">${$t('Select several changes to accept them as one new version.')}</span><button class="btn sm pri" data-a="acceptSel" data-id="${p.id}" ${sel < 2 ? 'disabled' : ''}>${$t('Accept selected ({n})', { n: sel })}</button></div>` : ''}${pend.map(card).join('')}${done.length ? `<div class="grp">${$t('Decided')}</div>${done.map(card).join('')}` : ''}`;
+  return `${multi ? `<div class="note" style="align-items:center"><span style="flex:1">${$t('Select several changes to accept them as one new version.')}</span><button class="btn sm" data-a="acceptAll" data-id="${p.id}">${$t('Accept all ({n})', { n: pend.length })}</button><button class="btn sm pri" data-a="acceptSel" data-id="${p.id}" ${sel < 2 ? 'disabled' : ''}>${$t('Accept selected ({n})', { n: sel })}</button></div>` : ''}${pend.map(card).join('')}${done.length ? `<div class="grp">${$t('Decided')}</div>${done.map(card).join('')}` : ''}`;
 }
 function versionNote(p, v) {
   if (v.note === 'created') return $t('Created');
@@ -1640,6 +1656,7 @@ function docModal(m, close, cancel) {
      ${['project', 'hypothesis'].includes(m.level) && !opts.length ? `<div class="note">${$t('You are not a member of any project.')}</div>` : ''}
      ${m.level === 'org' ? `<label class="fl">${$t('Who sees it and can propose changes')}<select class="in" id="npVis">${Object.entries(PVIS).map(([k, l]) => `<option value="${k}" ${(m.vis || 'all') === k ? 'selected' : ''}>${l}${k === 'all' ? ` — ${$t('members of all teams of the organization')}` : ''}</option>`).join('')}</select></label>` : ''}
      <label class="fl">${$t('Title')}<input class="in" id="npTitle" value="${esc(m.title || '')}" placeholder="${$t('E.g. “Hypothesis retro”')}"></label>
+     ${S.ai ? `<label class="fl">${$t('Draft the content with AI from')}<select class="in" id="npGen"><option value="">${$t('Nothing — I’ll describe it myself')}</option>${draftOpts(m.gen || '')}</select></label>` : ''}
      <label class="fl">${$t('In short: what this process is')}<textarea class="in" rows="3" id="npSum" placeholder="${$t('One or two sentences. Details — steps, roles, exceptions — can be added later or come from meetings.')}">${esc(m.summary || '')}</textarea></label>`,
     `<span class="hint" style="margin-right:auto">${active ? $t('You own this level — the process becomes active right away.') : $t('The process stays a draft until it is approved by: {who}.', { who: m.level === 'team' ? $t('Team Owner / Admin') : m.level === 'org' ? $t('Organization Owner / Admin') : owner ? esc(pn(owner)) : '—' })}</span>${cancel}<button class="btn pri" data-a="createProc">${$t('Create')}</button>`);
   }
@@ -1723,14 +1740,16 @@ const DOC_ACTIONS = {
   dsel: (el) => { S.dsel[el.dataset.id] = el.checked; render(); },
   pver: (el) => { const k = `${el.dataset.id}:${el.dataset.v}`; S.pver = S.pver === k ? null : k; render(); },
   newProc: (el) => { S.modal = { k: 'doc.newProc', level: el.dataset.level || (S.d.projects.length ? 'project' : 'team'), ref: el.dataset.ref || '' }; render(); },
-  mLevel: (el) => { Object.assign(S.modal, { level: el.dataset.v, ref: '', title: docField('npTitle'), summary: docField('npSum'), vis: docField('npVis') || S.modal.vis }); modal(); },
+  mLevel: (el) => { Object.assign(S.modal, { level: el.dataset.v, ref: '', title: docField('npTitle'), summary: docField('npSum'), vis: docField('npVis') || S.modal.vis, gen: docField('npGen') }); modal(); },
   createProc: () => {
     const m = S.modal, title = docField('npTitle').trim();
     if (!title) return toast($t('Name the process'));
-    const ref = docField('npRef');
+    const ref = docField('npRef'), gen = docField('npGen');
     act(async () => {
       const p = await api('POST', T('/processes'), { level: m.level, project: m.level === 'project' ? ref : undefined, hypothesis: m.level === 'hypothesis' ? ref : undefined, visibility: m.level === 'org' ? docField('npVis') : undefined, title, summary: docField('npSum') });
-      putPc(p); S.modal = null; S.dtab[p.id] = 'advocate'; go('process-' + p.id); return p;
+      putPc(p); S.modal = null; S.dtab[p.id] = gen ? 'changes' : 'advocate'; go('process-' + p.id);
+      if (gen) setTimeout(() => runDraft(p.id, gen), 0);
+      return p;
     }, (p) => (p.status === 'active' ? $t('Process created. The advocate shows what can be added.') : $t('Process created as a draft. Approves: {who}', { who: approverLabel(p).replace(/<[^>]+>/g, '') })));
   },
   collectProc: () => { S.modal = { k: 'doc.collect' }; render(); },
@@ -1757,6 +1776,8 @@ const DOC_ACTIONS = {
     act(async () => { putPc(await pcApi(p.id, '/amendments', { kind: o.kind, target: o.target, step: o.step, before: o.before, text, note: docField('pmNote'), advocate: m.advocate })); S.modal = null; S.dtab[p.id] = 'changes'; render(); }, p.canApprove ? $t('Change added. You can accept it.') : $t('Change added. Waiting for a decision: {who}', { who: approverLabel(p).replace(/<[^>]+>/g, '') }));
   },
   acceptAm: (el) => act(async () => { const p = await pcApi(el.dataset.id, '/amendments/accept', { ids: [el.dataset.am] }); putPc(p); render(); return p; }, (p) => $t('Accepted. “{title}” is now v{n}', { title: p.title, n: p.version })),
+  genDraft: (el) => { S.genFrom = docField('genFrom'); runDraft(el.dataset.id, S.genFrom); },
+  acceptAll: (el) => { const p = pcById(el.dataset.id); const ids = p.amendments.filter((a) => a.status === 'pending').map((a) => a.id); act(async () => { const x = await pcApi(p.id, '/amendments/accept', { ids }); putPc(x); S.dsel = {}; render(); return x; }, (x) => $t('Accepted. “{title}” is now v{n}', { title: x.title, n: x.version })); },
   acceptSel: (el) => { const p = pcById(el.dataset.id); const ids = p.amendments.filter((a) => a.status === 'pending' && S.dsel[a.id]).map((a) => a.id); act(async () => { const x = await pcApi(p.id, '/amendments/accept', { ids }); putPc(x); S.dsel = {}; render(); return x; }, (x) => $t('Accepted. “{title}” is now v{n}', { title: x.title, n: x.version })); },
   editAm: (el) => { S.modal = { k: 'doc.editAm', id: el.dataset.id, am: el.dataset.am }; render(); },
   editAmGo: () => { const m = S.modal; act(async () => { const p = await pcApi(m.id, '/amendments/accept', { ids: [m.am], edits: { [m.am]: docField('eaText') } }); putPc(p); S.modal = null; render(); return p; }, (p) => $t('Accepted. “{title}” is now v{n}', { title: p.title, n: p.version })); },

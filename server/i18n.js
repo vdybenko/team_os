@@ -435,4 +435,11 @@ const UK = {
   "How we work · {name}": "Як ми працюємо · {name}",
   "Collected from {n} knowledge entries of type “process”. Edit it into one document and approve it.": "Зібрано з {n} записів знань типу «процес». Доведіть до цілісного документа й затвердьте.",
   "Pass process_id or agreement_id": "Передай process_id або agreement_id",
+  "Choose a source shared with the team: the draft is visible to everyone who sees the process": "Обери джерело, відкрите команді: драфт бачать усі, хто бачить процес",
+  "Choose where to draft from": "Обери, з чого генерувати драфт",
+  "The knowledge base has no shared entries yet": "У базі знань ще немає записів, відкритих команді",
+  "AI is not configured: describe the process by hand": "AI не налаштовано: опиши процес вручну",
+  "A draft for this process is already being generated": "Драфт для цього процесу вже генерується",
+  "The material has nothing to add to this process": "У матеріалі немає нічого, що можна додати до цього процесу",
+  "Source not found": "Джерело не знайдено",
 };

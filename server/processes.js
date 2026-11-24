@@ -11,7 +11,8 @@
 import * as store from './store.js';
 import * as D from './domain.js';
 import { tr } from './i18n.js';
-import { aiConfigured, adviseDocument, errorMessage } from './ai.js';
+import { aiConfigured, adviseDocument, draftProcessDocument, errorMessage } from './ai.js';
+import { knowledgeEvidence } from './evidence.js';
 
 export const PROC_LEVELS = ['hypothesis', 'project', 'team', 'org'];
 export const PROC_VIS = ['owner', 'owner_admin', 'all'];
@@ -276,6 +277,76 @@ export async function processViews(c) {
   const ids = uniq(list.flatMap((p) => approversOf(c, env, p)).filter((id) => !D.isMember(c.team, id)));
   const names = Object.fromEntries(await Promise.all(ids.map(async (id) => [id, (await store.getUser(id))?.name || null])));
   return list.map((p) => processView(c, env, p, names));
+}
+
+/* ---------- an AI draft of the document from a source or from the knowledge base ---------- */
+// The generated text becomes ordinary pending changes by the person who asked for it, each with its source,
+// so it goes the usual way: the owner of the level accepts or rejects it. Only shared material is used,
+// because everyone who sees the process will see these changes.
+const drafting = new Set();
+async function draftMaterial(c, p, body) {
+  const shared = (x) => c.team.kind === 'personal' || x.scope === 'team';
+  if (body.from === 'source') {
+    const src = await D.getSourceWithText(c, String(body.sourceId || ''));
+    if (!shared(src)) D.fail(400, 'Choose a source shared with the team: the draft is visible to everyone who sees the process');
+    return { kind: 'source', title: src.title, source: src, text: src.text.slice(0, 80000) };
+  }
+  if (body.from !== 'knowledge') D.fail(400, 'Choose where to draft from');
+  const rank = (k) => (p.hypothesis && k.hypothesis === p.hypothesis ? 0 : p.project && k.project === p.project ? 1 : 2) * 10 + (['process', 'decision', 'agreement'].includes(k.type) ? 0 : 5);
+  const entries = (await D.visibleKnowledge(c)).filter((k) => shared(k) && !k.supersededBy)
+    .sort((a, b) => rank(a) - rank(b) || String(b.date).localeCompare(String(a.date))).slice(0, 250);
+  if (!entries.length) D.fail(400, 'The knowledge base has no shared entries yet');
+  return { kind: 'knowledge', title: '', entries };
+}
+export async function generateProcessDraft(c, id, body) {
+  const { p } = await processFor(c, id);
+  if (p.status === 'retired') D.fail(400, 'The process is retired');
+  if (!aiConfigured()) D.fail(503, 'AI is not configured: describe the process by hand');
+  const key = `${c.tid}/${p.id}`;
+  if (drafting.has(key)) D.fail(409, 'A draft for this process is already being generated');
+  drafting.add(key);
+  try {
+    const m = await draftMaterial(c, p, body);
+    const current = { title: p.title, level: p.level, summary: p.summary, sections: { ...p.sections, steps: p.sections.steps.map((x) => x.text) } };
+    const material = m.kind === 'source'
+      ? { kind: 'source', title: m.title, text: m.text }
+      : { kind: 'knowledge', entries: m.entries.map((k) => ({ id: k.id, type: k.type, text: k.text, why: k.why ? String(k.why).slice(0, 300) : undefined, date: k.date })) };
+    let out;
+    try { out = await draftProcessDocument({ current, material }); } catch (e) { D.failWith(502, errorMessage(e)); }
+    const ground = m.kind === 'source' ? knowledgeEvidence(m.text) : null;
+    const byId = new Map((m.entries || []).map((k) => [k.id, k]));
+    const sourceOf = (x) => {
+      if (m.kind === 'source') {
+        const quote = ground(String(x.evidence_quote || ''));
+        return { itemTitle: m.title, sourceId: m.source.id, ...(quote ? { quote } : {}) };
+      }
+      const k = byId.get(typeof x.knowledge_id === 'string' ? x.knowledge_id.trim() : '');
+      if (!k) return null; // knowledge-based text must point to the entry it comes from
+      return { knowledgeId: k.id, itemTitle: k.source && k.source !== 'Added manually' ? k.source : '', quote: k.quote || k.text, ...(k.sourceId ? { sourceId: k.sourceId } : {}) };
+    };
+    const fresh = (await processFor(c, id)).p;
+    const at = store.now();
+    const add = (target, text, x, extra = {}) => {
+      const t = D.str(text, MAX_TEXT); const src = sourceOf(x);
+      if (!t || !src) return;
+      fresh.amendments.push({ id: store.newId('am'), kind: 'add', target, step: null, before: null, text: t, note: null, by: c.uid, at, source: src, advocate: false, generated: m.kind, status: 'pending', decidedBy: null, decidedAt: null, reason: null, version: null, ...extra });
+    };
+    const before = fresh.amendments.length;
+    const waiting = new Set(pendingOf(fresh).map((a) => a.target));
+    if (!fresh.summary && !waiting.has('summary') && out.summary?.text) add('summary', out.summary.text, out.summary);
+    const seen = new Set();
+    for (const x of out.sections || []) {
+      if (!SECTIONS.includes(x.section) || x.section === 'steps' || fresh.sections[x.section] || waiting.has(x.section) || seen.has(x.section)) continue;
+      seen.add(x.section); add(x.section, x.text, x);
+    }
+    const norm = (t) => String(t).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const have = new Set([...fresh.sections.steps.map((x) => norm(x.text)), ...pendingOf(fresh).filter((a) => a.target === 'steps').map((a) => norm(a.text))]);
+    for (const x of (out.steps || []).slice(0, MAX_STEPS)) { if (!have.has(norm(x.text))) { have.add(norm(x.text)); add('steps', x.text, x); } }
+    const added = fresh.amendments.length - before;
+    if (!added) D.fail(422, 'The material has nothing to add to this process');
+    await saveProcess(c, fresh);
+    return { process: fresh, added };
+  } finally { drafting.delete(key); }
 }
 
 /* ---------- collecting knowledge entries of type "process" into one document ---------- */
