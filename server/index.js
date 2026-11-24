@@ -9,6 +9,7 @@ import { aiConfigured, errorMessage, AI_PROVIDER, MODEL } from './ai.js';
 import { askAssistant } from './assistant.js';
 import { langOf, tr, render, msg, LANGS } from './i18n.js';
 import * as D from './domain.js';
+import * as Docs from './processes.js';
 import { transcribeConfigured } from './transcribe.js';
 import { mountOAuth } from './oauth.js';
 import { mountMcp } from './mcp.js';
@@ -21,7 +22,7 @@ app.disable('x-powered-by');
 if (process.env.TRUST_LOCAL_PROXY === '1') app.set('trust proxy', 'loopback');
 // A PDF arrives base64-encoded in JSON, so adding to the inbox gets a larger body limit than the rest of the API.
 const jsonSmall = express.json({ limit: '5mb' }), jsonInbox = express.json({ limit: '30mb' });
-app.use((req, res, next) => (req.method === 'POST' && /^\/api\/teams\/[^/]+\/inbox(\/audio)?\/?$/.test(req.path) ? jsonInbox : jsonSmall)(req, res, next));
+app.use((req, res, next) => (req.method === 'POST' && /^\/api\/teams\/[^/]+\/(inbox(\/audio)?|agreements\/extract)\/?$/.test(req.path) ? jsonInbox : jsonSmall)(req, res, next));
 app.use(sessionMiddleware);
 mountAuthRoutes(app);
 mountOAuth(app);
@@ -77,13 +78,14 @@ app.get('/api/teams/:tid/state', requireUser, route(async (req) => {
   ]);
   const goals = await D.listGoals(c, projects);
   const org = c.team.orgId ? await store.getOrg(c.team.orgId) : null;
+  const [processes, agreements] = await Promise.all([Docs.processViews(c), Docs.agreementViews(c)]);
   return {
     team: { id: c.team.id, name: c.team.name, kind: c.team.kind, settings: c.team.settings || { urgentDays: 2 }, invites: c.admin ? c.team.invites : [] },
     org: org ? { id: org.id, name: org.name, role: D.orgRole(org, c.uid) } : null,
     role: c.role, members,
     projects: projects.map((p) => (p.goals?.length ? { ...p, goals: [] } : p)), hypotheses, goals,
     tasks: tasks.map((t) => D.taskView(c, t)),
-    knowledge,
+    knowledge, processes, agreements,
     sources: sources.map((s) => ({ ...s, canDelete: D.canDeleteSource(c, s) })),
     inbox: inbox.map(({ proposals, ...i }) => ({ ...D.inboxView(c.lang, i), counts: D.countProps(D.reviewProposals({ ...i, proposals })) })),
     vision,
@@ -206,6 +208,37 @@ app.post('/api/teams/:tid/hypotheses', requireUser, route(async (req) => D.creat
 app.patch('/api/teams/:tid/hypotheses/:hid', requireUser, route(async (req) => D.updateHypothesis(await ctx(req), req.params.hid, req.body)));
 app.post('/api/teams/:tid/hypotheses/:hid/learnings', requireUser, route(async (req) => D.addLearning(await ctx(req), req.params.hid, req.body.text)));
 app.delete('/api/teams/:tid/hypotheses/:hid', requireUser, route(async (req) => { await D.deleteHypothesis(await ctx(req), req.params.hid); }));
+
+/* ================= API: processes ================= */
+// Responses carry the view of the document for the signed-in member (what they may approve, what waits for them).
+const processOut = async (c, p) => (await Docs.processViews(c)).find((x) => x.id === p.id) || p;
+const agreementOut = (c, a) => Docs.agreementView(c, a);
+const P_ = '/api/teams/:tid/processes';
+app.post(P_, requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.createProcess(c, req.body)); }));
+app.post(P_ + '/links', requireUser, route(async (req) => Docs.linkProcess(await ctx(req), req.body)));
+app.post(P_ + '/collect', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.collectProcess(c, req.body)); }));
+app.patch(P_ + '/:id', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.updateProcess(c, req.params.id, req.body)); }));
+app.delete(P_ + '/:id', requireUser, route(async (req) => { await Docs.deleteProcess(await ctx(req), req.params.id); }));
+app.post(P_ + '/:id/approve', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.approveProcess(c, req.params.id)); }));
+app.post(P_ + '/:id/amendments', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.proposeProcessChange(c, req.params.id, req.body)); }));
+app.post(P_ + '/:id/amendments/accept', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.acceptProcessChanges(c, req.params.id, req.body.ids, req.body.edits)); }));
+app.post(P_ + '/:id/amendments/:aid/reject', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.rejectProcessChange(c, req.params.id, req.params.aid, req.body.reason)); }));
+app.delete(P_ + '/:id/amendments/:aid', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.withdrawProcessChange(c, req.params.id, req.params.aid)); }));
+app.post(P_ + '/:id/draft', requireUser, route(async (req) => { const c = await ctx(req); const r = await Docs.generateProcessDraft(c, req.params.id, req.body); return { process: await processOut(c, r.process), added: r.added }; }));
+app.post(P_ + '/:id/advocate', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.runAdvocate(c, 'process', req.params.id)); }));
+app.post(P_ + '/:id/advocate/dismiss', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.dismissAdvice(c, 'process', req.params.id, req.body.key)); }));
+
+/* ================= API: agreements ================= */
+const A_ = '/api/teams/:tid/agreements';
+app.use(A_, (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+app.post(A_ + '/extract', requireUser, route(async (req) => Docs.extractAgreement(await ctx(req), req.body)));
+app.post(A_, requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.createAgreement(c, req.body)); }));
+app.post(A_ + '/:id/versions', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.proposeAgreementChange(c, req.params.id, req.body)); }));
+app.delete(A_ + '/:id/versions/pending', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.withdrawAgreementVersion(c, req.params.id)); }));
+app.post(A_ + '/:id/respond', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.respondToAgreement(c, req.params.id, req.body)); }));
+app.post(A_ + '/:id/external-consent', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.recordExternalConsent(c, req.params.id, req.body)); }));
+app.post(A_ + '/:id/advocate', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.runAdvocate(c, 'agreement', req.params.id)); }));
+app.post(A_ + '/:id/advocate/dismiss', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.dismissAdvice(c, 'agreement', req.params.id, req.body.key)); }));
 
 /* ================= API: tasks ================= */
 
@@ -360,13 +393,19 @@ app.post('/api/teams/:tid/inbox/:iid/apply', requireUser, route(async (req) => {
   } finally { applying.delete(key); }
 }));
 
-/* ================= roadmap (single source: README.md) ================= */
+/* ================= roadmap & updates (single source: README.md) ================= */
 
-app.get('/api/roadmap', requireUser, route(() => {
+// Returns the body of a "## <title>" section of README.md, up to the next "## " heading.
+function readmeSection(title) {
   const readme = fs.readFileSync(path.join(here, '..', 'README.md'), 'utf8');
-  const i = readme.indexOf('## Roadmap');
-  return { markdown: i < 0 ? '' : readme.slice(i).replace(/^## Roadmap\s*\n/, '') };
-}));
+  const m = readme.match(new RegExp(`^## ${title}[ \\t]*\\n`, 'm'));
+  if (!m) return '';
+  const rest = readme.slice(m.index + m[0].length);
+  const end = rest.search(/^## /m);
+  return (end < 0 ? rest : rest.slice(0, end)).trim();
+}
+app.get('/api/roadmap', requireUser, route(() => ({ markdown: readmeSection('Roadmap') })));
+app.get('/api/updates', requireUser, route(() => ({ markdown: readmeSection('Updates') })));
 
 /* ================= static + SPA ================= */
 

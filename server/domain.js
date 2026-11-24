@@ -9,6 +9,7 @@ import { knowledgeEvidence } from './evidence.js';
 import { tr, render, msg } from './i18n.js';
 import { pdfToText, MAX_PDF_BYTES } from './pdf.js';
 import { transcribe, transcribeConfigured, MAX_AUDIO_BYTES } from './transcribe.js';
+import * as Docs from './processes.js';
 
 /* ================= helpers ================= */
 
@@ -586,6 +587,7 @@ export async function removeMember(c, uid) {
   const m = c.team.members.find((x) => x.userId === uid) || fail(404, 'Member not found');
   if (m.role === 'owner') fail(400, 'The Owner can’t leave — transfer ownership first');
   c.team.members = c.team.members.filter((x) => x !== m); await store.saveTeam(c.team);
+  await Docs.markPartyLeft(c.team, uid);
 }
 
 /* ================= inbox ================= */
@@ -692,8 +694,8 @@ async function transcribeItem(c, iid) {
 /* ---------- analysis ---------- */
 
 async function analysisContext(c, item) {
-  const [people, prj, hypotheses, tasks, knowledge, vision] = await Promise.all([
-    teamMembers(c.team), store.projects.list(c.tid), store.hypotheses.list(c.tid), visibleTasks(c), visibleKnowledge(c), store.getVision(c.tid),
+  const [people, prj, hypotheses, tasks, knowledge, vision, documents] = await Promise.all([
+    teamMembers(c.team), store.projects.list(c.tid), store.hypotheses.list(c.tid), visibleTasks(c), visibleKnowledge(c), store.getVision(c.tid), Docs.analysisContext(c),
   ]);
   const appliedTasks = new Map((item.proposals || []).filter((p) => ['task', 'merged'].includes(p.appliedKind)).map((p) => [p.applied, {
     id: p.applied, title: p.title, owner: p.owner, requester: p.requester, quote: p.quote, timestamp: p.ts,
@@ -714,6 +716,8 @@ async function analysisContext(c, item) {
     ...(appliedTasks.size ? { applied_tasks: [...appliedTasks.values()] } : {}),
     existing_knowledge: knowledge.filter((k) => !k.supersededBy).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 60)
       .map((k) => ({ id: k.id, type: k.type, text: k.text, date: k.date, project_id: k.project || null })),
+    processes: documents.processes,
+    agreements: documents.agreements,
   };
 }
 
@@ -812,18 +816,60 @@ function toProposals(c, out, context, source) {
   }
   for (const x of out.new_projects || []) P.push({ id: pid(), kind: 'project', on: false, ...ev(x), name: str(x.name, 120), vision: str(x.vision, 2000) });
   for (const x of out.new_hypotheses || []) P.push({ id: pid(), kind: 'hyp', on: false, ...ev(x), project: prj.has(x.project_id) ? x.project_id : null, if: str(x.if, 1000), then: str(x.then, 1000), because: str(x.because, 1000), metric: str(x.metric, 300), owner: x.owner_member_id && mem.has(x.owner_member_id) ? x.owner_member_id : c.uid });
+  // Processes and agreements: a change proposed here becomes a draft that the owner (or every party) decides on.
+  const procs = new Map((context.processes || []).map((x) => [x.id, x]));
+  const agrs = new Map((context.agreements || []).map((x) => [x.id, x]));
+  const opt = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  for (const x of out.process_changes || []) {
+    const pr = procs.get(x.process_id); if (!pr) continue;
+    const kind = ['add', 'extend', 'replace', 'remove'].includes(x.kind) ? x.kind : 'add';
+    const section = [...Docs.SECTIONS, 'summary'].includes(x.section) ? x.section : 'steps';
+    const stepIds = new Set(pr.steps.map((st) => st.id));
+    const step = section === 'steps' && kind !== 'add' ? (stepIds.has(opt(x.step_id)) ? opt(x.step_id) : null) : null;
+    if (section === 'steps' && kind !== 'add' && !step) continue;
+    const text = str(x.text, 3000);
+    if (kind !== 'remove' && !text) continue;
+    P.push({ id: pid(), kind: 'proc', on: x.confidence === 'high', ...ev(x), process: pr.id, akind: kind, section, step, before: section === 'steps' && kind === 'add' && stepIds.has(opt(x.before_step_id)) ? opt(x.before_step_id) : null, text });
+  }
+  for (const x of out.new_processes || []) {
+    const title = str(x.title, 200); if (!title) continue;
+    let level = ['hypothesis', 'project', 'team'].includes(x.level) ? x.level : 'team';
+    const h = hyp.get(opt(x.hypothesis_id));
+    const project = level === 'hypothesis' ? (h ? h.project_id : null) : prj.has(opt(x.project_id)) ? opt(x.project_id) : null;
+    if (level === 'hypothesis' && !h) level = project ? 'project' : 'team';
+    if (level === 'project' && !project) level = 'team';
+    P.push({ id: pid(), kind: 'newproc', on: false, ...ev(x), title, summary: str(x.summary, 2000), level, project: level === 'team' ? null : project, hypothesis: level === 'hypothesis' ? h.id : null, steps: (x.steps || []).map((st) => str(st, 500)).filter(Boolean).slice(0, 20) });
+  }
+  for (const x of out.agreement_changes || []) {
+    const ag = agrs.get(x.agreement_id); if (!ag) continue;
+    const clause = ag.clauses.find((cl) => cl.id === opt(x.clause_id));
+    const text = str(x.text, 3000); if (!text) continue;
+    P.push({ id: pid(), kind: 'agr', on: x.confidence === 'high', ...ev(x), agreement: ag.id, clause: clause?.id || null, clauseTitle: str(x.clause_title, 200) || clause?.title || '', text });
+  }
+  for (const x of out.new_agreements || []) {
+    const title = str(x.title, 200); if (!title) continue;
+    const parties = [...new Set([c.uid, ...(x.party_member_ids || []).filter((m) => mem.has(m)), ...(x.external_parties || []).map((n) => str(n, 120)).filter(Boolean).map((n) => `ext:${n}`)])];
+    const clauses = (x.clauses || []).map((cl) => ({ title: str(cl.title, 200), text: str(cl.text, 2000) })).filter((cl) => cl.text).slice(0, 30);
+    if (parties.length < 2 || !clauses.length) continue;
+    P.push({ id: pid(), kind: 'newagr', on: false, ...ev(x), title, atype: ['partnership', 'roles', 'team_rules', 'other'].includes(x.type) ? x.type : 'other', parties, clauses });
+  }
   return P.filter((p) => p.quote);
 }
 
-const PROP_KEYS = ['id', 'kind', 'on', 'quote', 'ts', 'conf', 'title', 'owner', 'requester', 'due', 'project', 'hypothesis', 'important', 'dup', 'merge', 'task', 'to', 'type', 'text', 'why', 'scope', 'conflict', 'conflictNote', 'visionConflict', 'res', 'name', 'vision', 'if', 'then', 'because', 'metric', 'from', 'manual'];
+const PROP_KEYS = ['id', 'kind', 'on', 'quote', 'ts', 'conf', 'title', 'owner', 'requester', 'due', 'project', 'hypothesis', 'important', 'dup', 'merge', 'task', 'to', 'type', 'text', 'why', 'scope', 'conflict', 'conflictNote', 'visionConflict', 'res', 'name', 'vision', 'if', 'then', 'because', 'metric', 'from', 'manual',
+  'process', 'akind', 'section', 'step', 'before', 'summary', 'level', 'steps', 'agreement', 'clause', 'clauseTitle', 'atype', 'parties', 'clauses'];
+const PROP_KINDS = ['task', 'status', 'kn', 'project', 'hyp', 'proc', 'newproc', 'agr', 'newagr'];
 function sanitizeProposals(ps) {
   const used = new Set();
-  return ps.slice(0, 300).filter((p) => p && ['task', 'status', 'kn', 'project', 'hyp'].includes(p.kind)).map((p) => {
+  return ps.slice(0, 300).filter((p) => p && PROP_KINDS.includes(p.kind)).map((p) => {
     const o = pick(p, PROP_KEYS);
     o.id = typeof o.id === 'string' && /^[\w-]{1,80}$/.test(o.id) && !used.has(o.id) ? o.id : store.newId('pr');
     used.add(o.id);
     o.on = Boolean(o.on);
-    for (const k of ['title', 'text', 'why', 'name', 'vision', 'if', 'then', 'because', 'metric', 'quote', 'conflictNote', 'visionConflict']) if (o[k] != null) o[k] = str(o[k], 2000);
+    for (const k of ['title', 'text', 'why', 'name', 'vision', 'if', 'then', 'because', 'metric', 'quote', 'conflictNote', 'visionConflict', 'summary', 'clauseTitle']) if (o[k] != null) o[k] = str(o[k], 3000);
+    if (o.steps !== undefined) o.steps = (Array.isArray(o.steps) ? o.steps : []).map((x) => str(x, 500)).filter(Boolean).slice(0, 20);
+    if (o.parties !== undefined) o.parties = (Array.isArray(o.parties) ? o.parties : []).filter((x) => typeof x === 'string').map((x) => str(x, 130)).filter(Boolean).slice(0, 30);
+    if (o.clauses !== undefined) o.clauses = (Array.isArray(o.clauses) ? o.clauses : []).map((x) => ({ title: str(x?.title, 200), text: str(x?.text, 3000) })).filter((x) => x.text).slice(0, 30);
     return o;
   });
 }
@@ -831,7 +877,7 @@ function sanitizeProposals(ps) {
 /* ---------- apply reviewed proposals ---------- */
 
 export async function applyProposals(c, item) {
-  const n = { task: 0, merged: 0, status: 0, routed: 0, kn: 0, project: 0, hyp: 0, skipped: 0 };
+  const n = { task: 0, merged: 0, status: 0, routed: 0, kn: 0, project: 0, hyp: 0, procDraft: 0, process: 0, agrDraft: 0, agreement: 0, skipped: 0 };
   const notified = new Set(), notes = [];
   const src = item.proposals.some((p) => p.on || p.appliedKind) ? await ensureSource(c, item) : null;
   const sourceOf = (p) => ({ itemId: item.id, itemTitle: item.title, owner: c.uid, ts: p.ts || null, quote: p.quote || '', ...(src ? { sourceId: src.id } : {}) });
@@ -901,13 +947,27 @@ export async function applyProposals(c, item) {
           await createHypothesis(c, { project, if: p.if, then: p.then, because: p.because, metric: p.metric || '', owner: p.owner || c.uid }, { id, source: sourceOf(p) });
         }
         await saved(p, id, 'hyp');
+      } else if (p.kind === 'proc') {
+        // Step 1 of 2: the uploader confirms it was said and concerns this process. The owner decides on the draft.
+        const am = idFor('am', p);
+        await Docs.proposeProcessChange(c, p.process, { kind: p.akind, target: p.section, step: p.step, before: p.before, text: p.text }, { id: am, source: sourceOf(p) });
+        await saved(p, p.process, 'procDraft');
+      } else if (p.kind === 'newproc') {
+        const pc = await Docs.createProcess(c, { level: p.level, project: p.project, hypothesis: p.hypothesis, title: p.title, summary: p.summary, sections: { steps: (p.steps || []).map((text) => ({ text, source: sourceOf(p) })) } }, { id: idFor('pc', p), source: sourceOf(p) });
+        await saved(p, pc.id, 'process');
+      } else if (p.kind === 'agr') {
+        await Docs.proposeAgreementChange(c, p.agreement, { clause: { id: p.clause || null, title: p.clauseTitle, text: p.text }, note: tr(c.lang, 'From “{title}”', { title: item.title }) }, { source: sourceOf(p), reviewId: idFor('review', p) });
+        await saved(p, p.agreement, 'agrDraft');
+      } else if (p.kind === 'newagr') {
+        const ag = await Docs.createAgreement(c, { type: p.atype, title: p.title, parties: p.parties, clauses: (p.clauses || []).map((cl) => ({ ...cl, source: sourceOf(p) })), note: tr(c.lang, 'From “{title}”', { title: item.title }) }, { id: idFor('ag', p), source: sourceOf(p) });
+        await saved(p, ag.id, 'agreement');
       }
     } catch (e) {
       if (e instanceof HttpError) { n.skipped++; notes.push(e.i18n); } else throw e;
     }
   }
   if (src) await recordDerived(c, src, item);
-  const lines = [['task', 'newCommitment'], ['merged', 'merged'], ['status', 'statusUpdated'], ['routed', 'routed'], ['kn', 'knowledgeSaved'], ['project', 'project'], ['hyp', 'draftHypothesis'], ['skipped', 'skipped']]
+  const lines = [['task', 'newCommitment'], ['merged', 'merged'], ['status', 'statusUpdated'], ['routed', 'routed'], ['kn', 'knowledgeSaved'], ['project', 'project'], ['hyp', 'draftHypothesis'], ['procDraft', 'processDraft'], ['process', 'newProcess'], ['agrDraft', 'agreementDraft'], ['agreement', 'newAgreement'], ['skipped', 'skipped']]
     .filter(([k]) => n[k]).map(([k, plural]) => ({ plural, n: n[k] }));
   return { lines, notified: [...notified], notes };
 }
@@ -942,7 +1002,7 @@ async function ensureSource(c, item) {
   return src;
 }
 
-const DERIVED_KIND = { task: 'task', merged: 'task', status: 'task', routed: 'task', kn: 'knowledge', hyp: 'hypothesis', project: 'project' };
+const DERIVED_KIND = { task: 'task', merged: 'task', status: 'task', routed: 'task', kn: 'knowledge', hyp: 'hypothesis', project: 'project', procDraft: 'process', process: 'process', agrDraft: 'agreement', agreement: 'agreement' };
 async function recordDerived(c, src, item) {
   const fresh = await store.findSource(c.tid, src.id, c.uid) || src;
   const have = new Set((fresh.derived ||= []).map((d) => `${d.kind}:${d.id}`));

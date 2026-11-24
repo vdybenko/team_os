@@ -360,6 +360,9 @@ export const projects = collection('projects');
 export const hypotheses = collection('hypotheses');
 // Goals (Objective + Key Results) on every level: team, project and member. All of them are visible to the whole team.
 export const goals = collection('goals');
+// Processes of the hypothesis / project / team levels and agreements (visible to their parties only).
+export const processes = collection('processes');
+export const agreements = collection('agreements');
 
 /* ---------------- organizations ---------------- */
 // records/primary/orgs/<orgId>/org.json — a container that groups teams. A team points to it with team.orgId.
@@ -374,6 +377,24 @@ export async function saveOrg(o) {
   writeJson(orgFile(o.id), o);
   return o;
 }
+
+// records/primary/orgs/<orgId>/processes/<id>.json — the first content that belongs to the organization itself.
+const orgProcessPrefix = (oid) => `${orgRoot}${assertId(oid)}/processes/`;
+const orgProcessDir = (oid) => path.join(DATA_DIR, orgProcessPrefix(oid));
+export const orgProcesses = {
+  list: (oid) => S3_RECORDS ? listJson(orgProcessPrefix(oid)) : listFiles(orgProcessDir(oid), '.json').map((f) => readJson(path.join(orgProcessDir(oid), f))).filter(Boolean),
+  get: (oid, id) => S3_RECORDS ? getJson(orgProcessPrefix(oid) + assertId(id) + '.json') : readJson(path.join(orgProcessDir(oid), assertId(id) + '.json')),
+  save(oid, obj) {
+    obj.updatedAt = now();
+    if (S3_RECORDS) return putJson(orgProcessPrefix(oid) + assertId(obj.id) + '.json', obj);
+    writeJson(path.join(orgProcessDir(oid), assertId(obj.id) + '.json'), obj);
+    return obj;
+  },
+  remove(oid, obj) {
+    if (S3_RECORDS) return s3.remove(obj);
+    rm(path.join(orgProcessDir(oid), assertId(obj.id) + '.json'));
+  },
+};
 
 /* ---------------- tasks ---------------- */
 // A task lives in the team folder when two or more team members take part in it
@@ -750,6 +771,11 @@ export function rebuildTeamIndex(tid) {
       for (const k of g.keyResults || []) L.push(`  - KR ${mdEsc(k.title)}: ${k.current} / ${k.target}${k.unit ? ' ' + mdEsc(k.unit) : ''}`);
     }
   }
+  const pcs = processes.localList(tid);
+  if (pcs.length) {
+    L.push('', `## Processes (${pcs.length})`, '');
+    for (const x of pcs) L.push(`- [${mdEsc(x.title)}](processes/${x.id}.json) — ${x.level} · ${x.status}${x.version ? ` · v${x.version}` : ''}`);
+  }
   const orphan = hyp.filter((h) => !prj.some((p) => p.id === h.project));
   if (orphan.length) { L.push('', '### Hypotheses without a project', ''); for (const h of orphan) L.push(`- [${mdEsc(h.statement || h.if)}](hypotheses/${h.id}.json) — ${HSTATUS[h.status]}`); }
   const tasks = localSharedTasks(tid), kn = localSharedKnowledge(tid);
@@ -816,7 +842,7 @@ export async function migrateToS3({ from }) {
   if (!S3_RECORDS) throw new Error('S3_BUCKET must be set.');
   if (!['files', 'split'].includes(from)) throw new Error('Select the source layout: files or split.');
 
-  const counts = { users: 0, teams: 0, projects: 0, goals: 0, hypotheses: 0, tasks: 0, knowledge: 0, privateTasks: 0, privateKnowledge: 0, visions: 0, inbox: 0, sources: 0, chats: 0, signinLinks: 0 };
+  const counts = { users: 0, teams: 0, projects: 0, goals: 0, processes: 0, agreements: 0, hypotheses: 0, tasks: 0, knowledge: 0, privateTasks: 0, privateKnowledge: 0, visions: 0, inbox: 0, sources: 0, chats: 0, signinLinks: 0 };
   async function copy(key, body, type) {
     if (body === null) return false;
     try { await s3.write(key, body, type); }
@@ -849,6 +875,7 @@ export async function migrateToS3({ from }) {
   }
   for (const oid of listDirs(path.join(DATA_DIR, orgRoot)).filter((id) => SAFE_ID.test(id))) {
     await copy(orgKey(oid), readText(orgFile(oid)), JSON_TYPE);
+    await copyFolder(orgProcessDir(oid), orgProcessPrefix(oid), '.json', JSON_TYPE, 'processes');
   }
   const teams = localTeams();
   for (const team of teams) {
@@ -860,6 +887,8 @@ export async function migrateToS3({ from }) {
     await copyFolder(path.join(dir, 'projects'), prefix + 'projects/', '.json', JSON_TYPE, 'projects');
     await copyFolder(path.join(dir, 'hypotheses'), prefix + 'hypotheses/', '.json', JSON_TYPE, 'hypotheses');
     await copyFolder(path.join(dir, 'goals'), prefix + 'goals/', '.json', JSON_TYPE, 'goals');
+    await copyFolder(path.join(dir, 'processes'), prefix + 'processes/', '.json', JSON_TYPE, 'processes');
+    await copyFolder(path.join(dir, 'agreements'), prefix + 'agreements/', '.json', JSON_TYPE, 'agreements');
 
     for (const user of users) {
       const personal = userTeamPrefix(user.id, tid);

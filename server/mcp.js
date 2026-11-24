@@ -9,6 +9,7 @@
 
 import * as store from './store.js';
 import * as D from './domain.js';
+import * as Docs from './processes.js';
 import { authenticate, challenge, RESOURCE } from './oauth.js';
 import { origin } from './auth.js';
 import { render, msg, tr, LANGS } from './i18n.js';
@@ -19,6 +20,7 @@ const INSTRUCTIONS = `TeamOS is the user's team second brain: tasks (commitments
 Start with list_workspaces to get team ids; most tools take team_id (optional when the connection is limited to one workspace).
 People are referenced by member id (from list_members / get_workspace_overview) or "ext:Name" for someone outside the team.
 Task rules: the requester (who set the task) changes its status and fields; the owner (who does it) can only comment. "I owe" = tasks where I am the owner; "owed to me" = tasks I requested from others.
+Processes (how we work, on the hypothesis / project / team / organization level) and agreements (what the parties agreed on) are versioned documents: anyone proposes a change; the owner of the process level accepts it, and an agreement version comes into force only when every party accepts it.
 Raw meeting transcripts, emails and notes go to add_to_inbox: TeamOS extracts proposals that the user confirms in Review. Use create_task / add_knowledge for items the user has already confirmed.
 Dates are YYYY-MM-DD.`;
 
@@ -77,6 +79,36 @@ function taskOut(c, t, full = false) {
 }
 const knOut = (c, k) => clean({ id: k.id, type: k.type, text: k.text, why: k.why, scope: k.scope, project_id: k.project, date: k.date, author: who(c, k.author), source: k.source, quote: k.quote, replaces: k.supersedes, superseded_by: k.supersededBy, you_can_edit: D.canEditKn(c, k) });
 const projectOut = (c, p) => clean({ id: p.id, name: p.name, status: p.status, owner: who(c, p.owner), vision: p.vision, members: (p.members || []).map((m) => who(c, m)), goals: (c.goalList || []).filter((g) => g.level === 'project' && g.project === p.id).map((g) => clean(D.legacyGoalView(g))) });
+const processOut = (c, p, full = false) => clean({
+  id: p.id, title: p.title, level: p.level, project_id: p.project, hypothesis_id: p.hypothesis, visibility: p.visibility, status: p.status, version: p.version,
+  summary: p.summary, approvers: (p.approvers || []).map((x) => who(c, x) || { id: x, name: p.approverNames?.[x] }), you_can_approve: p.canApprove,
+  pending_changes: full ? undefined : p.pending, waiting_for_you: p.needsMe || undefined, completeness: `${p.coverage}/${Docs.SECTIONS.length}`,
+  ...(full ? {
+    sections: { ...Object.fromEntries(Docs.SECTIONS.filter((k) => k !== 'steps').map((k) => [k, p.sections[k]])), steps: p.sections.steps.map((x) => clean({ id: x.id, text: x.text, quote: x.source?.quote })) },
+    changes: p.amendments.map((a) => clean({ id: a.id, kind: a.kind, section: a.target, step_id: a.step, before_step_id: a.before, text: a.text, status: a.status, by: who(c, a.by), at: a.at, quote: a.source?.quote, reason: a.reason, accepted_in_version: a.version })),
+    versions: p.versions.map((v) => clean({ n: v.n, at: v.at, by: who(c, v.by), note: v.note, changes: v.amendments })),
+    advocate: p.advocate ? clean({ checked_version: p.advocate.version, suggestions: p.advocate.suggestions, risks: p.advocate.risks, alternatives: p.advocate.alternatives }) : undefined,
+  } : {}),
+});
+const agreementOut = (c, a, full = false) => {
+  const clauses = (v) => v?.clauses.map((x) => clean({ id: x.id, title: x.title, text: x.text, quote: x.source?.quote }));
+  return clean({
+    id: a.id, title: a.title, type: a.type, status: a.status, parties: (a.current?.parties || a.parties).map((x) => who(c, x)), version_in_force: a.current?.n,
+    waiting_for_you: a.needsMe || undefined, review_reason: a.reviewReason ? clean({ party_left: who(c, a.reviewReason.party) || a.reviewReason.name, at: a.reviewReason.at }) : undefined,
+    pending: a.pending ? clean({
+      version: a.pending.n, by: who(c, a.pending.by), note: a.pending.note, terminate: a.pending.terminate || undefined, parties: a.pending.parties.map((x) => who(c, x)),
+      required: a.required.map((x) => who(c, x)), consents: a.pending.consents.map((x) => clean({ party: who(c, x.party), decision: x.decision, note: x.note, at: x.at })),
+      clauses: full ? clauses(a.pending) : undefined,
+    }) : undefined,
+    ...(full ? {
+      clauses_in_force: clauses(a.current), terminated_at: a.terminatedAt,
+      history: a.versions.map((v) => clean({ version: v.n, in_force_from: v.at, consents: v.consents.map((x) => who(c, x.party)) })),
+      advocate_checklist: a.checklist.map((x) => clean({ item: x.label, covered: x.ok, suggestion: x.ok ? undefined : x.suggestion })),
+      advocate: a.advocate ? clean({ checked_version: a.advocate.version, suggestions: a.advocate.suggestions, risks: a.advocate.risks, alternatives: a.advocate.alternatives }) : undefined,
+    } : {}),
+  });
+};
+const findView = async (list, id, what) => (await list).find((x) => x.id === id) || D.fail(404, what);
 const krOut = (c, k) => clean({ id: k.id, title: k.title, unit: k.unit, start: k.start, current: k.current, target: k.target, progress: Math.round(D.krProgress(k) * 100) / 100, owner: who(c, k.owner), confidence: k.confidence, note: k.note, last_checkin: k.checkins?.at(-1)?.at });
 const goalOut = (c, g) => clean({
   id: g.id, level: g.level, period: g.period, type: g.type, status: g.status, title: g.title, description: g.description, owner: who(c, g.owner),
@@ -457,6 +489,97 @@ const TOOLS = [
     description: 'Replaces the Team vision document (Markdown) of a workspace (Owner/Admin). Read it first with get_workspace_overview and keep what should stay.',
     inputSchema: obj({ team_id: S.team, markdown: S.str('The full new vision in Markdown', { maxLength: 100000 }) }, ['markdown']),
     async run(s, a) { const c = await teamCtx(s, a); await D.saveVision(c, a.markdown); return { saved: true, team_id: c.tid }; },
+  },
+
+  /* ---- processes & agreements ---- */
+  {
+    name: 'list_processes', title: 'List processes', scope: 'read', annotations: RO,
+    description: 'Processes you can see: how the team works on the hypothesis, project, team and organization level, with the version, who approves changes, pending changes and completeness by TeamOS Advocate.',
+    inputSchema: obj({ team_id: S.team, level: S.enum(Docs.PROC_LEVELS, 'Only this level'), project_id: S.str('Only processes of this project and its hypotheses'), waiting_for_me: S.bool('Only processes with changes waiting for your approval') }),
+    async run(s, a) {
+      const c = await teamCtx(s, a);
+      const list = (await Docs.processViews(c)).filter((p) => (!a.level || p.level === a.level) && (!a.project_id || p.project === a.project_id) && (!a.waiting_for_me || p.needsMe));
+      return { processes: list.map((p) => processOut(c, p)) };
+    },
+  },
+  {
+    name: 'get_process', title: 'Get a process', scope: 'read', annotations: RO,
+    description: 'The current version of a process by section and its steps (with step ids for proposing changes), proposed changes, version history and the latest advocate review.',
+    inputSchema: obj({ team_id: S.team, process_id: S.str('Process id') }, ['process_id']),
+    async run(s, a) { const c = await teamCtx(s, a); return processOut(c, await findView(Docs.processViews(c), a.process_id, 'Process not found'), true); },
+  },
+  {
+    name: 'propose_process_change', title: 'Propose a process change', scope: 'write', annotations: W,
+    description: 'Adds a draft change to a process. It changes nothing until whoever approves the process accepts it (if that is you, accept it with decide_process_change). kind: add (a new step, or describe an empty section), extend (add a detail), replace ("from now on we do it differently"), remove.',
+    inputSchema: obj({
+      team_id: S.team, process_id: S.str('Process id'), kind: S.enum(Docs.AMEND_KINDS, 'Kind of change'), section: S.enum([...Docs.SECTIONS, 'summary'], 'Section the change is about'),
+      step_id: S.str('For extend / replace / remove of a step'), before_step_id: S.str('For a new step: the step it goes before (default: at the end)'), text: S.str('The proposed wording (not needed for remove)'), note: S.str('Why'),
+    }, ['process_id', 'kind', 'section']),
+    async run(s, a) {
+      const c = await teamCtx(s, a);
+      const p = await Docs.proposeProcessChange(c, a.process_id, { kind: a.kind, target: a.section, step: a.step_id, before: a.before_step_id, text: a.text, note: a.note }, { source: { itemTitle: provenance(s) } });
+      return processOut(c, await findView(Docs.processViews(c), p.id, 'Process not found'), true);
+    },
+  },
+  {
+    name: 'decide_process_change', title: 'Accept or reject process changes', scope: 'write', annotations: W,
+    description: 'For whoever approves the process: accept one or several pending changes (they make one new version; edits replace the proposed wording) or reject one with a reason.',
+    inputSchema: obj({
+      team_id: S.team, process_id: S.str('Process id'), accept_ids: { type: 'array', items: { type: 'string' }, description: 'Change ids to accept together' },
+      edits: { type: 'object', additionalProperties: { type: 'string' }, description: 'Change id → the wording to accept instead' }, reject_id: S.str('A change id to reject'), reason: S.str('Why it is rejected'),
+    }, ['process_id']),
+    async run(s, a) {
+      const c = await teamCtx(s, a);
+      if (a.reject_id) await Docs.rejectProcessChange(c, a.process_id, a.reject_id, a.reason);
+      if (a.accept_ids?.length) await Docs.acceptProcessChanges(c, a.process_id, a.accept_ids, a.edits || {});
+      if (!a.reject_id && !a.accept_ids?.length) D.fail(400, 'Choose the changes to accept');
+      return processOut(c, await findView(Docs.processViews(c), a.process_id, 'Process not found'), true);
+    },
+  },
+  {
+    name: 'list_agreements', title: 'List agreements', scope: 'read', annotations: RO,
+    description: 'Agreements you are a party of (Owner/Admin don’t see others’), their status (pending, in_force, needs_review, terminated) and whose consent a pending version waits for.',
+    inputSchema: obj({ team_id: S.team, waiting_for_me: S.bool('Only agreements waiting for your response') }),
+    async run(s, a) {
+      const c = await teamCtx(s, a);
+      return { agreements: (await Docs.agreementViews(c)).filter((x) => !a.waiting_for_me || x.needsMe).map((x) => agreementOut(c, x)) };
+    },
+  },
+  {
+    name: 'get_agreement', title: 'Get an agreement', scope: 'read', annotations: RO,
+    description: 'Clauses in force and of the version on approval, consents, earlier versions and the advocate checklist.',
+    inputSchema: obj({ team_id: S.team, agreement_id: S.str('Agreement id') }, ['agreement_id']),
+    async run(s, a) { const c = await teamCtx(s, a); return agreementOut(c, await findView(Docs.agreementViews(c), a.agreement_id, 'Agreement not found'), true); },
+  },
+  {
+    name: 'propose_agreement_change', title: 'Propose an agreement change', scope: 'write', annotations: W,
+    description: 'As a party: proposes a new version of one clause (clause_id, or none for a new clause; empty text removes it). The version replaces any version on approval and resets consents given so far; it comes into force when every party accepts. The version in force stays until then. TeamOS records agreement between people; it is not a legal document.',
+    inputSchema: obj({ team_id: S.team, agreement_id: S.str('Agreement id'), clause_id: S.str('Clause to change'), clause_title: S.str('Clause title'), text: S.str('The complete new wording of the clause'), note: S.str('What changes and why') }, ['agreement_id', 'text']),
+    async run(s, a) {
+      const c = await teamCtx(s, a);
+      const x = await Docs.proposeAgreementChange(c, a.agreement_id, { clause: { id: a.clause_id || null, title: a.clause_title, text: a.text }, note: a.note }, { source: { itemTitle: provenance(s) } });
+      return agreementOut(c, Docs.agreementView(c, x), true);
+    },
+  },
+  {
+    name: 'respond_to_agreement', title: 'Respond to an agreement', scope: 'write', annotations: W,
+    description: 'Your own response, as a party, to the version on approval: accept, or reject with a reason. Only do this when the user explicitly asks you to give their consent.',
+    inputSchema: obj({ team_id: S.team, agreement_id: S.str('Agreement id'), decision: S.enum(['accept', 'reject'], 'Your decision'), note: S.str('Reason (required to reject)') }, ['agreement_id', 'decision']),
+    async run(s, a) { const c = await teamCtx(s, a); return agreementOut(c, Docs.agreementView(c, await Docs.respondToAgreement(c, a.agreement_id, { decision: a.decision, note: a.note })), true); },
+  },
+  {
+    name: 'review_with_advocate', title: 'Review with TeamOS Advocate', scope: 'write', annotations: W,
+    description: 'TeamOS Advocate reviews a process or an agreement: what is missing, risks and 2–3 alternatives. It changes nothing; propose a change to act on its advice. Needs AI configured on the server; otherwise returns the checklist only.',
+    inputSchema: obj({ team_id: S.team, process_id: S.str('Process id'), agreement_id: S.str('Agreement id') }),
+    async run(s, a) {
+      const c = await teamCtx(s, a);
+      const kind = a.process_id ? 'process' : a.agreement_id ? 'agreement' : D.fail(400, 'Pass process_id or agreement_id');
+      const id = a.process_id || a.agreement_id;
+      let note;
+      try { await Docs.runAdvocate(c, kind, id); } catch (e) { if (e.status === 503) note = render(c.lang, e.i18n); else throw e; }
+      const out = kind === 'process' ? processOut(c, await findView(Docs.processViews(c), id, 'Process not found'), true) : agreementOut(c, await findView(Docs.agreementViews(c), id, 'Agreement not found'), true);
+      return note ? { ...out, note } : out;
+    },
   },
 
   /* ---- manage ---- */

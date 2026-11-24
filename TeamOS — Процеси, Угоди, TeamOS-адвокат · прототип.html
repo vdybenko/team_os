@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeamOS — Процеси, Угоди, TeamOS-адвокат · прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#0e0e0e);--side:light-dark(#f5f5f3,#151515);--card:light-dark(#ffffff,#161616);--soft:light-dark(#f6f6f4,#1c1c1c);
+--ink:light-dark(#111111,#f1f1f1);--mut:light-dark(#686868,#9c9c9c);--line:light-dark(#e4e4e0,#2b2b2b);--line2:light-dark(#d4d4cf,#3a3a3a);
+--red:#e4002b;--redbg:light-dark(#fde8ec,#3a0d16);--amber:light-dark(#9a5b00,#f0b45a);--amberbg:light-dark(#fff3dc,#3a2a0c);
+--green:light-dark(#0b7a52,#4fd19c);--greenbg:light-dark(#e3f5ec,#0f2e22);--hi:light-dark(#fff2a6,#4b4310);--blue:light-dark(#1f4fd8,#7fa2ff);--bluebg:light-dark(#e8eefc,#14203d)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{font-stretch:112%;line-height:1.15;margin:0;text-wrap:balance}
+h1{font-size:30px;font-weight:800}h2{font-size:18px;font-weight:750}h3{font-size:15px;font-weight:700}
+.i{flex:none;vertical-align:-3px}
+.proto-banner{background:var(--ink);color:var(--bg);font-size:13px;padding:6px 16px;text-align:center}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.side{background:var(--side);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow:auto;padding:12px 10px;display:flex;flex-direction:column;gap:2px}
+.teamsw{display:flex;align-items:center;gap:8px;padding:8px;font-weight:700}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.nv{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;border:0;background:none;width:100%;text-align:left;color:var(--ink);font-size:14.5px}
+.nv:hover{background:var(--line)}
+.nv.on{background:var(--ink);color:var(--bg)}
+.nv.stub{color:var(--mut)}
+.nv .bd{margin-left:auto;background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:0 7px;line-height:18px}
+.nv .new{margin-left:auto;font-size:10.5px;font-weight:700;border-radius:20px;padding:0 6px;line-height:17px;background:var(--bluebg);color:var(--blue)}
+.nv.on .new{background:var(--bg)}
+.sect{font-size:12px;font-weight:700;color:var(--mut);padding:14px 10px 4px}
+.spacer{flex:1}
+.main{min-width:0}
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 28px;min-height:58px}
+.viewas{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin-left:auto}
+.viewas select{padding:5px 8px;border-radius:8px;border:1px solid var(--line2);background:var(--card)}
+.burger{display:none}
+.page{padding:26px 28px 120px;max-width:1280px}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:var(--card);border-radius:9px;padding:7px 13px;font-weight:600;font-size:14px;white-space:nowrap;min-height:36px}
+.btn:hover{border-color:var(--ink)}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.pri:hover{opacity:.88}
+.btn.ok{background:var(--green);border-color:var(--green);color:#fff}
+.btn.ghost{border-color:transparent;background:none}.btn.ghost:hover{background:var(--soft)}
+.btn.sm{padding:3px 9px;min-height:28px;font-size:13px;border-radius:7px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.nv:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.row:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.lnk{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;font-size:inherit;font-weight:600}
+.hd{display:flex;align-items:flex-end;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.hd .sub{color:var(--mut);margin-top:6px}
+.hd .act{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;padding:3px;gap:2px;background:var(--card);flex-wrap:wrap}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:7px;font-weight:600;font-size:13.5px;color:var(--mut)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card h2{font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.split{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--soft);color:var(--mut);white-space:nowrap;border:0}
+.chip.red{background:var(--redbg);color:var(--red)}.chip.amber{background:var(--amberbg);color:var(--amber)}.chip.green{background:var(--greenbg);color:var(--green)}.chip.blue{background:var(--bluebg);color:var(--blue)}
+.chip.ink{background:var(--ink);color:var(--bg)}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--mut);white-space:nowrap}
+.tag::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+.av{--s:24px;width:var(--s);height:var(--s);border-radius:50%;background:var(--c,#888);color:#fff;display:inline-grid;place-items:center;font-size:calc(var(--s)*.45);font-weight:700;flex:none;position:relative}
+.av.ext{background:var(--soft);color:var(--mut);border:1px dashed var(--line2)}
+.av.gone{opacity:.45;filter:grayscale(1)}
+.av .ck{position:absolute;right:-3px;bottom:-3px;width:13px;height:13px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--card);font-size:8px;color:#fff}
+.av .ck.y{background:var(--green)}.av .ck.n{background:var(--red)}.av .ck.w{background:var(--line2)}
+.avs{display:inline-flex;gap:4px}
+.hint{font-size:13px;color:var(--mut)}
+.empty{color:var(--mut);padding:18px 8px;text-align:center;font-size:14px}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--soft);border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--mut);margin-bottom:14px}
+.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:14px}
+.banner.amber{background:var(--amberbg)}.banner.red{background:var(--redbg)}.banner.blue{background:var(--bluebg)}.banner.green{background:var(--greenbg)}
+.banner .grow{flex:1;min-width:220px}
+.banner b{font-weight:700}
+.banner .acts{display:flex;gap:8px;flex-wrap:wrap}
+/* list rows */
+.grp{font-size:12.5px;font-weight:700;color:var(--mut);margin:22px 0 8px;display:flex;gap:8px;align-items:center}
+.grp:first-child{margin-top:0}
+.row{display:flex;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--card);cursor:pointer;width:100%;text-align:left}
+.row:hover{border-color:var(--ink)}
+.row.me{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.row .tt{flex:1;min-width:0}
+.row .tt b{display:block;font-weight:650}
+.row .tt .s{font-size:13px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .rt{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.cov{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
+.pb{height:6px;border-radius:4px;background:var(--line);overflow:hidden;width:70px}
+.pb i{display:block;height:100%;background:var(--ink);border-radius:4px}
+.pb.big{width:100%;height:8px}
+/* doc */
+.sec{border-top:1px solid var(--line);padding:12px 0}
+.sec:first-child{border-top:0;padding-top:0}
+.sec h3{font-size:13px;color:var(--mut);font-stretch:100%;display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.sec h3 .lnk{margin-left:auto;font-weight:600;font-size:12.5px;color:var(--mut)}
+.sec .miss{color:var(--mut);font-style:italic;font-size:14px}
+ol.steps{margin:4px 0 0;padding-left:22px}ol.steps li{margin:3px 0}
+.src{font-size:12.5px;color:var(--mut);border-left:3px solid var(--line2);padding-left:8px;margin-top:4px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px -18px 14px;padding:0 12px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:9px 10px;font-weight:600;font-size:14px;color:var(--mut);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.tabs button.on{color:var(--ink);border-color:var(--ink)}
+.tabs .n{font-size:11px;background:var(--soft);border-radius:20px;padding:0 6px}
+.tabs .n.red{background:var(--red);color:#fff}
+.draft{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.draft.adv{border-style:dashed}
+.draft .top2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.draft .top2 input{width:17px;height:17px;accent-color:var(--ink);margin:0}
+.draft .txt{font-size:14.5px}
+.draft .by{font-size:12.5px;color:var(--mut);margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.draft .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.draft.done{opacity:.6}
+.kind{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:1px 7px;border-radius:6px;background:var(--soft)}
+.kind.add{background:var(--greenbg);color:var(--green)}.kind.rep{background:var(--amberbg);color:var(--amber)}.kind.rem{background:var(--redbg);color:var(--red)}.kind.ext{background:var(--bluebg);color:var(--blue)}
+.ver{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.ver:first-child{border-top:0}
+.ver .n{font-weight:800;font-stretch:112%}
+.ver .m{font-size:12.5px;color:var(--mut)}
+/* advocate */
+.adv-h{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.adv-ico{width:36px;height:36px;border-radius:10px;background:var(--ink);color:var(--bg);display:grid;place-items:center;flex:none}
+.big-n{font:800 28px/1 Archivo,system-ui,sans-serif;font-stretch:112%}
+.chk{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.chk:first-child{border-top:0}
+.chk .mk{width:18px;height:18px;border-radius:50%;flex:none;display:grid;place-items:center;margin-top:1px;font-size:11px;color:#fff}
+.chk .mk.y{background:var(--green)}.chk .mk.n{background:none;border:2px solid var(--line2)}
+.chk .body{flex:1}
+.chk .sug{font-size:13px;color:var(--mut);margin-top:2px}
+.chk .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.risk{border-left:3px solid var(--amber);padding:2px 0 2px 10px;margin:8px 0;font-size:14px}
+.alt{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:14px}
+.alt b{display:block;margin-bottom:2px}
+.alt .pc{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;color:var(--mut);margin-top:6px}
+.disc{font-size:12.5px;color:var(--mut);margin-top:12px}
+/* agreements */
+.cl{padding:12px 0;border-top:1px solid var(--line)}
+.cl:first-child{border-top:0;padding-top:0}
+.cl h3{font-size:14px;margin-bottom:3px;display:flex;gap:8px;align-items:center}
+.cl.chg{background:var(--hi);margin:0 -10px;padding:12px 10px;border-radius:10px;border-top-color:transparent}
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.diff div{border-radius:8px;padding:8px 10px;font-size:14px}
+.diff .was{background:var(--redbg)}.diff .now{background:var(--greenbg)}
+.diff small{display:block;font-size:11.5px;font-weight:700;color:var(--mut);margin-bottom:2px}
+.party{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.party:first-child{border-top:0}
+.party .nm{flex:1}
+.party .nm small{display:block;color:var(--mut);font-size:12.5px}
+/* review */
+.rv{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:20px;align-items:start}
+.tr{position:sticky;top:76px}
+.ln{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:6px 8px;border-radius:8px;font-size:14px}
+.ln .ts{color:var(--mut);font-size:12px;padding-top:2px}
+.ln.hl{background:var(--hi)}
+.prop{display:flex;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--card)}
+.prop:hover{border-color:var(--ink)}
+.prop.off{opacity:.5}
+.prop>input{width:18px;height:18px;margin-top:3px;accent-color:var(--ink);flex:none}
+.prop .pb2{flex:1;min-width:0}
+.prop .ev{font-size:13.5px;color:var(--mut);margin-top:8px;border-left:3px solid var(--line2);padding-left:9px}
+.prop .next{font-size:12.5px;margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:var(--mut)}
+.fields{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:13px;color:var(--mut);align-items:center;margin-top:6px}
+.fields select{border:1px solid var(--line);background:var(--soft);border-radius:7px;padding:3px 6px;font-size:13px;color:var(--ink)}
+/* forms & modal */
+select.in,input.in,textarea.in{border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:6px 9px;font-size:14px;min-height:36px;width:100%}
+textarea.in{resize:vertical}
+label.fl{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mut);font-weight:600;margin-bottom:12px}
+.lv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.lv button{border:1px solid var(--line2);background:var(--card);border-radius:10px;padding:10px;text-align:left;font-size:13px;color:var(--mut)}
+.lv button b{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}
+.lv button.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.ov{position:fixed;inset:0;background:#0006;z-index:30;display:grid;place-items:start center;padding:8vh 16px;overflow:auto}
+.md{background:var(--card);border-radius:16px;width:min(620px,100%);box-shadow:0 30px 80px #0005;padding:20px 22px}
+.md.wide{width:min(760px,100%)}
+.mdh{display:flex;align-items:center;gap:10px;margin-bottom:14px}.mdh .x{margin-left:auto}
+.mdf{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;align-items:center;flex-wrap:wrap}
+.mdf .hint{margin-right:auto}
+.pchk{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.pchk label{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line2);border-radius:20px;padding:4px 10px 4px 6px;font-size:13.5px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;z-index:50;max-width:min(560px,90vw);text-align:center}
+.scrim{display:none}
+@media(max-width:1000px){.split,.rv{grid-template-columns:minmax(0,1fr)}.tr{position:static}.g2{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;inset:0 auto 0 0;width:260px;z-index:40;transform:translateX(-105%);transition:transform .2s}
+  .side.on{transform:none}
+  .scrim.on{display:block;position:fixed;inset:0;background:#0005;z-index:35}
+  .burger{display:inline-flex}
+  .top{padding:10px 16px;flex-wrap:wrap}.page{padding:20px 16px 100px}
+  .viewas{margin-left:0;width:100%}
+  .lv{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row{flex-wrap:wrap}.row .rt{flex-direction:row;align-items:center;width:100%;justify-content:flex-start;flex-wrap:wrap}
+  .diff,.alt .pc{grid-template-columns:minmax(0,1fr)}
+  h1{font-size:25px}
+}
+@media(prefers-reduced-motion:reduce){.side{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* TeamOS — Processes · Agreements · TeamOS Advocate — clickable prototype.
+   Based on docs/02-processes-and-agreements-vision.md. Demo data only; everything lives in memory, reload resets. */
+
+/* ================= icons ================= */
+const I = {
+  dash: 'M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z', inbox: 'M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6H3v-6z', tasks: 'M4 4h16v16H4zM8 12l3 3 5-6',
+  kn: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4zM5 16a4 4 0 0 1 4-4h10', target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  proc: 'M4 6h4v4H4zM16 6h4v4h-4zM10 15h4v4h-4zM8 8h8M6 10v3h6M18 10v3h-6', agr: 'M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h4M4 8v12a1 1 0 0 0 1 1h1',
+  plus: 'M12 5v14M5 12h14', x: 'M6 6l12 12M18 6L6 18', lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4', warn: 'M12 3l10 18H2zM12 10v5M12 18v.5',
+  back: 'M19 12H5M11 6l-6 6 6 6', check: 'M5 12l5 5L20 7', spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6',
+  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z M9 12l2 2 4-4', quote: 'M7 7h4v4c0 3-2 5-4 6M14 7h4v4c0 3-2 5-4 6', org: 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1',
+  bell: 'M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0', menu: 'M4 6h16M4 12h16M4 18h16', users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 20a5 5 0 0 0-4-5',
+  link: 'M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', arrow: 'M5 12h14M13 6l6 6-6 6',
+};
+const ico = (n, s = 16) => `<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${I[n]}"/></svg>`;
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const TODAY = '2026-11-24';
+const fdate = (d) => { if (!d) return ''; const [, m, dd] = d.split('-'); return `${Number(dd)} ${['січ', 'лют', 'бер', 'квіт', 'трав', 'черв', 'лип', 'серп', 'вер', 'жовт', 'лист', 'груд'][Number(m) - 1]}`; };
+
+/* ================= demo data ================= */
+const U = {
+  v: { name: 'Volodymyr', c: '#b4441c', role: 'owner', org: 'owner' },
+  o: { name: 'Олександр', c: '#2f7f8f', role: 'admin', org: 'admin' },
+  r: { name: 'Ростислав', c: '#a8326e', role: 'member', org: null },
+  k: { name: 'Катерина', c: '#7a3fb0', role: 'member', org: null },
+  m: { name: 'Марина', c: '#8a6d00', role: null, org: null, left: '2026-11-18' },
+};
+const TEAM = ['v', 'o', 'r', 'k'];
+const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Member' };
+const PROJECTS = [
+  { id: 'p1', name: 'Outreach via Linxa', color: '#1f4fd8', owner: 'v', members: ['v', 'r'] },
+  { id: 'p2', name: 'Content & Brand', color: '#0b8a5f', owner: 'o', members: ['o', 'k', 'r'] },
+  { id: 'p3', name: 'Linxa MCP', color: '#7a3fb0', owner: 'o', members: ['o', 'v'] },
+];
+const HYPS = [
+  { id: 'h1', project: 'p1', code: 'H1', owner: 'r', title: 'Агресивний контент по кожному сервісу' },
+  { id: 'h2', project: 'p1', code: 'H2', owner: 'v', title: 'Фолоуап візитерів з розсилки' },
+];
+
+const SECS = [['purpose', 'Мета'], ['trigger', 'Тригер'], ['roles', 'Ролі'], ['inputs', 'Входи'], ['steps', 'Кроки'], ['output', 'Результат і критерій готовності'], ['metric', 'Метрика'], ['exceptions', 'Винятки'], ['review', 'Частота перегляду']];
+const SECN = Object.fromEntries(SECS);
+const ADV_HINT = {
+  purpose: 'Навіщо цей процес і що зламається без нього.', trigger: 'Коли процес запускається: подія, розклад чи умова.', roles: 'Хто виконує, хто відповідає, кого консультують, кого інформують.',
+  inputs: 'Що має бути готове на старті.', steps: 'Що робимо по порядку.', output: 'Як зрозуміти, що процес завершено.', metric: 'Як ми знаємо, що процес працює.',
+  exceptions: 'Що робити, коли щось пішло не так.', review: 'Коли власник переглядає сам процес.',
+};
+const sec0 = () => ({ purpose: '', trigger: '', roles: '', inputs: '', steps: [], output: '', metric: '', exceptions: '', review: '' });
+const S0 = (o) => ({ ...sec0(), ...o });
+let seq = 100; const nid = (p) => `${p}${++seq}`;
+
+let PROCS = [
+  { id: 'pr1', level: 'org', vis: 'all', title: 'Онбординг нової людини', summary: 'Перший тиждень новачка: доступи, бадді, 1:1 і перша закрита задача.', status: 'active', version: 2, creator: 'v',
+    sec: S0({ purpose: 'Щоб нова людина за перший тиждень розуміла, як ми працюємо, і закрила першу задачу.', trigger: 'Людина прийняла оффер', roles: 'Відповідає: Owner/Admin організації. Виконує: бадді з команди новачка.', inputs: 'Доступи, Team vision, процеси команди', steps: [{ t: 'Надати доступи до TeamOS, пошти й Linxa' }, { t: 'Призначити бадді з команди' }, { t: '1:1 з Owner команди в перший день' }, { t: 'Перша задача з дедлайном до п’ятниці' }], output: 'Новачок закрив першу задачу і провів 1:1 з бадді', review: 'Раз на пів року' }),
+    drafts: [], versions: [{ n: 1, at: '2026-06-02', by: 'v', note: 'Створено' }, { n: 2, at: '2026-10-14', by: 'o', note: 'Додано крок «Призначити бадді з команди»' }] },
+  { id: 'pr2', level: 'org', vis: 'owner_admin', title: 'Найм у команди', summary: 'Вакансію погоджує Owner організації, інтерв’ю проводять двоє з команди.', status: 'active', version: 1, creator: 'v',
+    sec: S0({ purpose: 'Наймати людей, які підсилюють цілі організації.', steps: [{ t: 'Owner організації погоджує вакансію' }, { t: 'Два інтерв’ю: з Owner команди і з майбутнім колегою' }, { t: 'Оплачуване тестове завдання до 4 годин' }] }),
+    drafts: [], versions: [{ n: 1, at: '2026-08-11', by: 'v', note: 'Створено' }] },
+  { id: 'pr3', level: 'org', vis: 'owner', title: 'Витрати понад $500', summary: 'Будь-яку витрату понад $500 письмово погоджує Owner організації.', status: 'active', version: 1, creator: 'v',
+    sec: S0({ purpose: 'Тримати витрати під контролем, не гальмуючи дрібні покупки.', trigger: 'Витрата понад $500', steps: [{ t: 'Описати витрату й очікуваний результат' }, { t: 'Owner організації погоджує або відхиляє в TeamOS' }] }),
+    drafts: [], versions: [{ n: 1, at: '2026-07-01', by: 'v', note: 'Створено' }] },
+  { id: 'pr4', level: 'team', title: 'Тижневе планування', summary: 'Щопонеділка звіряємо пріоритети тижня з цілями кварталу.', status: 'active', version: 3, creator: 'v',
+    sec: S0({ purpose: 'Щотижня узгоджувати пріоритети команди з цілями кварталу.', trigger: 'Понеділок, 10:00', roles: 'Веде: Owner команди. Беруть участь: усі члени команди.', inputs: 'OKR кварталу, задачі «Чекає на мене», check-in key results', steps: [{ t: 'Check-in key results (5 хв)' }, { t: 'Кожен називає 3 пріоритети тижня' }, { t: 'Перевірити WIP гіпотез у тестуванні' }, { t: 'Записати задачі в TeamOS' }], output: 'У кожного є задачі на тиждень, прив’язані до key results', metric: 'Alignment score ≥ 70%', exceptions: 'Якщо Owner відсутній — веде Admin', review: 'Раз на квартал' }),
+    drafts: [{ id: 'd1', kind: 'add', target: 'steps', at: 4, text: 'Кожен називає один блокер, з яким потрібна допомога', by: 'k', on: '2026-11-19', st: 'pending' }],
+    versions: [{ n: 1, at: '2026-04-06', by: 'v', note: 'Створено' }, { n: 2, at: '2026-07-13', by: 'o', note: 'Додано «Перевірити WIP гіпотез у тестуванні»' }, { n: 3, at: '2026-10-05', by: 'v', note: 'Метрика: Alignment score ≥ 70%' }] },
+  { id: 'pr5', level: 'team', title: 'Обробка інбоксу після мітингу', summary: 'Хто записав мітинг, протягом дня кидає транскрипт в інбокс і підтверджує пропозиції.', status: 'draft', version: 0, creator: 'k', createdAt: '2026-11-22',
+    sec: sec0(), drafts: [], versions: [] },
+  { id: 'pr6', level: 'project', ref: 'p1', title: 'Запуск сиквенсу outreach', summary: 'Від аудиторії до розбору відповідей — так, щоб не шкодити репутації акаунтів.', status: 'active', version: 2, creator: 'v',
+    sec: S0({ purpose: 'Запускати сиквенси, які не шкодять репутації акаунтів і дають цікаві відповіді.', trigger: 'Новий сегмент аудиторії або нова гіпотеза в проєкті', roles: 'Виконує: автор сиквенсу. Затверджує текст: власник проєкту.', inputs: 'Сегмент аудиторії, гіпотеза, 3 варіанти першого повідомлення', steps: [{ t: 'Зібрати аудиторію в Linxa (від 300 контактів)' }, { t: 'Написати 3 кроки сиквенсу' }, { t: 'Узгодити текст з власником проєкту' }, { t: 'Запустити сиквенс' }, { t: 'Через 7 днів — розбір відповідей', src: { title: 'Ретро outreach · 3 лист', quote: 'Давайте завжди через тиждень сідати й дивитись відповіді.' } }], output: 'Сиквенс запущено, розбір відповідей — у learnings гіпотези', metric: 'Reply rate' }),
+    drafts: [{ id: 'd2', kind: 'rep', target: 'metric', text: 'Reply rate ≥ 12% на перших 100 контактах', by: 'r', on: '2026-11-20', st: 'pending', src: { title: 'Синк Outreach · 20 лист', quote: 'Якщо на першій сотні менше 12%, далі не масштабуємо.' } }],
+    versions: [{ n: 1, at: '2026-09-15', by: 'v', note: 'Створено' }, { n: 2, at: '2026-11-04', by: 'v', note: 'Додано «Через 7 днів — розбір відповідей»' }],
+    advice: { exceptions: 'Якщо на перших 50 контактах є скарга або reply rate нижче 3%, зупинити сиквенс і обговорити з власником проєкту.', review: 'Раз на квартал, разом з ретро гіпотез проєкту.' },
+    risks: ['Крок «Узгодити текст з власником проєкту» не має строку — запуск може чекати тижнями.', 'Метрика «Reply rate» без цілі: незрозуміло, коли сиквенс вважати невдалим.'],
+    alts: [['Один сиквенс — одна гіпотеза', 'Простіше рахувати внесок у key result', 'Більше дисципліни при запуску'], ['Затверджувати шаблони, а не кожен текст', 'Запуск швидший на 2–3 дні', 'Вищий ризик невдалих повідомлень'], ['A/B двох перших повідомлень на 50 контактах', 'Більше даних з першого тижня', 'Запуск довший на тиждень']] },
+  { id: 'pr7', level: 'project', ref: 'p2', title: 'Публікація поста', summary: 'Чернетка → рев’ю → публікація у вівторок або четвер.', status: 'active', version: 1, creator: 'o',
+    sec: S0({ purpose: 'Публікувати пости, що приводять реєстрації.', steps: [{ t: 'Чернетка в Notion' }, { t: 'Рев’ю Олександра' }, { t: 'Публікація у вівторок або четвер о 9:00' }] }),
+    drafts: [], versions: [{ n: 1, at: '2026-10-01', by: 'o', note: 'Створено' }] },
+  { id: 'pr8', level: 'hyp', ref: 'h1', title: 'Підрахунок коментарів для H1', summary: 'Щопонеділка рахуємо коментарі під постами кампанії й оновлюємо метрику гіпотези.', status: 'active', version: 1, creator: 'r',
+    sec: S0({ trigger: 'Щопонеділка', steps: [{ t: 'Зібрати кількість коментарів під постами кампанії' }, { t: 'Оновити метрику H1 у TeamOS' }] }),
+    drafts: [], versions: [{ n: 1, at: '2026-11-10', by: 'r', note: 'Створено' }] },
+];
+
+const AGR_TYPES = { partnership: 'Партнерський договір', team_rules: 'Правила команди', roles: 'Ролі й відповідальність', other: 'Інше' };
+const cons = (o) => Object.fromEntries(Object.entries(o).map(([u, at]) => [u, { d: 'accept', at }]));
+let AGRS = [
+  { id: 'a1', type: 'partnership', title: 'Партнерський договір Linxa', parties: ['v', 'o', 'r'],
+    inForce: { n: 1, at: '2026-09-02', note: 'Перша версія', consents: cons({ v: '2026-09-01', o: '2026-09-01', r: '2026-09-02' }), clauses: [
+      { id: 'c1', t: 'Частки', x: 'Volodymyr — 40%, Олександр — 40%, Ростислав — 20%.' },
+      { id: 'c2', t: 'Внески', x: 'Volodymyr і Олександр — повний робочий час. Ростислав — 20 годин на тиждень на outreach і продажі.' },
+      { id: 'c3', t: 'Ролі', x: 'Volodymyr — продукт і продажі. Олександр — технології та контент. Ростислав — outreach.' },
+      { id: 'c4', t: 'Рішення', x: 'Стратегічні рішення ухвалюються більшістю голосів партнерів.' }] },
+    pending: { n: 2, by: 'v', at: '2026-11-21', note: 'Перерозподіл часток після мітингу партнерів', src: { title: 'Мітинг партнерів · 20 лист', who: 'Ростислав', quote: 'Я розумію, що вкладав набагато менше часу, ніж планували. Готовий зменшити свою частку до 10%.' },
+      consents: { v: { d: 'accept', at: '2026-11-21' } }, clauses: [
+      { id: 'c1', t: 'Частки', x: 'Volodymyr — 45%, Олександр — 45%, Ростислав — 10%.' },
+      { id: 'c2', t: 'Внески', x: 'Volodymyr і Олександр — повний робочий час. Ростислав — до 8 годин на тиждень на outreach.' },
+      { id: 'c3', t: 'Ролі', x: 'Volodymyr — продукт і продажі. Олександр — технології та контент. Ростислав — outreach.' },
+      { id: 'c4', t: 'Рішення', x: 'Стратегічні рішення ухвалюються більшістю голосів партнерів.' }] },
+    past: [] },
+  { id: 'a2', type: 'team_rules', title: 'Правила команди Linxa Agent', parties: ['v', 'o', 'r', 'k'],
+    inForce: { n: 3, at: '2026-10-08', note: 'Додано правило про демо', consents: cons({ v: '2026-10-06', o: '2026-10-06', r: '2026-10-07', k: '2026-10-08' }), clauses: [
+      { id: 'c1', t: 'Відповіді в чаті', x: 'Відповідаємо в робочому чаті протягом робочого дня.' },
+      { id: 'c2', t: 'Задачі', x: 'Задачу ставить той, хто чекає на результат, і він же її закриває.' },
+      { id: 'c3', t: 'Демо', x: 'Щоп’ятниці о 16:00 показуємо, що зроблено за тиждень.' },
+      { id: 'c4', t: 'Конфлікти', x: 'Спершу обговорюємо 1:1, якщо не вийшло — разом з Owner команди.' }] },
+    pending: null, past: [{ n: 2, at: '2026-06-15', note: 'Додано правило про конфлікти', consents: cons({ v: '2026-06-12', o: '2026-06-12', r: '2026-06-15' }) }, { n: 1, at: '2026-03-02', note: 'Перша версія', consents: cons({ v: '2026-03-02', o: '2026-03-02' }) }] },
+  { id: 'a3', type: 'roles', title: 'Ролі в Content & Brand', parties: ['o', 'k', 'm'], review: { party: 'm', at: '2026-11-18' },
+    inForce: { n: 1, at: '2026-09-20', note: 'Перша версія', consents: cons({ o: '2026-09-19', k: '2026-09-19', m: '2026-09-20' }), clauses: [
+      { id: 'c1', t: 'Олександр', x: 'Стратегія контенту, рев’ю кожного поста.' },
+      { id: 'c2', t: 'Катерина', x: 'Пости, коментарі, аналітика охоплень.' },
+      { id: 'c3', t: 'Марина', x: 'Дизайн візуалів до кожного поста.' }] },
+    pending: null, past: [] },
+  { id: 'a4', type: 'other', title: 'Співпраця з дизайнером Андрієм', parties: ['v', 'ext:Андрій'], inForce: null,
+    pending: { n: 1, by: 'v', at: '2026-11-23', note: 'Перша версія', consents: { v: { d: 'accept', at: '2026-11-23' } }, clauses: [
+      { id: 'c1', t: 'Обсяг', x: '8 візуалів на місяць для постів Linxa.' },
+      { id: 'c2', t: 'Оплата', x: '$600 на місяць, до 5 числа.' },
+      { id: 'c3', t: 'Права', x: 'Права на візуали належать Linxa.' }] },
+    past: [] },
+  { id: 'a5', type: 'other', title: 'Умови співпраці з Linxa Sales', parties: ['v', 'o'], inForce: { n: 1, at: '2026-10-20', note: 'Перша версія', consents: cons({ v: '2026-10-20', o: '2026-10-20' }), clauses: [{ id: 'c1', t: 'Ліди', x: 'Linxa Sales передає ліди з outreach протягом 24 годин.' }] }, pending: null, past: [] },
+];
+
+// Checklists of TeamOS Advocate per agreement type: [key, label, regexp on clause titles, suggested clause]
+const CHECK = {
+  partnership: [
+    ['contrib', 'Внески кожного і як їх вимірюють', /внес/i],
+    ['equity', 'Розподіл часток', /^част/i],
+    ['change', 'Як змінюються частки', /зміна част/i, { t: 'Зміна часток', x: 'Раз на рік партнери переглядають частки за погодженими критеріями: час, гроші, результати.' }],
+    ['vesting', 'Вестинг і cliff', /вест/i, { t: 'Вестинг', x: 'Частка кожного партнера нараховується щомісяця протягом 4 років, з cliff 1 рік.' }],
+    ['roles', 'Ролі й зони відповідальності', /рол/i],
+    ['decisions', 'Як ухвалюються рішення', /рішен/i],
+    ['deadlock', 'Що робити в дедлоку', /дедлок/i, { t: 'Дедлок', x: 'Якщо голоси розділились порівну, вирішує зовнішній радник, обраний партнерами заздалегідь.' }],
+    ['exit', 'Вихід партнера (good / bad leaver)', /вихід/i, { t: 'Вихід партнера', x: 'Good leaver зберігає нараховану частку, bad leaver — лише за номіналом. Решту викуповують інші партнери.' }],
+    ['dilution', 'Розмиття при залученні інвестицій', /розмит/i, { t: 'Розмиття', x: 'При залученні інвестицій частки всіх партнерів розмиваються пропорційно.' }],
+    ['ip', 'Інтелектуальна власність', /власн/i, { t: 'Інтелектуальна власність', x: 'Усе, що створено для Linxa, належить компанії, а не окремим партнерам.' }],
+    ['conf', 'Конфіденційність і неконкуренція', /конфіден/i, { t: 'Конфіденційність', x: 'Партнери не розголошують внутрішню інформацію і не запускають конкурентний продукт під час участі та 12 місяців після виходу.' }],
+    ['disputes', 'Вирішення спорів', /спор/i, { t: 'Спори', x: 'Спори спершу обговорюють партнери, далі — медіація.' }],
+    ['review', 'Коли переглядаємо угоду', /перегляд/i, { t: 'Перегляд угоди', x: 'Партнери переглядають угоду раз на рік або при зміні складу.' }],
+  ],
+  team_rules: [
+    ['comm', 'Комунікація і час відповіді', /чат|відпов/i], ['tasks', 'Хто ставить і закриває задачі', /задач/i], ['meet', 'Регулярні зустрічі', /демо|зустр/i],
+    ['conf', 'Як вирішуємо конфлікти', /конфлікт/i], ['away', 'Відпустки й передача справ', /відпуст/i, { t: 'Відпустки', x: 'Перед відпусткою людина передає свої відкриті задачі колезі.' }],
+    ['review', 'Коли переглядаємо правила', /перегляд/i, { t: 'Перегляд правил', x: 'Переглядаємо правила раз на квартал на тижневому плануванні.' }],
+  ],
+  roles: [
+    ['each', 'Зона відповідальності кожного', /./], ['backup', 'Хто підміняє', /підмін/i, { t: 'Підміна', x: 'Якщо когось немає понад 3 дні, його задачі бере Олександр.' }],
+    ['handoff', 'Передача справ при виході', /передач/i, { t: 'Передача справ', x: 'Хто виходить з ролі, за тиждень передає справи й доступи.' }], ['review', 'Коли переглядаємо ролі', /перегляд/i, { t: 'Перегляд ролей', x: 'Ролі переглядаємо раз на пів року або при зміні складу.' }],
+  ],
+  other: [
+    ['scope', 'Обсяг роботи', /обсяг|ліди/i], ['pay', 'Оплата або обмін цінністю', /оплат/i, { t: 'Оплата', x: 'Опишіть, що кожна сторона отримує.' }], ['rights', 'Права на результат', /прав/i, { t: 'Права', x: 'Результати роботи належать замовнику.' }],
+    ['term', 'Строк і припинення', /строк|припин/i, { t: 'Строк і припинення', x: 'Угода діє до припинення будь-якою стороною з повідомленням за 30 днів.' }], ['review', 'Коли переглядаємо', /перегляд/i, { t: 'Перегляд', x: 'Переглядаємо умови раз на квартал.' }],
+  ],
+};
+const AGR_ADV = {
+  a1: { risks: ['Частки фіксовані, хоча внески партнерів змінюються — саме це вже сталося з часткою Ростислава. Без правил кожен перерозподіл — переговори з нуля.', 'Після перерозподілу 45 / 45 / 10 рішення «більшістю голосів» блокується, якщо Volodymyr і Олександр не згодні, а Ростислав утримався.'],
+    alts: [['Фіксовані частки + вестинг 4 роки з cliff 1 рік', 'Просто і стандартно для стартапів', 'Не враховує зміну внесків'], ['Динамічний розподіл: частка пропорційна внеску', 'Чесно відображає внески', 'Потребує регулярного обліку'], ['Фіксовані частки + щорічний перегляд за критеріями', 'Компроміс між простотою і чесністю', 'Критерії треба погодити заздалегідь']] },
+  a3: { risks: ['Марина більше не в команді, а дизайн візуалів ні за ким не закріплений — пости можуть виходити без візуалів.'], alts: [['Перерозподілити дизайн між учасниками', 'Без нових витрат', 'Більше навантаження на Катерину'], ['Залучити зовнішнього дизайнера', 'Якість і стабільність', 'Окрема угода й бюджет']] },
+};
+
+let INBOX = [{ id: 'i1', title: 'Синк команди · 24 лист', origin: 'Транскрипт Google Meet', date: '2026-11-24', done: false,
+  lines: [['00:02', 'Volodymyr', 'Давайте домовимось: перед запуском будь-якого сиквенсу тестуємо його на 10 тестових контактах.'], ['00:15', 'Ростислав', 'Так, минулого разу персоналізація зламалась на сороковому контакті.'], ['03:40', 'Катерина', 'І для H1 пропоную раз на два тижні коротке ретро: що спрацювало в постах.'], ['05:12', 'Олександр', 'Ще одне в правила команди: хто йде у відпустку, передає свої задачі до від’їзду.'], ['06:30', 'Volodymyr', 'Згоден, це треба зафіксувати.']],
+  props: [
+    { id: 'pp1', kind: 'proc_amend', on: true, proc: 'pr6', op: 'add', target: 'steps', at: 3, text: 'Протестувати сиквенс на 10 тестових контактах і перевірити персоналізацію', line: 0 },
+    { id: 'pp2', kind: 'new_proc', on: true, level: 'hyp', ref: 'h1', title: 'Ретро постів H1', summary: 'Раз на два тижні — коротке ретро: що спрацювало в постах кампанії.', line: 2 },
+    { id: 'pp3', kind: 'agr_amend', on: true, agr: 'a2', clause: { t: 'Відпустки', x: 'Хто йде у відпустку, передає свої відкриті задачі до від’їзду.' }, line: 3 },
+  ] }];
+
+/* ================= state & helpers ================= */
+const S = { as: 'v', route: 'processes', tab: {}, modal: null, lvl: 'all', agrF: 'all', side: false, sel: {}, hl: null };
+const prj = (id) => PROJECTS.find((p) => p.id === id);
+const hyp = (id) => HYPS.find((h) => h.id === id);
+const proc = (id) => PROCS.find((p) => p.id === id);
+const agr = (id) => AGRS.find((a) => a.id === id);
+const isExt = (u) => typeof u === 'string' && u.startsWith('ext:');
+const nm = (u) => (isExt(u) ? u.slice(4) : U[u]?.name || '—');
+const isAdmin = (u = S.as) => ['owner', 'admin'].includes(U[u]?.role);
+const av = (u, s = 22, ck) => {
+  const mark = ck ? `<span class="ck ${ck}">${ck === 'y' ? '✓' : ck === 'n' ? '✕' : ''}</span>` : '';
+  if (isExt(u)) return `<span class="av ext" style="--s:${s}px" title="${esc(nm(u))} · зовнішній">${esc(nm(u)[0])}${mark}</span>`;
+  return U[u] ? `<span class="av ${U[u].left ? 'gone' : ''}" style="--s:${s}px;--c:${U[u].c}" title="${esc(U[u].name)}">${U[u].name[0]}${mark}</span>` : '';
+};
+const tag = (pid) => { const p = prj(pid); return p ? `<span class="tag" style="--c:${p.color}">${esc(p.name)}</span>` : ''; };
+let toastT;
+function toast(t) { document.querySelector('.toast')?.remove(); const d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); clearTimeout(toastT); toastT = setTimeout(() => d.remove(), 3400); }
+
+/* ---------- processes: levels, owners, visibility ---------- */
+const LEVELS = { org: 'Організація', team: 'Команда', project: 'Проєкт', hyp: 'Гіпотеза' };
+const VIS = { owner: 'Тільки Owner', owner_admin: 'Owner і Admin', all: 'Усі' };
+const projOf = (p) => (p.level === 'project' ? p.ref : p.level === 'hyp' ? hyp(p.ref)?.project : null);
+// Primary approvers: they get the badge. Team Owner/Admin can also approve lower levels as a fallback.
+function primary(p) {
+  if (p.level === 'hyp') return [hyp(p.ref).owner];
+  if (p.level === 'project') return [prj(p.ref).owner];
+  if (p.level === 'team') return TEAM.filter((u) => isAdmin(u));
+  return Object.keys(U).filter((u) => U[u].org);
+}
+const canApprove = (p, u = S.as) => primary(p).includes(u) || (['hyp', 'project'].includes(p.level) && isAdmin(u));
+function approverLabel(p) {
+  if (p.level === 'hyp') return `${nm(hyp(p.ref).owner)} · відповідальний за гіпотезу`;
+  if (p.level === 'project') return `${nm(prj(p.ref).owner)} · власник проєкту`;
+  if (p.level === 'team') return 'Owner / Admin команди';
+  return 'Owner / Admin організації';
+}
+function canSeeProc(p, u = S.as) {
+  if (p.level === 'org') return p.vis === 'all' || (p.vis === 'owner' ? U[u].org === 'owner' : Boolean(U[u].org));
+  if (p.level === 'team') return true;
+  return isAdmin(u) || prj(projOf(p)).members.includes(u);
+}
+const pendingDrafts = (p) => p.drafts.filter((d) => d.st === 'pending');
+const procNeedsMe = (p, u = S.as) => primary(p).includes(u) && (pendingDrafts(p).length + (p.status === 'draft' ? 1 : 0));
+const procBadge = () => PROCS.filter((p) => canSeeProc(p)).reduce((a, p) => a + procNeedsMe(p), 0);
+const filled = (p, k) => (k === 'steps' ? p.sec.steps.length > 0 : Boolean(p.sec[k]));
+const coverage = (p) => SECS.filter(([k]) => filled(p, k)).length;
+const levelChip = (p) => {
+  const ref = p.level === 'project' ? tag(p.ref) : p.level === 'hyp' ? `${tag(hyp(p.ref).project)} <span class="hint">· ${hyp(p.ref).code}</span>` : '';
+  return `<span class="chip ${p.level === 'org' ? 'ink' : ''}">${p.level === 'org' ? ico('org', 12) + ' ' : ''}${LEVELS[p.level]}</span>${ref}`;
+};
+const visChip = (p) => (p.level === 'org' ? `<span class="chip" title="Хто бачить і може пропонувати зміни">${p.vis === 'all' ? ico('users', 12) : ico('lock', 12)} ${VIS[p.vis]}</span>` : '');
+const KIND = { add: ['add', 'Додати'], ext: ['ext', 'Розширити'], rep: ['rep', 'Замінити'], rem: ['rem', 'Прибрати'] };
+function targetLabel(p, d) {
+  if (d.target === 'steps') {
+    if (d.kind === 'rem') return `Крок ${d.at + 1}: «${esc(p.sec.steps[d.at]?.t || '')}»`;
+    return d.at != null && d.at < p.sec.steps.length ? `Кроки · перед кроком ${d.at + 1} «${esc(p.sec.steps[d.at].t)}»` : 'Кроки · в кінець';
+  }
+  return SECN[d.target];
+}
+
+/* ---------- agreements ---------- */
+const current = (a) => a.pending || a.inForce;
+const agrStatus = (a) => (a.review ? 'review' : !a.inForce ? 'draft' : a.pending ? 'pending' : 'force');
+const ST_CHIP = { review: '<span class="chip red">Потребує повного перегляду</span>', draft: '<span class="chip">Чернетка · на погодженні</span>', pending: '<span class="chip amber">Нова версія на погодженні</span>', force: '<span class="chip green">Чинна</span>' };
+const activeParties = (a) => a.parties.filter((u) => !U[u]?.left);
+const canSeeAgr = (a, u = S.as) => a.parties.includes(u);
+const agrNeedsMe = (a, u = S.as) => a.parties.includes(u) && ((a.pending && !a.pending.consents[u]) || (a.review && !a.pending));
+const agrBadge = () => AGRS.filter((a) => canSeeAgr(a) && agrNeedsMe(a)).length;
+const accepted = (a) => (a.pending ? a.pending.parties || a.parties : a.parties).filter((u) => a.pending?.consents[u]?.d === 'accept');
+const pendParties = (a) => a.pending?.parties || activeParties(a);
+function consentMark(a, u) {
+  if (!a.pending) return a.inForce?.consents[u] ? 'y' : 'w';
+  const c = a.pending.consents[u];
+  return c?.d === 'accept' ? 'y' : c?.d === 'reject' ? 'n' : 'w';
+}
+function changedClauses(a) {
+  if (!a.pending || !a.inForce) return new Set();
+  const old = new Map(a.inForce.clauses.map((c) => [c.id, c.x]));
+  return new Set(a.pending.clauses.filter((c) => old.get(c.id) !== c.x).map((c) => c.id));
+}
+function checklist(a) {
+  const cl = current(a).clauses;
+  return (CHECK[a.type] || CHECK.other).map(([key, label, re, sug]) => ({ key, label, ok: cl.some((c) => re.test(c.t)), sug }));
+}
+// Any text change resets consents: people agree to an exact text. The author of the change agrees automatically.
+function editPending(a, fn, note) {
+  const hadOthers = a.pending && Object.keys(a.pending.consents).some((u) => u !== S.as && a.pending.consents[u].d === 'accept');
+  if (!a.pending) a.pending = { n: (a.inForce?.n || 0) + 1, by: S.as, at: TODAY, note, consents: {}, clauses: structuredClone(a.inForce.clauses) };
+  fn(a.pending);
+  a.pending.consents = a.parties.includes(S.as) ? { [S.as]: { d: 'accept', at: TODAY } } : {};
+  a.pending.by = S.as; a.pending.at = TODAY; if (note) a.pending.note = note;
+  return hadOthers;
+}
+function tryFinalize(a) {
+  const ps = pendParties(a);
+  if (!ps.every((u) => a.pending.consents[u]?.d === 'accept')) return false;
+  if (a.inForce) a.past.unshift({ n: a.inForce.n, at: a.inForce.at, note: a.inForce.note, consents: a.inForce.consents });
+  a.inForce = { n: a.pending.n, at: TODAY, note: a.pending.note, consents: a.pending.consents, clauses: a.pending.clauses, src: a.pending.src };
+  if (a.pending.parties) a.parties = a.pending.parties;
+  a.pending = null; a.review = null;
+  return true;
+}
+
+/* ================= layout ================= */
+const app = document.getElementById('app');
+function go(r) { S.route = r; S.side = false; S.sel = {}; if (location.hash.slice(1) !== r) history.pushState(null, '', '#' + r); render(); window.scrollTo(0, 0); }
+window.addEventListener('popstate', () => { S.route = location.hash.slice(1) || 'processes'; render(); });
+
+function side() {
+  const r = S.route, on = (x) => (r === x || r.startsWith(x.slice(0, 4) + '-') ? 'on' : '');
+  const pb = procBadge(), ab = agrBadge(), ib = INBOX.filter((i) => !i.done).length;
+  return `<aside class="side ${S.side ? 'on' : ''}">
+  <div class="teamsw"><span class="logo">Li</span><span style="flex:1"><span style="display:block;font-size:11px;color:var(--mut);font-weight:600">Linxa</span>Linxa Agent</span></div>
+  <button class="nv ${r === 'dash' ? 'on' : ''}" data-a="go" data-h="dash">${ico('dash')}<span>Дашборд</span></button>
+  <button class="nv ${r.startsWith('inbox') || r.startsWith('review') ? 'on' : ''}" data-a="go" data-h="inbox">${ico('inbox')}<span>Інбокс</span>${ib ? `<span class="bd">${ib}</span>` : ''}</button>
+  <button class="nv stub" data-a="stub">${ico('tasks')}<span>Задачі</span></button>
+  <button class="nv stub" data-a="stub">${ico('kn')}<span>Знання</span></button>
+  <button class="nv ${r === 'processes' || r.startsWith('proc-') ? 'on' : ''}" data-a="go" data-h="processes">${ico('proc')}<span>Процеси</span>${pb ? `<span class="bd" title="Драфтів чекає на ваше затвердження">${pb}</span>` : '<span class="new">нове</span>'}</button>
+  <button class="nv ${r === 'agreements' || r.startsWith('agr-') ? 'on' : ''}" data-a="go" data-h="agreements">${ico('agr')}<span>Угоди</span>${ab ? `<span class="bd" title="Угод чекає на ваше погодження">${ab}</span>` : '<span class="new">нове</span>'}</button>
+  <div class="sect">Team Space</div>
+  <button class="nv stub" data-a="stub">${ico('target')}<span>Цілі (OKR)</span></button>
+  ${PROJECTS.map((p) => `<button class="nv stub" data-a="stub"><span class="tag" style="--c:${p.color}"></span><span>${esc(p.name)}</span></button>`).join('')}
+  <div class="spacer"></div>
+  <div class="hint" style="padding:8px 10px">Прототип: Процеси, Угоди, TeamOS-адвокат</div>
+  </aside><div class="scrim ${S.side ? 'on' : ''}" data-a="side"></div>`;
+}
+function topBar() {
+  return `<div class="top"><button class="btn ghost burger" data-a="side" aria-label="Меню">${ico('menu')}</button><span class="hint">${ico('org', 14)} Linxa / <b style="color:var(--ink)">Linxa Agent</b></span>
+  <div class="viewas">Дивитись як <select data-f="as">${['v', 'o', 'r', 'k'].map((u) => `<option value="${u}" ${S.as === u ? 'selected' : ''}>${U[u].name} · ${ROLE[U[u].role]}${U[u].org ? ` · Org ${ROLE[U[u].org]}` : ''}</option>`).join('')}</select></div></div>`;
+}
+function render() {
+  const p = page();
+  app.innerHTML = `<div class="proto-banner"><b>Прототип</b> · Процеси, Угоди й TeamOS-адвокат · демо-дані на 24 листопада 2026 · перемикайте «Дивитись як», щоб побачити права й погодження</div><div class="app">${side()}<main class="main">${topBar()}<div class="page">${p}</div></main></div>${S.modal ? modal() : ''}`;
+  if (S.modal) setTimeout(() => document.querySelector('.md [autofocus]')?.focus(), 0);
+}
+function page() {
+  const r = S.route;
+  if (r === 'dash') return pDash();
+  if (r === 'inbox') return pInbox();
+  if (r.startsWith('review-')) return pReview(r.slice(7));
+  if (r === 'agreements') return pAgreements();
+  if (r.startsWith('agr-')) return agr(r.slice(4)) && canSeeAgr(agr(r.slice(4))) ? pAgreement(agr(r.slice(4))) : noAccess('Угоду бачать лише її учасники.', 'agreements');
+  if (r.startsWith('proc-')) return proc(r.slice(5)) && canSeeProc(proc(r.slice(5))) ? pProcess(proc(r.slice(5))) : noAccess('Цей процес вам не видно.', 'processes');
+  return pProcesses();
+}
+const noAccess = (t, back) => `<div class="card empty">${ico('lock')} ${t}<br><br><button class="btn" data-a="go" data-h="${back}">${ico('back')} До списку</button></div>`;
+
+/* ================= dashboard ================= */
+function pDash() {
+  const ag = AGRS.filter((a) => canSeeAgr(a) && agrNeedsMe(a));
+  const pr = PROCS.filter((p) => canSeeProc(p) && procNeedsMe(p));
+  return `<div class="hd"><div><h1>Дашборд</h1><div class="sub">${esc(U[S.as].name)} · тут лише блок «Чекає на мене» з процесів і угод</div></div></div>
+  <div class="grid g2">
+   <div class="card"><h2>${ico('agr')} Угоди на погодження <span class="chip ${ag.length ? 'red' : ''}">${ag.length}</span></h2>
+    ${ag.map((a) => agrRow(a)).join('') || '<div class="empty">Немає угод, що чекають на вас</div>'}</div>
+   <div class="card"><h2>${ico('proc')} Процеси на затвердження <span class="chip ${pr.length ? 'red' : ''}">${pr.reduce((n, p) => n + procNeedsMe(p), 0)}</span></h2>
+    ${pr.map((p) => procRow(p)).join('') || '<div class="empty">Немає драфтів, що чекають на вас</div>'}</div>
+  </div>`;
+}
+
+/* ================= processes: list ================= */
+function procRow(p) {
+  const n = pendingDrafts(p).length, me = procNeedsMe(p);
+  const cov = coverage(p);
+  return `<button class="row ${me ? 'me' : ''}" data-a="go" data-h="proc-${p.id}">
+   <span class="tt"><b>${esc(p.title)}</b><span class="s">${esc(p.summary || p.sec.purpose)}</span>
+    <span class="chips" style="margin-top:6px">${levelChip(p)}${visChip(p)}<span class="hint">Затверджує: ${esc(approverLabel(p))}</span></span></span>
+   <span class="rt">
+    ${p.status === 'draft' ? `<span class="chip amber">Чернетка · чекає на затвердження</span>` : `<span class="chip">v${p.version}</span>`}
+    ${n ? `<span class="chip ${me ? 'red' : 'amber'}">${n} ${n === 1 ? 'драфт зміни' : 'драфти змін'}${me ? ' · на вас' : ''}</span>` : ''}
+    <span class="cov" title="Повнота за адвокатом">${ico('shield', 13)} <span class="pb"><i style="width:${Math.round((cov / 9) * 100)}%"></i></span> ${cov}/9</span>
+   </span></button>`;
+}
+function pProcesses() {
+  const vis = PROCS.filter((p) => canSeeProc(p));
+  const hiddenOrg = PROCS.filter((p) => p.level === 'org' && !canSeeProc(p)).length;
+  const f = (p) => S.lvl === 'all' || p.level === S.lvl;
+  const org = vis.filter((p) => p.level === 'org' && f(p)), team = vis.filter((p) => p.level === 'team' && f(p));
+  const byProj = PROJECTS.map((pp) => ({ pp, list: vis.filter((p) => ['project', 'hyp'].includes(p.level) && projOf(p) === pp.id && f(p)).sort((a, b) => (a.level === 'hyp') - (b.level === 'hyp')) })).filter((x) => x.list.length);
+  const notMember = PROJECTS.filter((pp) => !isAdmin() && !pp.members.includes(S.as)).length;
+  const seg = `<span class="seg">${[['all', 'Усі'], ['org', 'Організація'], ['team', 'Команда'], ['project', 'Проєкти'], ['hyp', 'Гіпотези']].map(([k, l]) => `<button class="${S.lvl === k ? 'on' : ''}" data-a="lvl" data-v="${k}">${l}</button>`).join('')}</span>`;
+  return `<div class="hd"><div><h1>Процеси</h1><div class="sub">Як ми робимо роботу — на рівні гіпотез, проєктів, команди й організації. Пропонує будь-хто, затверджує власник рівня.</div></div>
+   <div class="act"><button class="btn pri" data-a="newProc">${ico('plus')} Новий процес</button></div></div>
+  <div style="margin-bottom:18px">${seg}</div>
+  ${org.length ? `<div class="grp">${ico('org', 13)} Організація Linxa</div>${org.map(procRow).join('')}` : ''}
+  ${hiddenOrg && (S.lvl === 'all' || S.lvl === 'org') ? `<div class="note">${ico('lock')} <span>Ще ${hiddenOrg} ${hiddenOrg === 1 ? 'процес' : 'процеси'} організації приховано налаштуванням видимості («Тільки Owner» або «Owner і Admin»).</span></div>` : ''}
+  ${team.length ? `<div class="grp">Команда Linxa Agent</div>${team.map(procRow).join('')}` : ''}
+  ${byProj.map(({ pp, list }) => `<div class="grp"><span class="tag" style="--c:${pp.color}">${esc(pp.name)}</span> · проєкт і його гіпотези</div>${list.map(procRow).join('')}`).join('')}
+  ${notMember && (S.lvl === 'all' || S.lvl === 'project' || S.lvl === 'hyp') ? `<div class="hint" style="margin-top:12px">Процеси проєктів, де ви не учасник, не показуються.</div>` : ''}`;
+}
+
+/* ================= processes: card ================= */
+function stepHtml(s) { return `<li>${esc(s.t)}${s.src ? `<div class="src">${ico('quote', 12)} ${esc(s.src.title)}: «${esc(s.src.quote)}»</div>` : ''}</li>`; }
+function pProcess(p) {
+  const tab = S.tab[p.id] || (pendingDrafts(p).length ? 'drafts' : 'advocate');
+  const appr = canApprove(p), n = pendingDrafts(p).length;
+  const banner = p.status === 'draft'
+    ? `<div class="banner amber">${ico('warn')}<span class="grow"><b>Чернетка</b> від ${fdate(p.createdAt)}, автор: ${esc(nm(p.creator))}. Він набере сили після затвердження: ${esc(approverLabel(p))}.</span>${appr ? `<span class="acts"><button class="btn ok sm" data-a="approveProc" data-id="${p.id}">${ico('check', 14)} Затвердити як v1</button></span>` : ''}</div>` : '';
+  const secs = SECS.map(([k, l]) => {
+    const body = k === 'steps' ? (p.sec.steps.length ? `<ol class="steps">${p.sec.steps.map(stepHtml).join('')}</ol>` : '') : p.sec[k] ? `<div>${esc(p.sec[k])}</div>` : '';
+    return `<div class="sec"><h3>${l}<button class="lnk" data-a="propose" data-id="${p.id}" data-t="${k}">${body ? 'Запропонувати зміну' : '+ Описати'}</button></h3>${body || '<div class="miss">Не описано</div>'}</div>`;
+  }).join('');
+  const orgVis = p.level === 'org' ? `<div class="note">${ico(p.vis === 'all' ? 'users' : 'lock')}<span style="flex:1">Видимість: <b style="color:var(--ink)">${VIS[p.vis]}</b>. ${p.vis === 'all' ? 'Бачать і пропонують зміни члени всіх команд організації.' : p.vis === 'owner' ? 'Бачить і пропонує зміни лише Owner організації.' : 'Бачать і пропонують зміни Owner і Admin організації.'}</span>
+    ${canApprove(p) ? `<select class="in" style="width:auto" data-f="vis" data-id="${p.id}">${Object.entries(VIS).map(([k, l]) => `<option value="${k}" ${p.vis === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}</div>` : '';
+  return `<div class="crumb"><button class="lnk" data-a="go" data-h="processes">${ico('back', 13)} Процеси</button> / ${LEVELS[p.level]}</div>
+  <div class="hd"><div><div class="chips" style="margin-bottom:8px">${levelChip(p)}${visChip(p)}${p.status === 'draft' ? '<span class="chip amber">Чернетка</span>' : `<span class="chip green">Активний · v${p.version}</span>`}</div>
+   <h1>${esc(p.title)}</h1><div class="sub">${esc(p.summary)}</div><div class="hint" style="margin-top:6px">Затверджує зміни: <b style="color:var(--ink)">${esc(approverLabel(p))}</b>${['hyp', 'project'].includes(p.level) ? ' · резервно — Owner/Admin команди' : ''}</div></div>
+   <div class="act"><button class="btn pri" data-a="propose" data-id="${p.id}">${ico('edit')} Запропонувати зміну</button></div></div>
+  ${banner}${orgVis}
+  <div class="split">
+   <div class="card">${secs}</div>
+   <div class="card"><div class="tabs">
+     <button class="${tab === 'drafts' ? 'on' : ''}" data-a="tab" data-id="${p.id}" data-v="drafts">Драфти <span class="n ${n && appr ? 'red' : ''}">${n}</span></button>
+     <button class="${tab === 'history' ? 'on' : ''}" data-a="tab" data-id="${p.id}" data-v="history">Історія версій</button>
+     <button class="${tab === 'advocate' ? 'on' : ''}" data-a="tab" data-id="${p.id}" data-v="advocate">${ico('shield', 14)} Адвокат</button></div>
+    ${tab === 'drafts' ? draftsTab(p) : tab === 'history' ? historyTab(p) : procAdvocate(p)}
+   </div></div>`;
+}
+function draftsTab(p) {
+  const list = p.drafts.slice().sort((a, b) => (a.st === 'pending' ? 0 : 1) - (b.st === 'pending' ? 0 : 1));
+  const appr = canApprove(p), sel = Object.keys(S.sel).filter((k) => S.sel[k] && p.drafts.some((d) => d.id === k && d.st === 'pending'));
+  if (!list.length) return `<div class="empty">Драфтів немає.<br>Зміни з’являються тут, коли хтось їх пропонує вручну, з інбоксу або з поради адвоката.</div>`;
+  return `${appr && pendingDrafts(p).length > 1 ? `<div class="note" style="align-items:center"><span style="flex:1">Позначте кілька драфтів, щоб прийняти їх однією новою версією.</span><button class="btn sm pri" data-a="acceptSel" data-id="${p.id}" ${sel.length < 2 ? 'disabled' : ''}>Прийняти вибрані (${sel.length})</button></div>` : ''}
+  ${list.map((d) => {
+    const [kc, kl] = KIND[d.kind];
+    const pend = d.st === 'pending';
+    return `<div class="draft ${pend ? '' : 'done'} ${d.adv ? 'adv' : ''}"><div class="top2">${appr && pend && pendingDrafts(p).length > 1 ? `<input type="checkbox" data-a="sel" data-id="${d.id}" ${S.sel[d.id] ? 'checked' : ''} aria-label="Вибрати">` : ''}<span class="kind ${kc}">${kl}</span><span class="hint">${targetLabel(p, d)}</span>
+      ${!pend ? `<span class="chip ${d.st === 'accepted' ? 'green' : 'red'}" style="margin-left:auto">${d.st === 'accepted' ? `Прийнято у v${d.v}` : 'Відхилено'}</span>` : ''}</div>
+     ${d.kind !== 'rem' ? `<div class="txt">${esc(d.text)}</div>` : ''}
+     ${d.src ? `<div class="src">${ico('quote', 12)} ${esc(d.src.title)}: «${esc(d.src.quote)}»</div>` : ''}
+     <div class="by">${av(d.by, 18)} ${esc(nm(d.by))} · ${fdate(d.on)}${d.adv ? ' · за порадою адвоката' : ''}${d.src ? ' · з інбоксу' : ''}${d.reason ? ` · причина: «${esc(d.reason)}»` : ''}</div>
+     ${pend ? (appr ? `<div class="acts"><button class="btn sm ok" data-a="acceptDraft" data-id="${p.id}" data-d="${d.id}">${ico('check', 14)} Прийняти</button><button class="btn sm" data-a="editAccept" data-id="${p.id}" data-d="${d.id}">Редагувати й прийняти</button><button class="btn sm ghost" data-a="rejectDraft" data-id="${p.id}" data-d="${d.id}">Відхилити</button></div>` : `<div class="by">${ico('bell', 13)} Чекає на рішення: ${esc(approverLabel(p))}</div>`) : ''}
+    </div>`;
+  }).join('')}`;
+}
+function historyTab(p) {
+  if (!p.versions.length) return '<div class="empty">Ще немає затверджених версій</div>';
+  return p.versions.slice().reverse().map((v) => `<div class="ver"><span class="n">v${v.n}</span><span>${esc(v.note)}<div class="m">${av(v.by, 16)} затверджено · ${esc(nm(v.by))} · ${fdate(v.at)}</div></span></div>`).join('');
+}
+function procAdvocate(p) {
+  const cov = coverage(p); const dis = p.dismissed || [];
+  const gaps = SECS.filter(([k]) => !filled(p, k) && !dis.includes(k));
+  const risks = p.risks || (cov < 5 ? ['Процес описано коротко: новій людині буде важко його виконати без пояснень.'] : []);
+  const alts = p.alts || [];
+  return `<div class="adv-h"><span class="adv-ico">${ico('shield', 18)}</span><span style="flex:1"><b>TeamOS-адвокат</b><div class="hint">Перевірено v${p.version || 0} · ${fdate(TODAY)}. Адвокат радить, але сам нічого не змінює.</div></span><span class="big-n">${cov}<span class="hint">/9</span></span></div>
+  <div class="pb big" style="margin-bottom:14px"><i style="width:${Math.round((cov / 9) * 100)}%"></i></div>
+  <h3 style="margin-bottom:4px">Чого бракує</h3>
+  ${gaps.length ? gaps.map(([k, l]) => `<div class="chk"><span class="mk n"></span><span class="body"><b>${l}</b><div class="sug">${esc(p.advice?.[k] ? 'Пропозиція: ' + p.advice[k] : ADV_HINT[k])}</div>
+    <div class="acts"><button class="btn sm" data-a="${p.advice?.[k] ? 'advPropose' : 'propose'}" data-id="${p.id}" data-t="${k}">Запропонувати як зміну</button><button class="btn sm ghost" data-a="dismiss" data-id="${p.id}" data-t="${k}">Не актуально</button></div></span></div>`).join('') : '<div class="hint">Усі розділи описано.</div>'}
+  ${dis.length ? `<div class="hint" style="margin-top:6px">Свідомо пропущено: ${dis.map((k) => SECN[k]).join(', ')}</div>` : ''}
+  ${risks.length ? `<h3 style="margin:16px 0 4px">Ризики</h3>${risks.map((r) => `<div class="risk">${esc(r)}</div>`).join('')}` : ''}
+  ${alts.length ? `<h3 style="margin:16px 0 0">Як ще може розвиватись</h3>${alts.map(altHtml).join('')}` : ''}`;
+}
+const altHtml = ([t, plus, minus]) => `<div class="alt"><b>${esc(t)}</b><div class="pc"><span>+ ${esc(plus)}</span><span>− ${esc(minus)}</span></div></div>`;
+
+function applyDraft(p, d, text) {
+  const t = text ?? d.text;
+  if (d.target === 'steps') {
+    if (d.kind === 'rem') p.sec.steps.splice(d.at, 1);
+    else { const s = { t, ...(d.src ? { src: d.src } : {}) }; if (d.at != null && d.at < p.sec.steps.length) p.sec.steps.splice(d.at, 0, s); else p.sec.steps.push(s); }
+  } else if (d.kind === 'ext' && p.sec[d.target]) p.sec[d.target] = `${p.sec[d.target]} ${t}`;
+  else if (d.kind === 'rem') p.sec[d.target] = '';
+  else p.sec[d.target] = t;
+  if (text != null) d.text = text;
+}
+function acceptDrafts(p, ds, edited) {
+  p.version += 1;
+  ds.forEach((d) => { applyDraft(p, d, edited); d.st = 'accepted'; d.v = p.version; });
+  p.versions.push({ n: p.version, at: TODAY, by: S.as, note: ds.map((d) => `${KIND[d.kind][1]}: ${d.target === 'steps' ? 'крок' : SECN[d.target].toLowerCase()} «${(d.text || '').slice(0, 60)}»`).join('; ') });
+  S.sel = {};
+  toast(`Прийнято. Процес «${p.title}» тепер v${p.version}`);
+}
+
+/* ================= agreements: list ================= */
+function agrRow(a) {
+  const me = agrNeedsMe(a), st = agrStatus(a);
+  const ps = a.parties;
+  const acc = a.pending ? accepted(a).length : null, tot = a.pending ? pendParties(a).length : null;
+  return `<button class="row ${me ? 'me' : ''}" data-a="go" data-h="agr-${a.id}">
+   <span class="tt"><b>${esc(a.title)}</b><span class="s">${AGR_TYPES[a.type]} · ${a.inForce ? `чинна v${a.inForce.n} з ${fdate(a.inForce.at)}` : 'ще не набула чинності'}</span>
+    <span class="chips" style="margin-top:6px"><span class="avs">${ps.map((u) => av(u, 22, consentMark(a, u))).join('')}</span>${a.pending ? `<span class="hint">${acc} з ${tot} погодили v${a.pending.n}</span>` : ''}</span></span>
+   <span class="rt">${me ? `<span class="chip red">${ico('bell', 12)} ${st === 'review' ? 'Потрібен ваш перегляд' : 'Потрібне ваше погодження'}</span>` : ''}${ST_CHIP[st]}</span></button>`;
+}
+function pAgreements() {
+  const vis = AGRS.filter((a) => canSeeAgr(a));
+  const mine = vis.filter((a) => agrNeedsMe(a));
+  const list = (S.agrF === 'me' ? mine : vis).slice().sort((a, b) => agrNeedsMe(b) - agrNeedsMe(a));
+  const hidden = AGRS.length - vis.length;
+  return `<div class="hd"><div><h1>Угоди</h1><div class="sub">Про що ми домовились між собою. Нова версія набирає сили, коли її погодили <b>всі</b> учасники.</div></div>
+   <div class="act"><button class="btn pri" data-a="newAgr">${ico('plus')} Нова угода</button></div></div>
+  ${mine.length ? `<div class="banner red">${ico('bell')}<span class="grow"><b>${mine.length} ${mine.length === 1 ? 'угода чекає' : 'угоди чекають'} на ваше погодження.</b> Поки ви не відповіли, діє попередня версія.</span></div>` : ''}
+  <div style="margin-bottom:16px"><span class="seg"><button class="${S.agrF === 'all' ? 'on' : ''}" data-a="agrF" data-v="all">Усі (${vis.length})</button><button class="${S.agrF === 'me' ? 'on' : ''}" data-a="agrF" data-v="me">Чекають на мене (${mine.length})</button></span></div>
+  ${list.map(agrRow).join('') || '<div class="card empty">Немає угод, що чекають на вас</div>'}
+  <div class="note" style="margin-top:14px">${ico('lock')}<span>Угоду бачать лише її учасники.${hidden ? ` Ще ${hidden} ${hidden === 1 ? 'угода' : 'угоди'} команди вам не видно — ви в них не учасник${isAdmin() ? ', і роль Owner/Admin цього не змінює' : ''}.` : ''}</span></div>`;
+}
+
+/* ================= agreements: card ================= */
+function pAgreement(a) {
+  const st = agrStatus(a), me = S.as, party = a.parties.includes(me);
+  const tab = S.tab[a.id] || (a.pending && a.inForce ? 'diff' : 'text');
+  const myC = a.pending?.consents[me];
+  const ps = pendParties(a);
+  let banner = '';
+  if (a.review && !a.pending) {
+    banner = `<div class="banner red">${ico('warn')}<span class="grow"><b>${esc(nm(a.review.party))} більше не в команді (з ${fdate(a.review.at)}).</b> Угода потребує повного перегляду: склад учасників, ролі й умови. Поки перегляд не завершено, v${a.inForce.n} зберігається як запис домовленості з позначкою «потребує перегляду».</span>${party ? `<span class="acts"><button class="btn pri sm" data-a="fullReview" data-id="${a.id}">Почати повний перегляд</button></span>` : ''}</div>`;
+  } else if (a.pending) {
+    const acc = accepted(a).length;
+    const rej = ps.filter((u) => a.pending.consents[u]?.d === 'reject');
+    banner = `<div class="banner ${rej.length ? 'red' : 'amber'}">${ico(rej.length ? 'warn' : 'bell')}<span class="grow"><b>v${a.pending.n} ${a.inForce ? 'на погодженні' : '— перша версія на погодженні'}: ${acc} з ${ps.length} погодили.</b> ${a.inForce ? `Поки не всі погодили, діє v${a.inForce.n}. Тайм-ауту немає.` : 'Угода набере чинності після згоди всіх учасників.'}${a.review ? ' Це повний перегляд після виходу учасника.' : ''}
+      ${rej.map((u) => `<br>${esc(nm(u))}: відхилено — «${esc(a.pending.consents[u].note)}»`).join('')}</span>
+     ${party && ps.includes(me) ? (myC?.d === 'accept' ? `<span class="chip green">${ico('check', 12)} Ви погодили ${fdate(myC.at)}</span>` : `<span class="acts"><button class="btn ok sm" data-a="agrAccept" data-id="${a.id}">${ico('check', 14)} Погоджуюсь</button><button class="btn sm" data-a="agrCounter" data-id="${a.id}">Свій варіант</button><button class="btn sm ghost" data-a="agrReject" data-id="${a.id}">Відхиляю</button></span>`) : ''}</div>`;
+  }
+  const tabs = [['text', a.pending && a.inForce ? `Чинна v${a.inForce.n}` : 'Текст'], ...(a.pending && a.inForce ? [['diff', `v${a.inForce.n} → v${a.pending.n}`]] : []), ['history', 'Історія версій'], ['advocate', `${ico('shield', 14)} Адвокат`]];
+  let body;
+  if (tab === 'diff' && a.pending && a.inForce) body = diffView(a);
+  else if (tab === 'history') body = agrHistory(a);
+  else if (tab === 'advocate') body = agrAdvocate(a);
+  else body = clausesView(a.inForce || a.pending, a);
+  return `<div class="crumb"><button class="lnk" data-a="go" data-h="agreements">${ico('back', 13)} Угоди</button> / ${AGR_TYPES[a.type]}</div>
+  <div class="hd"><div><div class="chips" style="margin-bottom:8px"><span class="chip">${AGR_TYPES[a.type]}</span>${ST_CHIP[st]}${a.inForce ? `<span class="hint">чинна v${a.inForce.n}</span>` : ''}</div><h1>${esc(a.title)}</h1>
+   <div class="sub">Учасники: ${a.parties.map((u) => esc(nm(u)) + (isExt(u) ? ' (зовнішній)' : U[u]?.left ? ' (не в команді)' : '')).join(', ')}</div></div>
+   <div class="act">${party && !(a.review && !a.pending) ? `<button class="btn" data-a="agrCounter" data-id="${a.id}">${ico('edit')} Запропонувати зміну</button>` : ''}</div></div>
+  ${banner}
+  <div class="split">
+   <div class="card"><div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-a="tab" data-id="${a.id}" data-v="${k}">${l}</button>`).join('')}</div>${body}</div>
+   <div class="col">
+    <div class="card"><h2>${ico('users')} Учасники і згоди</h2>
+     ${[...new Set([...a.parties, ...(a.pending?.parties || [])])].map((u) => partyRow(a, u)).join('')}
+     ${a.pending ? `<div class="hint" style="margin-top:10px">Будь-яка зміна тексту скидає вже надані згоди: люди погоджуються з конкретним текстом. Автор зміни погоджує її автоматично.</div>` : ''}
+    </div>
+    ${a.pending?.src ? `<div class="card"><h2>${ico('quote')} Звідки ця зміна</h2><div class="src" style="font-size:14px;color:var(--ink)">${esc(a.pending.src.who)}: «${esc(a.pending.src.quote)}»</div><div class="hint" style="margin-top:6px">${esc(a.pending.src.title)} · з інбоксу, автор: ${esc(nm(a.pending.by))}, ${fdate(a.pending.at)}</div></div>` : ''}
+   </div></div>`;
+}
+function partyRow(a, u) {
+  const left = U[u]?.left;
+  let state = '';
+  if (a.pending && (a.pending.parties || activeParties(a)).includes(u)) {
+    const c = a.pending.consents[u];
+    state = c?.d === 'accept' ? `<span class="chip green">Погоджено ${fdate(c.at)}</span>` : c?.d === 'reject' ? '<span class="chip red">Відхилено</span>' : `<span class="chip">Чекаємо</span>${u !== S.as && a.parties.includes(S.as) ? `<button class="btn sm ghost" data-a="${isExt(u) ? 'extLink' : 'remind'}" data-u="${esc(u)}" data-id="${a.id}">${isExt(u) ? ico('link', 13) + ' Посилання' : ico('bell', 13) + ' Нагадати'}</button>` : ''}`;
+  } else if (left) state = `<span class="chip red">Вихід з команди ${fdate(left)}</span>`;
+  else if (a.inForce?.consents[u]) state = `<span class="hint">погоджено v${a.inForce.n} · ${fdate(a.inForce.consents[u].at)}</span>`;
+  return `<div class="party">${av(u, 28, a.pending ? consentMark(a, u) : null)}<span class="nm">${esc(nm(u))}${u === S.as ? ' (ви)' : ''}<small>${isExt(u) ? 'Зовнішній учасник · погоджує за посиланням' : left ? 'Більше не в команді' : ROLE[U[u].role]}</small></span>${state}</div>`;
+}
+function clausesView(v, a) {
+  const chg = changedClauses(a);
+  return v.clauses.map((c) => `<div class="cl ${v === a.pending && chg.has(c.id) ? 'chg' : ''}"><h3>${esc(c.t)}</h3><div>${esc(c.x)}</div></div>`).join('') + (v === a.inForce ? `<div class="hint" style="margin-top:12px">Набула чинності ${fdate(v.at)} після згоди всіх учасників.</div>` : '');
+}
+function diffView(a) {
+  const old = new Map(a.inForce.clauses.map((c) => [c.id, c]));
+  const nw = new Set(a.pending.clauses.map((c) => c.id));
+  const rows = a.pending.clauses.map((c) => {
+    const o = old.get(c.id);
+    if (!o) return `<div class="cl chg"><h3>${esc(c.t)} <span class="kind add">Новий пункт</span></h3><div>${esc(c.x)}</div></div>`;
+    if (o.x === c.x) return `<div class="cl"><h3>${esc(c.t)} <span class="hint">без змін</span></h3><div class="hint">${esc(c.x)}</div></div>`;
+    return `<div class="cl"><h3>${esc(c.t)} <span class="kind rep">Змінено</span></h3><div class="diff"><div class="was"><small>v${a.inForce.n} · зараз діє</small>${esc(o.x)}</div><div class="now"><small>v${a.pending.n} · на погодженні</small>${esc(c.x)}</div></div></div>`;
+  }).join('');
+  const removed = a.inForce.clauses.filter((c) => !nw.has(c.id)).map((c) => `<div class="cl"><h3>${esc(c.t)} <span class="kind rem">Прибрано</span></h3><div class="hint" style="text-decoration:line-through">${esc(c.x)}</div></div>`).join('');
+  const partyChg = a.pending.parties ? `<div class="cl"><h3>Учасники <span class="kind rep">Змінено</span></h3><div class="diff"><div class="was"><small>v${a.inForce.n}</small>${a.parties.map(nm).join(', ')}</div><div class="now"><small>v${a.pending.n}</small>${a.pending.parties.map(nm).join(', ')}</div></div></div>` : '';
+  return partyChg + rows + removed + `<div class="hint" style="margin-top:12px">${esc(a.pending.note || '')} · автор: ${esc(nm(a.pending.by))}, ${fdate(a.pending.at)}. Коли всі погодять, угода перескладеться у v${a.pending.n} як цілісний текст.</div>`;
+}
+function agrHistory(a) {
+  const cons2 = (c) => Object.entries(c).map(([u, x]) => `${esc(nm(u))} ${fdate(x.at)}`).join(' · ');
+  const rows = [];
+  if (a.pending) rows.push(`<div class="ver"><span class="n">v${a.pending.n}</span><span>${esc(a.pending.note)} <span class="chip amber">на погодженні</span><div class="m">погодили: ${cons2(Object.fromEntries(Object.entries(a.pending.consents).filter(([, x]) => x.d === 'accept'))) || 'ще ніхто'}</div></span></div>`);
+  if (a.inForce) rows.push(`<div class="ver"><span class="n">v${a.inForce.n}</span><span>${esc(a.inForce.note)} <span class="chip green">чинна</span><div class="m">погодили: ${cons2(a.inForce.consents)}</div></span></div>`);
+  a.past.forEach((v) => rows.push(`<div class="ver"><span class="n">v${v.n}</span><span>${esc(v.note)}<div class="m">погодили: ${cons2(v.consents)} · діяла з ${fdate(v.at)}</div></span></div>`));
+  return rows.join('');
+}
+function agrAdvocate(a) {
+  const list = checklist(a); const ok = list.filter((x) => x.ok).length;
+  const adv = AGR_ADV[a.id] || {};
+  const party = a.parties.includes(S.as);
+  return `<div class="adv-h"><span class="adv-ico">${ico('shield', 18)}</span><span style="flex:1"><b>TeamOS-адвокат</b><div class="hint">Перевірено ${a.pending ? `v${a.pending.n} (на погодженні)` : `v${a.inForce.n}`} за чеклістом «${AGR_TYPES[a.type]}»</div></span><span class="big-n">${ok}<span class="hint">/${list.length}</span></span></div>
+  <div class="pb big" style="margin-bottom:14px"><i style="width:${Math.round((ok / list.length) * 100)}%"></i></div>
+  ${list.map((x) => `<div class="chk"><span class="mk ${x.ok ? 'y' : 'n'}">${x.ok ? '✓' : ''}</span><span class="body"><b>${esc(x.label)}</b>${!x.ok && x.sug ? `<div class="sug">Пропозиція пункту «${esc(x.sug.t)}»: ${esc(x.sug.x)}</div>${party && !(a.review && !a.pending) ? `<div class="acts"><button class="btn sm" data-a="advClause" data-id="${a.id}" data-k="${x.key}">Запропонувати як зміну</button></div>` : ''}` : ''}</span></div>`).join('')}
+  ${adv.risks ? `<h3 style="margin:16px 0 4px">Ризики</h3>${adv.risks.map((r) => `<div class="risk">${esc(r)}</div>`).join('')}` : ''}
+  ${adv.alts ? `<h3 style="margin:16px 0 0">Як ще може розвиватись</h3>${adv.alts.map(altHtml).join('')}` : ''}
+  <div class="disc">${ico('warn', 13)} TeamOS фіксує домовленість і згоду людей. Це не юридична консультація: формальний договір варто зробити з юристом.</div>`;
+}
+
+/* ================= inbox ================= */
+function pInbox() {
+  return `<div class="hd"><div><h1>Інбокс</h1><div class="sub">Особистий. Тут лише приклад, як мітинг пропонує зміни до процесів і угод.</div></div></div>
+  ${INBOX.map((i) => `<button class="row" data-a="go" data-h="review-${i.id}"><span class="tt"><b>${esc(i.title)}</b><span class="s">${esc(i.origin)} · ${i.props.length} пропозиції: процеси й угоди</span></span><span class="rt">${i.done ? '<span class="chip green">Застосовано</span>' : '<span class="chip amber">Чекає на Review</span>'}</span></button>`).join('')}`;
+}
+function propHtml(i, p) {
+  const line = i.lines[p.line];
+  let head, body = '', next = '';
+  if (p.kind === 'proc_amend') {
+    const pr = proc(p.proc);
+    head = `<span class="kind add">Зміна процесу</span> <b>${esc(pr.title)}</b>`;
+    body = `<div class="fields"><span>${KIND[p.op][1]} · ${targetLabel(pr, { kind: p.op, target: p.target, at: p.at })}</span></div><div style="margin-top:6px">${esc(p.text)}</div>`;
+    next = `Після підтвердження — драфт у процесі. Затверджує: ${esc(approverLabel(pr))}`;
+  } else if (p.kind === 'new_proc') {
+    head = `<span class="kind ext">Новий процес</span> <b>${esc(p.title)}</b>`;
+    const opts = [['team', '', 'Команда'], ...PROJECTS.map((pp) => ['project', pp.id, `Проєкт · ${pp.name}`]), ...HYPS.map((h) => ['hyp', h.id, `Гіпотеза · ${h.code} ${h.title}`])];
+    body = `<div style="margin-top:4px">${esc(p.summary)}</div><div class="fields"><label>Рівень <select data-f="propLevel" data-i="${i.id}" data-p="${p.id}">${opts.map(([l, r, t]) => `<option value="${l}:${r}" ${p.level === l && (p.ref || '') === r ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>`;
+    const fake = { level: p.level, ref: p.ref };
+    next = `Затверджує: ${esc(approverLabel(fake))}`;
+  } else {
+    const a = agr(p.agr);
+    head = `<span class="kind add">Зміна угоди</span> <b>${esc(a.title)}</b>`;
+    body = `<div class="fields"><span>Новий пункт «${esc(p.clause.t)}»</span></div><div style="margin-top:6px">${esc(p.clause.x)}</div>`;
+    next = `Після підтвердження — нова версія на погодженні. Погоджують усі: ${a.parties.map(nm).join(', ')}`;
+  }
+  return `<div class="prop ${p.on ? '' : 'off'}" data-a="hl" data-l="${p.line}"><input type="checkbox" data-a="propOn" data-i="${i.id}" data-p="${p.id}" ${p.on ? 'checked' : ''} ${i.done ? 'disabled' : ''} aria-label="Застосувати"><div class="pb2"><div class="chips">${head}</div>${body}
+   <div class="ev">${esc(line[1])} · ${line[0]}: «${esc(line[2])}»</div><div class="next">${ico('arrow', 13)} ${next}</div>${p.result ? `<div class="next" style="color:var(--green)">${ico('check', 13)} ${p.result}</div>` : ''}</div></div>`;
+}
+function pReview(id) {
+  const i = INBOX.find((x) => x.id === id); if (!i) return noAccess('Не знайдено', 'inbox');
+  return `<div class="crumb"><button class="lnk" data-a="go" data-h="inbox">${ico('back', 13)} Інбокс</button> / Review</div>
+  <div class="hd"><div><h1>${esc(i.title)}</h1><div class="sub">${esc(i.origin)} · ${fdate(i.date)}</div></div>
+   <div class="act">${i.done ? '<span class="chip green">Застосовано</span>' : `<button class="btn pri" data-a="applyInbox" data-i="${i.id}">${ico('check')} Застосувати вибрані</button>`}</div></div>
+  <div class="note">${ico('users')}<span><b style="color:var(--ink)">Крок 1 з 2.</b> Ви підтверджуєте, що на мітингу справді так сказали і що це стосується саме цього процесу чи угоди. Крок 2 — рішення власника процесу або згода всіх учасників угоди.</span></div>
+  <div class="rv"><div class="card tr"><h2>Транскрипт</h2>${i.lines.map(([t, w, x], n) => `<div class="ln ${S.hl === n ? 'hl' : ''}"><span class="ts">${t}</span><span><b>${esc(w)}:</b> ${esc(x)}</span></div>`).join('')}</div>
+   <div><div class="grp">Процеси й угоди · ${i.props.length}</div>${i.props.map((p) => propHtml(i, p)).join('')}</div></div>`;
+}
+
+/* ================= modals ================= */
+function modal() {
+  const m = S.modal;
+  const wrap = (title, body, foot, wide) => `<div class="ov" data-a="ovClose"><div class="md ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mdh"><h2>${title}</h2><button class="btn ghost sm x" data-a="close" aria-label="Закрити">${ico('x')}</button></div>${body}<div class="mdf">${foot}</div></div></div>`;
+  if (m.k === 'newProc') {
+    const opts = m.level === 'project' ? PROJECTS.filter((p) => isAdmin() || p.members.includes(S.as)).map((p) => [p.id, p.name]) : m.level === 'hyp' ? HYPS.filter((h) => isAdmin() || prj(h.project).members.includes(S.as)).map((h) => [h.id, `${h.code} · ${h.title} (${prj(h.project).name})`]) : [];
+    const fake = { level: m.level, ref: m.ref || opts[0]?.[0] };
+    const willBeActive = m.level === 'org' ? Boolean(U[S.as].org) : m.level === 'team' ? isAdmin() : fake.ref && canApprove(fake);
+    const lv = [['hyp', 'Гіпотеза', 'Затверджує відповідальний'], ['project', 'Проєкт', 'Затверджує власник'], ['team', 'Команда', 'Owner / Admin команди'], ['org', 'Організація', 'Owner / Admin організації']];
+    return wrap('Новий процес', `<div class="hint" style="margin-bottom:8px">Спершу оберіть рівень — від нього залежить, хто затверджує зміни.</div>
+     <div class="lv">${lv.map(([k, l, d]) => `<button class="${m.level === k ? 'on' : ''}" data-a="mLevel" data-v="${k}"><b>${l}</b>${d}</button>`).join('')}</div>
+     ${opts.length ? `<label class="fl">${m.level === 'project' ? 'Проєкт' : 'Гіпотеза'}<select class="in" data-m="ref" data-rr="1">${opts.map(([v, t]) => `<option value="${v}" ${fake.ref === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : ''}
+     ${['project', 'hyp'].includes(m.level) && !opts.length ? '<div class="note">Ви не учасник жодного проєкту.</div>' : ''}
+     ${m.level === 'org' ? `<label class="fl">Хто бачить і може пропонувати зміни<select class="in" data-m="vis">${Object.entries(VIS).map(([k, l]) => `<option value="${k}" ${m.vis === k ? 'selected' : ''}>${l}${k === 'all' ? ' — члени всіх команд організації' : ''}</option>`).join('')}</select></label>` : ''}
+     <label class="fl">Назва<input class="in" data-m="title" value="${esc(m.title)}" placeholder="Напр. «Ретро гіпотези»" autofocus></label>
+     <label class="fl">Коротко: що це за процес<textarea class="in" rows="3" data-m="summary" placeholder="Одне-два речення. Деталі — кроки, ролі, винятки — можна додати пізніше або з мітингів.">${esc(m.summary)}</textarea></label>`,
+    `<span class="hint">${willBeActive ? 'Ви власник цього рівня — процес одразу стане активним.' : `Процес буде чернеткою, доки його не затвердить: ${esc(fake.ref || ['team', 'org'].includes(m.level) ? approverLabel(fake) : '—')}.`}</span><button class="btn" data-a="close">Скасувати</button><button class="btn pri" data-a="createProc" ${['project', 'hyp'].includes(m.level) && !opts.length ? 'disabled' : ''}>Створити</button>`);
+  }
+  if (m.k === 'propose') {
+    const p = proc(m.pid);
+    const opts = proposeOpts(p);
+    const o = opts[m.opt] || opts[0];
+    return wrap(`Зміна процесу «${esc(p.title)}»`, `<label class="fl">Що змінити<select class="in" data-m="opt" data-rr="1">${opts.map((x, n) => `<option value="${n}" ${n === Number(m.opt) ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+     ${o.kind !== 'rem' ? `<label class="fl">Текст<textarea class="in" rows="4" data-m="text" autofocus placeholder="${esc(o.target === 'steps' ? 'Опишіть крок' : ADV_HINT[o.target])}">${esc(m.text)}</textarea></label>` : '<div class="note">Крок буде прибрано після затвердження.</div>'}`,
+    `<span class="hint">${canApprove(p) ? 'Ви можете одразу прийняти його у вкладці «Драфти».' : `Піде як драфт. Затверджує: ${esc(approverLabel(p))}`}</span><button class="btn" data-a="close">Скасувати</button><button class="btn pri" data-a="submitPropose">Додати драфт</button>`);
+  }
+  if (m.k === 'editAccept') {
+    const p = proc(m.pid), d = p.drafts.find((x) => x.id === m.did);
+    return wrap('Редагувати й прийняти', `<div class="hint" style="margin-bottom:8px">${KIND[d.kind][1]} · ${targetLabel(p, d)}</div><textarea class="in" rows="4" data-m="text" autofocus>${esc(m.text ?? d.text)}</textarea>`,
+      `<button class="btn" data-a="close">Скасувати</button><button class="btn ok" data-a="submitEditAccept">${ico('check', 14)} Прийняти як v${p.version + 1}</button>`);
+  }
+  if (m.k === 'rejectDraft' || m.k === 'agrReject') {
+    return wrap(m.k === 'rejectDraft' ? 'Відхилити драфт' : 'Відхилити нову версію', `<label class="fl">Причина — її побачить автор${m.k === 'agrReject' ? ' і всі учасники' : ''}<textarea class="in" rows="3" data-m="text" autofocus placeholder="Напр. «Вважаю, що має бути 42 / 42 / 16»">${esc(m.text || '')}</textarea></label>
+     ${m.k === 'agrReject' ? '<div class="note">Поки нова версія не погоджена всіма, діє попередня. Ви також можете запропонувати свій варіант замість відмови.</div>' : ''}`,
+      `<button class="btn" data-a="close">Скасувати</button><button class="btn pri" data-a="${m.k === 'rejectDraft' ? 'submitRejectDraft' : 'submitAgrReject'}">Відхилити</button>`);
+  }
+  if (m.k === 'counter') {
+    const a = agr(m.aid), cl = current(a).clauses;
+    const c = cl.find((x) => x.id === m.cid);
+    return wrap(`Зміна угоди «${esc(a.title)}»`, `<label class="fl">Пункт<select class="in" data-m="cid" data-rr="1">${cl.map((x) => `<option value="${x.id}" ${x.id === m.cid ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}<option value="new" ${m.cid === 'new' ? 'selected' : ''}>+ Новий пункт</option></select></label>
+     ${m.cid === 'new' ? `<label class="fl">Назва пункту<input class="in" data-m="ct" value="${esc(m.ct || '')}"></label>` : ''}
+     <label class="fl">Текст<textarea class="in" rows="4" data-m="text" autofocus>${esc(m.text ?? c?.x ?? '')}</textarea></label>
+     <div class="note">${ico('warn')}<span>${a.pending && Object.keys(a.pending.consents).some((u) => u !== S.as) ? 'Уже надані згоди буде скинуто — усі учасники мають погодити новий текст.' : 'Зміна стане новою версією на погодженні.'} Поки її не погодили всі, діє ${a.inForce ? 'v' + a.inForce.n : 'нічого'}.</span></div>`,
+      `<button class="btn" data-a="close">Скасувати</button><button class="btn pri" data-a="submitCounter">Запропонувати</button>`);
+  }
+  if (m.k === 'review') {
+    const a = agr(m.aid);
+    return wrap(`Повний перегляд: ${esc(a.title)}`, `<div class="note">${ico('warn')}<span>${esc(nm(a.review.party))} більше не в команді. Перегляньте склад учасників і кожен пункт. Нову версію мають погодити всі учасники, що залишаться.</span></div>
+     <div class="hint" style="margin-bottom:6px;font-weight:600">Учасники</div>
+     <div class="pchk">${a.parties.map((u) => `<label><input type="checkbox" data-m="p_${u}" ${m['p_' + u] !== false ? 'checked' : ''}>${av(u, 20)} ${esc(nm(u))}${U[u]?.left ? ' — залишити як зовнішнього учасника' : ''}</label>`).join('')}</div>
+     ${current(a).clauses.map((c) => `<label class="fl">${esc(c.t)}${a.review.party && c.t === nm(a.review.party) ? ' <span class="chip red" style="align-self:flex-start">стосується того, хто вийшов</span>' : ''}<textarea class="in" rows="2" data-m="c_${c.id}">${esc(m['c_' + c.id] ?? c.x)}</textarea></label>`).join('')}`,
+      `<span class="hint">Порожній пункт буде прибрано.</span><button class="btn" data-a="close">Скасувати</button><button class="btn pri" data-a="submitReview">Надіслати на погодження</button>`, true);
+  }
+  if (m.k === 'newAgr') {
+    return wrap('Нова угода', `<label class="fl">Тип<select class="in" data-m="type">${Object.entries(AGR_TYPES).map(([k, l]) => `<option value="${k}" ${m.type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+     <label class="fl">Назва<input class="in" data-m="title" value="${esc(m.title || '')}" autofocus></label>
+     <div class="hint" style="margin-bottom:6px;font-weight:600">Учасники — погодити мають усі</div>
+     <div class="pchk">${TEAM.map((u) => `<label><input type="checkbox" data-m="p_${u}" ${u === S.as ? 'checked disabled' : m['p_' + u] ? 'checked' : ''}>${av(u, 20)} ${esc(nm(u))}</label>`).join('')}</div>
+     <label class="fl">Зовнішній учасник (необов’язково)<input class="in" data-m="ext" value="${esc(m.ext || '')}" placeholder="Ім’я — погоджує за посиланням"></label>
+     <label class="fl">Пункти — кожен з нового рядка у форматі «Назва: текст»<textarea class="in" rows="5" data-m="clauses" placeholder="Частки: Анна — 40%, Богдан — 40%, Віктор — 20%">${esc(m.clauses || '')}</textarea></label>`,
+      `<span class="hint">Після створення адвокат підкаже, чого бракує.</span><button class="btn" data-a="close">Скасувати</button><button class="btn pri" data-a="createAgr">Надіслати на погодження</button>`);
+  }
+  return '';
+}
+function proposeOpts(p) {
+  const o = [{ kind: 'add', target: 'steps', at: null, label: 'Додати крок у кінець' }];
+  p.sec.steps.forEach((s, n) => o.push({ kind: 'add', target: 'steps', at: n, label: `Додати крок перед ${n + 1}. ${s.t}` }));
+  p.sec.steps.forEach((s, n) => o.push({ kind: 'rem', target: 'steps', at: n, label: `Прибрати крок ${n + 1}. ${s.t}` }));
+  SECS.filter(([k]) => k !== 'steps').forEach(([k, l]) => { if (p.sec[k]) { o.push({ kind: 'ext', target: k, label: `Розширити: ${l}` }); o.push({ kind: 'rep', target: k, label: `Замінити: ${l}` }); } else o.push({ kind: 'add', target: k, label: `Описати: ${l}` }); });
+  return o;
+}
+function syncModal() {
+  const m = S.modal; if (!m) return;
+  document.querySelectorAll('.md [data-m]').forEach((el) => { m[el.dataset.m] = el.type === 'checkbox' ? el.checked : el.value; });
+}
+
+/* ================= actions ================= */
+const A = {
+  go: (el) => go(el.dataset.h),
+  stub: () => toast('У цьому прототипі показано лише Процеси, Угоди та Інбокс'),
+  side: () => { S.side = !S.side; render(); },
+  lvl: (el) => { S.lvl = el.dataset.v; render(); },
+  agrF: (el) => { S.agrF = el.dataset.v; render(); },
+  tab: (el) => { S.tab[el.dataset.id] = el.dataset.v; render(); },
+  close: () => { S.modal = null; render(); },
+  ovClose: (el, e) => { if (e.target === el) { S.modal = null; render(); } },
+  sel: (el) => { S.sel[el.dataset.id] = el.checked; render(); },
+  hl: (el, e) => { if (e.target.closest('input,select')) return; S.hl = Number(el.dataset.l); render(); },
+  // processes
+  newProc: () => { S.modal = { k: 'newProc', level: 'project', ref: '', vis: 'all', title: '', summary: '' }; render(); },
+  mLevel: (el) => { syncModal(); S.modal.level = el.dataset.v; S.modal.ref = ''; render(); },
+  createProc: () => {
+    syncModal(); const m = S.modal;
+    if (!m.title.trim()) return toast('Вкажіть назву процесу');
+    const opts = m.level === 'project' ? PROJECTS.filter((p) => isAdmin() || p.members.includes(S.as)) : m.level === 'hyp' ? HYPS.filter((h) => isAdmin() || prj(h.project).members.includes(S.as)) : [];
+    const p = { id: nid('pr'), level: m.level, ref: ['project', 'hyp'].includes(m.level) ? m.ref || opts[0].id : undefined, vis: m.level === 'org' ? m.vis : undefined, title: m.title.trim(), summary: m.summary.trim(), status: 'draft', version: 0, creator: S.as, createdAt: TODAY, sec: sec0(), drafts: [], versions: [] };
+    if (canApprove(p) && (m.level !== 'team' || isAdmin())) { p.status = 'active'; p.version = 1; p.versions.push({ n: 1, at: TODAY, by: S.as, note: 'Створено' }); }
+    PROCS.push(p); S.modal = null; S.tab[p.id] = 'advocate'; go('proc-' + p.id);
+    toast(p.status === 'active' ? 'Процес створено. Адвокат показує, що можна додати.' : `Процес створено як чернетку. Затверджує: ${approverLabel(p)}`);
+  },
+  approveProc: (el) => { const p = proc(el.dataset.id); p.status = 'active'; p.version = 1; p.versions.push({ n: 1, at: TODAY, by: S.as, note: `Затверджено (автор: ${nm(p.creator)})` }); render(); toast('Процес затверджено як v1'); },
+  propose: (el) => {
+    const p = proc(el.dataset.id), t = el.dataset.t; const opts = proposeOpts(p);
+    let opt = 0; if (t) { const n = opts.findIndex((o) => o.target === t && o.kind !== 'rem'); if (n >= 0) opt = n; }
+    S.modal = { k: 'propose', pid: p.id, opt, text: '' }; render();
+  },
+  advPropose: (el) => {
+    const p = proc(el.dataset.id), k = el.dataset.t;
+    p.drafts.push({ id: nid('d'), kind: 'add', target: k, text: p.advice[k], by: S.as, on: TODAY, st: 'pending', adv: true });
+    S.tab[p.id] = 'drafts'; render(); toast(canApprove(p) ? 'Порада стала драфтом — його можна прийняти' : `Драфт від вашого імені. Затверджує: ${approverLabel(p)}`);
+  },
+  dismiss: (el) => { const p = proc(el.dataset.id); (p.dismissed ||= []).push(el.dataset.t); render(); toast('Адвокат більше не показуватиме цю пораду для цієї версії'); },
+  submitPropose: () => {
+    syncModal(); const m = S.modal, p = proc(m.pid); const o = proposeOpts(p)[Number(m.opt)];
+    if (o.kind !== 'rem' && !m.text.trim()) return toast('Опишіть зміну');
+    p.drafts.push({ id: nid('d'), kind: o.kind, target: o.target, at: o.at, text: m.text.trim(), by: S.as, on: TODAY, st: 'pending' });
+    S.modal = null; S.tab[p.id] = 'drafts'; render();
+    toast(canApprove(p) ? 'Драфт додано. Ви можете його прийняти.' : `Драфт додано. Чекає на рішення: ${approverLabel(p)}`);
+  },
+  acceptDraft: (el) => { const p = proc(el.dataset.id); acceptDrafts(p, [p.drafts.find((d) => d.id === el.dataset.d)]); render(); },
+  acceptSel: (el) => { const p = proc(el.dataset.id); const ds = p.drafts.filter((d) => S.sel[d.id] && d.st === 'pending'); acceptDrafts(p, ds); render(); },
+  editAccept: (el) => { S.modal = { k: 'editAccept', pid: el.dataset.id, did: el.dataset.d }; render(); },
+  submitEditAccept: () => { syncModal(); const m = S.modal, p = proc(m.pid); acceptDrafts(p, [p.drafts.find((d) => d.id === m.did)], m.text.trim()); S.modal = null; render(); },
+  rejectDraft: (el) => { S.modal = { k: 'rejectDraft', pid: el.dataset.id, did: el.dataset.d }; render(); },
+  submitRejectDraft: () => { syncModal(); const m = S.modal, d = proc(m.pid).drafts.find((x) => x.id === m.did); d.st = 'rejected'; d.reason = m.text.trim() || null; S.modal = null; render(); toast(`Відхилено. ${nm(d.by)} побачить причину.`); },
+  // agreements
+  agrAccept: (el) => {
+    const a = agr(el.dataset.id); a.pending.consents[S.as] = { d: 'accept', at: TODAY };
+    const n = a.pending.n;
+    if (tryFinalize(a)) { S.tab[a.id] = 'text'; render(); toast(`Усі погодили — v${n} набула чинності й перескладена як цілісний текст`); }
+    else { render(); const left = pendParties(a).filter((u) => a.pending.consents[u]?.d !== 'accept').map(nm); toast(`Ви погодили. Чекаємо: ${left.join(', ')}`); }
+  },
+  agrReject: (el) => { S.modal = { k: 'agrReject', aid: el.dataset.id }; render(); },
+  submitAgrReject: () => { syncModal(); const m = S.modal, a = agr(m.aid); if (!m.text.trim()) return toast('Напишіть причину'); a.pending.consents[S.as] = { d: 'reject', at: TODAY, note: m.text.trim() }; S.modal = null; render(); toast(`Відхилено. Діє v${a.inForce?.n ?? '—'}, учасники бачать вашу причину`); },
+  agrCounter: (el) => { const a = agr(el.dataset.id); const chg = [...changedClauses(a)]; S.modal = { k: 'counter', aid: a.id, cid: chg[0] || current(a).clauses[0].id }; render(); },
+  submitCounter: () => {
+    syncModal(); const m = S.modal, a = agr(m.aid);
+    if (!m.text?.trim() || (m.cid === 'new' && !m.ct?.trim())) return toast('Заповніть пункт');
+    const reset = editPending(a, (v) => { if (m.cid === 'new') v.clauses.push({ id: nid('c'), t: m.ct.trim(), x: m.text.trim() }); else v.clauses.find((c) => c.id === m.cid).x = m.text.trim(); }, a.pending?.note || 'Зміна від ' + nm(S.as));
+    S.modal = null; S.tab[a.id] = a.inForce ? 'diff' : 'text'; render();
+    toast(reset ? 'Ваш варіант на погодженні. Попередні згоди скинуто — погодити мають усі.' : 'Зміна на погодженні. Ви погодили її автоматично.');
+  },
+  advClause: (el) => {
+    const a = agr(el.dataset.id); const x = checklist(a).find((c) => c.key === el.dataset.k);
+    const reset = editPending(a, (v) => v.clauses.push({ id: nid('c'), t: x.sug.t, x: x.sug.x }), a.pending?.note || `Пункт «${x.sug.t}» за порадою адвоката`);
+    render(); toast(reset ? `Пункт «${x.sug.t}» додано. Згоди скинуто — погодити мають усі.` : `Пункт «${x.sug.t}» додано в нову версію на погодженні`);
+  },
+  remind: (el) => toast(`Нагадування надіслано: ${nm(el.dataset.u)}`),
+  extLink: (el) => {
+    const a = agr(el.dataset.id); const u = el.dataset.u;
+    a.pending.consents[u] = { d: 'accept', at: TODAY };
+    const done = tryFinalize(a); render();
+    toast(done ? `${nm(u)}: погоджено за посиланням — угода набула чинності` : `${nm(u)}: погоджено за посиланням (демо)`);
+  },
+  fullReview: (el) => { S.modal = { k: 'review', aid: el.dataset.id }; render(); },
+  submitReview: () => {
+    syncModal(); const m = S.modal, a = agr(m.aid);
+    const parties = a.parties.filter((u) => m['p_' + u] !== false).map((u) => (U[u]?.left ? `ext:${U[u].name}` : u));
+    a.pending = { n: a.inForce.n + 1, by: S.as, at: TODAY, note: `Повний перегляд: ${nm(a.review.party)} більше не в команді`, parties, consents: { [S.as]: { d: 'accept', at: TODAY } },
+      clauses: a.inForce.clauses.map((c) => ({ ...c, x: (m['c_' + c.id] ?? c.x).trim() })).filter((c) => c.x) };
+    S.modal = null; S.tab[a.id] = 'diff'; render();
+    toast(`v${a.pending.n} на погодженні. Погодити мають: ${parties.map(nm).join(', ')}`);
+  },
+  newAgr: () => { S.modal = { k: 'newAgr', type: 'partnership' }; render(); },
+  createAgr: () => {
+    syncModal(); const m = S.modal;
+    if (!m.title?.trim()) return toast('Вкажіть назву');
+    const clauses = (m.clauses || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [t, ...x] = l.split(':'); return { id: nid('c'), t: x.length ? t.trim() : 'Пункт', x: (x.length ? x.join(':') : t).trim() }; });
+    if (!clauses.length) return toast('Додайте хоча б один пункт');
+    const parties = [S.as, ...TEAM.filter((u) => u !== S.as && m['p_' + u]), ...(m.ext?.trim() ? [`ext:${m.ext.trim()}`] : [])];
+    if (parties.length < 2) return toast('Угода потребує щонайменше двох учасників');
+    const a = { id: nid('a'), type: m.type, title: m.title.trim(), parties, inForce: null, past: [], pending: { n: 1, by: S.as, at: TODAY, note: 'Перша версія', consents: { [S.as]: { d: 'accept', at: TODAY } }, clauses } };
+    AGRS.push(a); S.modal = null; S.tab[a.id] = 'advocate'; go('agr-' + a.id); toast('Угоду надіслано учасникам на погодження');
+  },
+  // inbox
+  propOn: (el) => { const p = INBOX.find((i) => i.id === el.dataset.i).props.find((x) => x.id === el.dataset.p); p.on = el.checked; render(); },
+  applyInbox: (el) => {
+    const i = INBOX.find((x) => x.id === el.dataset.i);
+    const src = (p) => ({ title: i.title, quote: i.lines[p.line][2] });
+    for (const p of i.props.filter((x) => x.on)) {
+      if (p.kind === 'proc_amend') {
+        const pr = proc(p.proc); pr.drafts.push({ id: nid('d'), kind: p.op, target: p.target, at: p.at, text: p.text, by: S.as, on: TODAY, st: 'pending', src: src(p) });
+        p.result = `Драфт у процесі «${esc(pr.title)}» · <button class="lnk" data-a="go" data-h="proc-${pr.id}">відкрити</button>`;
+      } else if (p.kind === 'new_proc') {
+        const np = { id: nid('pr'), level: p.level, ref: p.ref || undefined, title: p.title, summary: p.summary, status: 'draft', version: 0, creator: S.as, createdAt: TODAY, sec: sec0(), drafts: [], versions: [] };
+        if (primary(np).includes(S.as)) { np.status = 'active'; np.version = 1; np.versions.push({ n: 1, at: TODAY, by: S.as, note: `Створено з «${i.title}»` }); }
+        PROCS.push(np); p.result = `${np.status === 'active' ? 'Процес створено' : `Чернетка процесу, чекає на: ${esc(approverLabel(np))}`} · <button class="lnk" data-a="go" data-h="proc-${np.id}">відкрити</button>`;
+      } else {
+        const a = agr(p.agr);
+        editPending(a, (v) => v.clauses.push({ id: nid('c'), t: p.clause.t, x: p.clause.x }), `Пункт «${p.clause.t}» з «${i.title}»`);
+        a.pending.src = { title: i.title, who: i.lines[p.line][1], quote: i.lines[p.line][2] };
+        p.result = `v${a.pending.n} на погодженні всіма учасниками · <button class="lnk" data-a="go" data-h="agr-${a.id}">відкрити</button>`;
+      }
+    }
+    i.done = true; render(); toast('Крок 1 зроблено. Власники процесів і учасники угод побачили запити у «Чекає на мене»');
+  },
+};
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-a]'); if (!el) return;
+  if (el.tagName === 'INPUT' && el.type === 'checkbox') return; // handled on change
+  A[el.dataset.a]?.(el, e);
+});
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.type === 'checkbox' && t.dataset.a) { A[t.dataset.a]?.(t, e); return; }
+  if (t.dataset.rr) { syncModal(); render(); return; }
+  const f = t.dataset.f; if (!f) return;
+  if (f === 'as') { S.as = t.value; S.sel = {}; render(); toast(`Тепер ви — ${U[S.as].name} (${ROLE[U[S.as].role]}${U[S.as].org ? `, Org ${ROLE[U[S.as].org]}` : ''})`); return; }
+  if (f === 'vis') { const p = proc(t.dataset.id); p.vis = t.value; render(); toast(`Видимість: ${VIS[p.vis]}`); return; }
+  if (f === 'propLevel') { const p = INBOX.find((i) => i.id === t.dataset.i).props.find((x) => x.id === t.dataset.p); const [l, r] = t.value.split(':'); p.level = l; p.ref = r || null; render(); }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
+
+S.route = location.hash.slice(1) || 'processes';
+render();
+</script>
+</body>
+</html>
