@@ -1,0 +1,62 @@
+#!/bin/bash
+set -euo pipefail
+
+# Called by the root-owned deploy script after it builds and tests main.
+# Its existing lock serializes deployment, and its rollback trap restarts the service on failure.
+release=${1:?Provide a built release directory}
+[[ "$release" =~ ^/opt/teamos/releases/main-[0-9a-f]{40}$ && -d "$release" && "$(realpath -- "$release")" == "$release" ]]
+shopt -s nullglob
+migrations=()
+for migration in "$release"/server/release-migrations/*.mjs; do
+  id=${migration##*/}
+  id=${id%.mjs}
+  [[ "$id" =~ ^[0-9]{4}-[a-z0-9-]+$ && -f "$migration" && ! -L "$migration" ]]
+  migrations+=("$id")
+done
+(( ${#migrations[@]} )) || exit 0
+
+umask 077
+state=/var/lib/teamos-release-migrations
+backup_root=/var/backups/teamos-release-migrations
+install -d -m 0700 "$state" "$backup_root"
+run() {
+  local id=$1 phase=$2
+  shift 2
+  systemd-run --quiet --wait --collect -p DynamicUser=yes -p User=teamos \
+    -p EnvironmentFile=/etc/teamos.env -p EnvironmentFile=/etc/teamos-s3.env \
+    -p Environment=TEAMOS_RELEASE_MIGRATION=1 \
+    -p WorkingDirectory="$release" "$@" /opt/teamos/node/bin/node \
+    "$release/server/release-migrations/$id.mjs" "$phase"
+}
+
+report=$(mktemp "$state/.report.XXXXXX")
+trap 'rm -f -- "$report"' EXIT
+show_report() {
+  : > "$report"
+  run "$1" "$2" -p "StandardOutput=append:$report"
+  cat -- "$report"
+}
+
+pending=()
+for id in "${migrations[@]}"; do
+  [[ ! -f "$state/$id" ]] || continue
+  [[ ! -e "$state/$id" ]]
+  pending+=("$id")
+  echo "Planning migration $id"
+  show_report "$id" plan
+done
+(( ${#pending[@]} )) || exit 0
+
+systemctl stop teamos.service
+for id in "${pending[@]}"; do
+  backup=$(mktemp "$backup_root/$id.XXXXXX.json")
+  run "$id" backup -p "StandardOutput=append:$backup"
+  [[ -s "$backup" ]]
+  run "$id" check-backup -p "StandardInput=file:$backup"
+  echo "Applying migration $id"
+  show_report "$id" apply
+  show_report "$id" verify
+  marker=$(mktemp "$state/.done.XXXXXX")
+  printf '%s\n' "$release" > "$marker"
+  mv -- "$marker" "$state/$id"
+done

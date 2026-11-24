@@ -249,6 +249,8 @@ Run `npm test` before release. The S3 startup integration test uses a simulated 
 
 From a clean checkout of the exact remote `main` commit, run `scripts/release.sh`. It runs the tests and invokes the production deploy over SSH. The production server also runs the tests before activating each new build.
 
+Production release migrations live in `server/release-migrations/`. Add a new numbered `.mjs` file for each migration. The server runs `plan`, then pauses application writes and runs `backup`, `check-backup`, `apply`, and `verify`. A failure stops the release and restarts the previous app build. Migration code must be safe to retry and compatible with that previous build, since restarting the app does not undo S3 writes. The host keeps backups in `/var/backups/teamos-release-migrations` and completed migration IDs in `/var/lib/teamos-release-migrations`. Preserve both directories when replacing the host.
+
 For releases that change storage permissions or data layout, verify access for the production service before switching releases. If an isolated HTTPS staging environment has matching permissions, the release script can also check authenticated profile and workspace loading there. Seed staging with a legacy team and project goal, then provide `TEAMOS_STAGING_URL`, `TEAMOS_STAGING_COOKIE`, `TEAMOS_STAGING_TEAM`, and `TEAMOS_STAGING_GOAL`. Use a staging account and reset the fixture before each migration check.
 
 ### Preparing existing workspaces for the processes & agreements release
@@ -257,7 +259,7 @@ The release adds new folders (`teams/<id>/processes/`, `teams/<id>/agreements/`,
 
 The migration collects knowledge entries of type “process” into **draft** process documents: one per team, project and hypothesis they are placed in (up to 40 steps each). Each step links to its knowledge entry and quote, and the entries themselves stay unchanged. A draft takes effect only when whoever owns its level approves it. Knowledge entries of type “agreement” are counted but not converted: an agreement needs every party’s explicit consent. Members can also collect entries later from the Processes page.
 
-As for the OKR release, verify a backup, pause application writes and run the new release’s code with the intended storage configuration:
+The numbered release migration runs during the SSH deploy. For manual maintenance, verify a backup, pause application writes and run the new release’s code with the intended storage configuration:
 
 ```bash
 node --env-file-if-exists=.env server/migrate-processes.js
