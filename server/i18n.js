@@ -442,4 +442,9 @@ const UK = {
   "A draft for this process is already being generated": "Драфт для цього процесу вже генерується",
   "The material has nothing to add to this process": "У матеріалі немає нічого, що можна додати до цього процесу",
   "Source not found": "Джерело не знайдено",
+  "Choose a project or a hypothesis": "Обери проєкт або гіпотезу",
+  "Only people who work in the project can link processes to it": "Прив’язувати процеси до проєкту можуть лише ті, хто в ньому працює",
+  "This process already belongs here": "Цей процес уже належить сюди",
+  "AI is not configured: fill in the agreement by hand": "AI не налаштовано: заповни угоду вручну",
+  "No text was found in the PDF": "У PDF не знайдено тексту",
 };

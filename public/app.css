@@ -747,3 +747,8 @@ button.stat:hover{border-color:var(--ink)}
 .dc .lnk,.prop .lnk,.dcnote .lnk{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;font-size:inherit;font-weight:600;cursor:pointer}
 .dc .sec h3 .lnk,.dc .crumb .lnk{color:var(--mut)}
 .note.gen{flex-wrap:wrap;align-items:center;margin-bottom:16px}.note.gen b{color:var(--ink)}.gen-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.gen-row select{width:auto;max-width:260px}
+.h2acts{margin-left:auto;display:inline-flex;gap:14px;align-items:center}.card h2 .h2acts .lnk{margin-left:0}.pcitem{display:flex;align-items:center;gap:6px}.pcitem>.trow{flex:1}.dc .cklist label{align-items:flex-start}
+.hyp-over{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}.hyp-over>.card{margin:0}.hyp-tab{max-width:880px}
+@media(max-width:1100px){.hyp-over{grid-template-columns:minmax(0,1fr)}}
+.card h2 .h2acts{flex-wrap:wrap;justify-content:flex-end;row-gap:4px}.card h2 .h2acts .lnk{white-space:nowrap}.hyp-over .card.dc h2{flex-wrap:wrap;row-gap:6px}
+.cl h3 .clacts{margin-left:auto;display:inline-flex;gap:12px;font-size:12.5px;font-weight:600}.cl h3 .clacts .lnk{color:var(--mut)}.cl:not(:hover) h3 .clacts{opacity:.55}

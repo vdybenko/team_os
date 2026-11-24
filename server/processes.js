@@ -11,7 +11,9 @@
 import * as store from './store.js';
 import * as D from './domain.js';
 import { tr } from './i18n.js';
-import { aiConfigured, adviseDocument, draftProcessDocument, errorMessage } from './ai.js';
+import { aiConfigured, adviseDocument, draftProcessDocument, draftAgreementDocument, errorMessage } from './ai.js';
+import { pdfToText, MAX_PDF_BYTES } from './pdf.js';
+import { transcribe, transcribeConfigured, MAX_AUDIO_BYTES } from './transcribe.js';
 import { knowledgeEvidence } from './evidence.js';
 
 export const PROC_LEVELS = ['hypothesis', 'project', 'team', 'org'];
@@ -279,6 +281,28 @@ export async function processViews(c) {
   return list.map((p) => processView(c, env, p, names));
 }
 
+/* ---------- linking an existing process to a project or hypothesis ---------- */
+// "This process is used here": a link kept on the project or hypothesis. The process keeps its level and approver,
+// so one team or organization process can serve several projects. Anyone who works in the project links it.
+export async function linkProcess(c, body) {
+  const env = await procEnv(c);
+  const kind = body.kind === 'hypothesis' ? 'hypothesis' : body.kind === 'project' ? 'project' : D.fail(400, 'Choose a project or a hypothesis');
+  const target = (kind === 'project' ? env.projects : env.hyps).get(String(body.id || '')) || D.fail(404, kind === 'project' ? 'Project not found' : 'Hypothesis not found');
+  const pr = kind === 'project' ? target : env.projects.get(target.project);
+  if (!c.admin && !(pr && (pr.owner === c.uid || (pr.members || []).includes(c.uid))) && target.owner !== c.uid) D.fail(403, 'Only people who work in the project can link processes to it');
+  const pid = store.assertId(String(body.process || ''), 'process id');
+  const links = new Set(target.processLinks || []);
+  if (body.on === false) links.delete(pid);
+  else {
+    const p = await readProcess(c, env, pid);
+    if (!p || !canSeeProcess(c, env, p)) D.fail(404, 'Process not found');
+    if ((kind === 'project' && p.project === target.id && p.level === 'project') || (kind === 'hypothesis' && p.hypothesis === target.id)) D.fail(400, 'This process already belongs here');
+    links.add(pid);
+  }
+  target.processLinks = [...links].slice(0, 50);
+  return (kind === 'project' ? store.projects : store.hypotheses).save(c.tid, target);
+}
+
 /* ---------- an AI draft of the document from a source or from the knowledge base ---------- */
 // The generated text becomes ordinary pending changes by the person who asked for it, each with its source,
 // so it goes the usual way: the owner of the level accepts or rejects it. Only shared material is used,
@@ -423,7 +447,7 @@ export async function createAgreement(c, body, extra = {}) {
   const at = store.now();
   const a = {
     id: extra.id || store.newId('ag'), type, title, parties, current: null,
-    pending: { n: 1, clauses: clausesInput(body.clauses), parties, by: c.uid, at, note: D.str(body.note, 500) || null, consents: [{ party: c.uid, decision: 'accept', at }], source: extra.source || null, terminate: false, review: false },
+    pending: { n: 1, clauses: clausesInput(body.clauses), parties, by: c.uid, at, note: D.str(body.note, 500) || null, consents: [], source: extra.source || null, terminate: false, review: false },
     versions: [], reviewReason: null, terminatedAt: null, advocate: null, dismissed: null, creator: c.uid, createdAt: at, history: [],
   };
   log(a, c.uid, 'proposed', { n: 1 });
@@ -434,7 +458,7 @@ export async function createAgreement(c, body, extra = {}) {
 
 // A new version on approval: the whole text (clauses), or one clause ({ clause: { id | null, title, text } }; empty text removes it),
 // optionally a new list of parties, or terminate: true. Any change resets the consents already given:
-// people agree to an exact text. The author accepts their own version.
+// people agree to an exact text. The author accepts it as a separate step, like every other party.
 export async function proposeAgreementChange(c, id, body, extra = {}) {
   const a = await agreementFor(c, id);
   if (a.terminatedAt) D.fail(400, 'The agreement has been terminated');
@@ -465,7 +489,6 @@ export async function proposeAgreementChange(c, id, body, extra = {}) {
     n: (a.current?.n || 0) + 1, clauses, parties, by: c.uid, at, note: D.str(body.note, 500) || a.pending?.note || null, consents: [],
     source: extra.source || (a.pending && !body.clause && !body.clauses ? a.pending.source : null) || null, terminate: Boolean(body.terminate), review: Boolean(a.reviewReason), counterTo,
   };
-  if (requiredParties(c.team, a).includes(c.uid)) a.pending.consents.push({ party: c.uid, decision: 'accept', at });
   log(a, c.uid, counterTo ? 'counter' : body.terminate ? 'terminate' : a.reviewReason ? 'review' : 'proposed', { n: a.pending.n, ...(extra.reviewId ? { reviewId: extra.reviewId } : {}) });
   finalizeIfAccepted(c, a);
   await store.agreements.save(c.tid, a);
@@ -539,6 +562,46 @@ export async function markPartyLeft(team, uid) {
     log(a, null, 'party_left', { party: uid, name });
     await store.agreements.save(team.id, a);
   }
+}
+
+/* ---------- filling in a new agreement from a PDF or a dictation ---------- */
+// Nothing is stored here: the result fills the "New agreement" form, and the person checks it before sending it for consent.
+const AUDIO_MIME = /^audio\/[\w.+-]+(;\s*codecs=[\w.,"' -]+)?$/i;
+const base64 = (v, what) => (typeof v === 'string' && /^[A-Za-z0-9+/=\s]+$/.test(v) ? Buffer.from(v, 'base64') : D.fail(400, what));
+export async function extractAgreement(c, body) {
+  if (!aiConfigured()) D.fail(503, 'AI is not configured: fill in the agreement by hand');
+  let text = '', kind = 'dictation', transcript = null;
+  if (body.pdf) {
+    const buf = base64(body.pdf.data, 'The file is not a PDF.');
+    if (buf.length > MAX_PDF_BYTES) D.fail(413, 'The file is too large (max 20 MB)');
+    try { text = (await pdfToText(buf)).text; } catch (e) { D.fail(400, e.message); }
+    kind = 'document';
+  } else if (body.audio) {
+    if (!AUDIO_MIME.test(String(body.audio.mime || ''))) D.fail(400, 'Unsupported audio format');
+    const buf = base64(body.audio.data, 'The recording is empty');
+    if (buf.length > MAX_AUDIO_BYTES) D.fail(413, 'The recording is too long (max 20 MB)');
+    const typed = D.str(body.text, 100000);
+    if (transcribeConfigured() && !(body.edited === true && typed)) {
+      try { text = await transcribe(buf, D.audioType(body.audio.mime), /^[a-z]{2}$/.test(body.lang) ? body.lang : null); } catch (e) { if (!typed) D.failWith(502, errorMessage(e)); }
+    }
+    text ||= typed;
+    transcript = text;
+  } else {
+    text = D.str(body.text, 100000);
+    transcript = text;
+  }
+  if (!text.trim()) D.fail(400, kind === 'document' ? 'No text was found in the PDF' : 'No transcript: speech recognition didn’t catch anything and server transcription isn’t configured');
+  const members = (await D.memberList(c.team)).map((m) => ({ id: m.id, name: m.name, aliases: m.aliases }));
+  let out;
+  try { out = await draftAgreementDocument({ kind, text: text.slice(0, 150000), members, uploader: { id: c.uid, name: c.me.name } }); } catch (e) { D.failWith(502, errorMessage(e)); }
+  const ids = new Set(members.map((m) => m.id));
+  return {
+    kind, transcript,
+    title: D.str(out.title, 200), type: AGR_TYPES.includes(out.type) ? out.type : 'other',
+    parties: uniq((out.party_member_ids || []).filter((x) => ids.has(x))),
+    external: uniq((out.external_parties || []).map((x) => D.str(x, 120)).filter(Boolean)).slice(0, 20),
+    clauses: (out.clauses || []).map((x) => ({ title: D.str(x.title, 200), text: D.str(x.text, MAX_TEXT) })).filter((x) => x.text).slice(0, MAX_CLAUSES),
+  };
 }
 
 /* ---------- advocate checklists for agreements ---------- */

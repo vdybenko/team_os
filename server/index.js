@@ -22,7 +22,7 @@ app.disable('x-powered-by');
 if (process.env.TRUST_LOCAL_PROXY === '1') app.set('trust proxy', 'loopback');
 // A PDF arrives base64-encoded in JSON, so adding to the inbox gets a larger body limit than the rest of the API.
 const jsonSmall = express.json({ limit: '5mb' }), jsonInbox = express.json({ limit: '30mb' });
-app.use((req, res, next) => (req.method === 'POST' && /^\/api\/teams\/[^/]+\/inbox(\/audio)?\/?$/.test(req.path) ? jsonInbox : jsonSmall)(req, res, next));
+app.use((req, res, next) => (req.method === 'POST' && /^\/api\/teams\/[^/]+\/(inbox(\/audio)?|agreements\/extract)\/?$/.test(req.path) ? jsonInbox : jsonSmall)(req, res, next));
 app.use(sessionMiddleware);
 mountAuthRoutes(app);
 mountOAuth(app);
@@ -215,6 +215,7 @@ const processOut = async (c, p) => (await Docs.processViews(c)).find((x) => x.id
 const agreementOut = (c, a) => Docs.agreementView(c, a);
 const P_ = '/api/teams/:tid/processes';
 app.post(P_, requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.createProcess(c, req.body)); }));
+app.post(P_ + '/links', requireUser, route(async (req) => Docs.linkProcess(await ctx(req), req.body)));
 app.post(P_ + '/collect', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.collectProcess(c, req.body)); }));
 app.patch(P_ + '/:id', requireUser, route(async (req) => { const c = await ctx(req); return processOut(c, await Docs.updateProcess(c, req.params.id, req.body)); }));
 app.delete(P_ + '/:id', requireUser, route(async (req) => { await Docs.deleteProcess(await ctx(req), req.params.id); }));
@@ -230,6 +231,7 @@ app.post(P_ + '/:id/advocate/dismiss', requireUser, route(async (req) => { const
 /* ================= API: agreements ================= */
 const A_ = '/api/teams/:tid/agreements';
 app.use(A_, (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+app.post(A_ + '/extract', requireUser, route(async (req) => Docs.extractAgreement(await ctx(req), req.body)));
 app.post(A_, requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.createAgreement(c, req.body)); }));
 app.post(A_ + '/:id/versions', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.proposeAgreementChange(c, req.params.id, req.body)); }));
 app.delete(A_ + '/:id/versions/pending', requireUser, route(async (req) => { const c = await ctx(req); return agreementOut(c, await Docs.withdrawAgreementVersion(c, req.params.id)); }));
@@ -391,13 +393,19 @@ app.post('/api/teams/:tid/inbox/:iid/apply', requireUser, route(async (req) => {
   } finally { applying.delete(key); }
 }));
 
-/* ================= roadmap (single source: README.md) ================= */
+/* ================= roadmap & updates (single source: README.md) ================= */
 
-app.get('/api/roadmap', requireUser, route(() => {
+// Returns the body of a "## <title>" section of README.md, up to the next "## " heading.
+function readmeSection(title) {
   const readme = fs.readFileSync(path.join(here, '..', 'README.md'), 'utf8');
-  const i = readme.indexOf('## Roadmap');
-  return { markdown: i < 0 ? '' : readme.slice(i).replace(/^## Roadmap\s*\n/, '') };
-}));
+  const m = readme.match(new RegExp(`^## ${title}[ \\t]*\\n`, 'm'));
+  if (!m) return '';
+  const rest = readme.slice(m.index + m[0].length);
+  const end = rest.search(/^## /m);
+  return (end < 0 ? rest : rest.slice(0, end)).trim();
+}
+app.get('/api/roadmap', requireUser, route(() => ({ markdown: readmeSection('Roadmap') })));
+app.get('/api/updates', requireUser, route(() => ({ markdown: readmeSection('Updates') })));
 
 /* ================= static + SPA ================= */
 

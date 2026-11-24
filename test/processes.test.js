@@ -75,8 +75,12 @@ test('an agreement comes into force only when every party accepts the same text'
   const { anna, bohdan, viktor } = await workspace('agr');
   const a = await Docs.createAgreement(anna, { type: 'partnership', title: 'Partnership', parties: ['bohdan', 'viktor'], clauses: [{ title: 'Shares', text: '40 / 40 / 20' }] });
   assert.equal(Docs.agreementStatus(a), 'pending');
+  // The author accepts as a separate step, like everyone else.
+  assert.deepEqual(a.pending.consents, []);
+  assert.ok(Docs.agreementView(anna, a).needsMe);
   await Docs.respondToAgreement(bohdan, a.id, { decision: 'accept' });
-  const v1 = await Docs.respondToAgreement(viktor, a.id, { decision: 'accept' });
+  assert.equal(Docs.agreementStatus(await Docs.respondToAgreement(viktor, a.id, { decision: 'accept' })), 'pending');
+  const v1 = await Docs.respondToAgreement(anna, a.id, { decision: 'accept' });
   assert.equal(Docs.agreementStatus(v1), 'in_force');
   assert.equal(v1.current.n, 1);
   assert.equal(v1.current.consents.length, 3);
@@ -84,16 +88,20 @@ test('an agreement comes into force only when every party accepts the same text'
   const shares = v1.current.clauses[0].id;
   const v2 = await Docs.proposeAgreementChange(viktor, a.id, { clause: { id: shares, text: '45 / 45 / 10' } });
   assert.equal(v2.pending.n, 2);
-  assert.deepEqual(v2.pending.consents.map((x) => x.party), ['viktor']);
+  assert.deepEqual(v2.pending.consents, []);
+  await Docs.respondToAgreement(viktor, a.id, { decision: 'accept' });
   await Docs.respondToAgreement(anna, a.id, { decision: 'accept' });
   await assert.rejects(Docs.respondToAgreement(bohdan, a.id, { decision: 'reject' }), /reason/);
   await Docs.respondToAgreement(bohdan, a.id, { decision: 'reject', note: 'Should be 42 / 42 / 16' });
   // A counter-proposal resets every consent: people agree to an exact text.
   const counter = await Docs.proposeAgreementChange(bohdan, a.id, { clause: { id: shares, text: '42 / 42 / 16' } });
   assert.equal(counter.pending.counterTo, 'viktor');
-  assert.deepEqual(counter.pending.consents.map((x) => x.party), ['bohdan']);
+  assert.deepEqual(counter.pending.consents, []);
   assert.equal(counter.current.clauses[0].text, '40 / 40 / 20');
+  await Docs.respondToAgreement(bohdan, a.id, { decision: 'accept' });
   await Docs.respondToAgreement(anna, a.id, { decision: 'accept' });
+  // A clause is changed or removed on its own; the last one can't be removed.
+  await assert.rejects(Docs.proposeAgreementChange(anna, a.id, { clause: { id: shares, text: '' } }), /at least one clause/);
   const done = await Docs.respondToAgreement(viktor, a.id, { decision: 'accept' });
   assert.equal(done.current.n, 2);
   assert.equal(done.current.clauses[0].text, '42 / 42 / 16');
@@ -109,6 +117,7 @@ test('an agreement comes into force only when every party accepts the same text'
 test('when a party leaves the team, the agreement needs a full review by those who remain', async () => {
   const { anna, bohdan, viktor } = await workspace('leave');
   const a = await Docs.createAgreement(anna, { type: 'roles', title: 'Roles', parties: ['bohdan', 'viktor'], clauses: [{ title: 'Viktor', text: 'Design' }, { title: 'Bohdan', text: 'Posts' }] });
+  await Docs.respondToAgreement(anna, a.id, { decision: 'accept' });
   await Docs.respondToAgreement(bohdan, a.id, { decision: 'accept' });
   await Docs.respondToAgreement(viktor, a.id, { decision: 'accept' });
   await D.removeMember(anna, 'viktor');
@@ -120,6 +129,7 @@ test('when a party leaves the team, the agreement needs a full review by those w
   const review = await Docs.proposeAgreementChange(ctx, a.id, { parties: ['anna', 'bohdan'], clauses: [{ id: marked.current.clauses[1].id, title: 'Bohdan', text: 'Posts and design' }] });
   assert.equal(review.pending.review, true);
   assert.deepEqual(Docs.requiredParties(ctx.team, review), ['anna', 'bohdan']);
+  await Docs.respondToAgreement(ctx, a.id, { decision: 'accept' });
   const done = await Docs.respondToAgreement(await D.ctxFor({ id: 'bohdan' }, 'leave', 'en'), a.id, { decision: 'accept' });
   assert.equal(Docs.agreementStatus(done), 'in_force');
   assert.equal(done.current.n, 2);
@@ -148,7 +158,7 @@ test('advocate checklist and review proposals become drafts, not changes', async
   assert.equal(p.amendments[0].source.quote, 'smoke test before each release');
   const ag = await Docs.getAgreement(anna, a.id);
   assert.equal(ag.pending.clauses.at(-1).title, 'Vesting');
-  assert.equal(ag.pending.consents.length, 1);
+  assert.equal(ag.pending.consents.length, 0);
   // Applying again is idempotent.
   await D.applyProposals(anna, { ...item, proposals: item.proposals.map((x) => ({ ...x })) });
   assert.equal((await Docs.getProcess(anna, release.id)).amendments.length, 1);
@@ -176,4 +186,21 @@ test('the migration collects team process knowledge into drafts once and leaves 
   const again = await migrateProcesses();
   assert.equal(again.processDraftsToCreate, 0);
   assert.ok(again.agreementKnowledgeLeftAsIs >= 1);
+});
+
+test('an existing process is linked to a project and a hypothesis by people who work in it', async () => {
+  const { anna, bohdan, viktor } = await workspace('links');
+  await store.hypotheses.save('links', { id: 'h1', project: 'release', owner: 'viktor', if: 'a', then: 'b', status: 'draft' });
+  const weekly = await Docs.createProcess(anna, { level: 'team', title: 'Weekly planning' });
+  const secret = await Docs.createProcess(anna, { level: 'org', visibility: 'owner', title: 'Spending' });
+  const p = await Docs.linkProcess(bohdan, { kind: 'project', id: 'release', process: weekly.id });
+  assert.deepEqual(p.processLinks, [weekly.id]);
+  const h = await Docs.linkProcess(viktor, { kind: 'hypothesis', id: 'h1', process: weekly.id });
+  assert.deepEqual(h.processLinks, [weekly.id]);
+  await assert.rejects(Docs.linkProcess(bohdan, { kind: 'project', id: 'release', process: secret.id }), /Process not found/);
+  await store.saveTeam({ ...anna.team, members: [...anna.team.members, { userId: 'olena', role: 'member' }] });
+  const olena = await D.ctxFor({ id: 'olena' }, 'links', 'en');
+  await assert.rejects(Docs.linkProcess(olena, { kind: 'project', id: 'release', process: weekly.id, on: false }), /work in the project/);
+  assert.deepEqual((await Docs.linkProcess(bohdan, { kind: 'project', id: 'release', process: weekly.id, on: false })).processLinks, []);
+  assert.equal((await Docs.getProcess(anna, weekly.id)).level, 'team');
 });

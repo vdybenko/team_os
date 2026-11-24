@@ -74,7 +74,7 @@ const T = (p) => `/api/teams/${encodeURIComponent(S.tid)}${p}`;
 const S = {
   me: null, teams: [], tid: null, d: null, ai: false, cfg: { emailLink: false, dev: false }, loginEmail: '', loginSent: false, loginBusy: false, loginError: '',
   tmenu: false, tab: 'matrix', dir: 'mine', taskDirs: { matrix: 'mine', kanban: 'mine', list: 'all' }, person: '', proj: '', fst: 'all', grp: 'person', dash: 'all', itab: 'review',
-  knt: 'all', kscope: 'all', kproj: '', klog: false, ptab: 'overview', vEdit: false,
+  knt: 'all', kscope: 'all', kproj: '', klog: false, ptab: 'overview', htab: 'overview', vEdit: false,
   review: null, applied: null, drawer: null, modal: null, pendingJoin: null, busy: false,
   orgs: [], period: null, gtab: 'okr', goal: null, hview: 'cards', hsort: 'score', ckAll: false, ckc: {},
   plvl: 'all', agf: 'all', dtab: {}, dsel: {}, pver: null, advBusy: null, draftBusy: null, genFrom: null,
@@ -226,6 +226,7 @@ function nav() {
   <div class="spacer"></div>
   ${personal() ? '' : `<button class="nv ${on('members')}" data-a="go" data-h="members">${ico('users')}<span class="lbl">${$t('Members')}</span></button>`}
   <button class="nv ${on('profile')}" data-a="go" data-h="profile">${ico('gear')}<span class="lbl">${$t('Profile')}</span></button>
+  <button class="nv ${on('updates')}" data-a="go" data-h="updates">${ico('bell')}<span class="lbl">${$t('Updates')}</span></button>
   <button class="nv ${on('roadmap')}" data-a="go" data-h="roadmap">${ico('route')}<span class="lbl">Roadmap</span></button>
   <div class="me">${av(uid(), 28)}<span class="lbl"><b>${esc(S.me.name)}</b><br><span class="hint">${ROLE[role()]}</span></span><button class="btn ghost sm lbl" style="margin-left:auto" data-a="logout" title="${$t('Sign out')}">${ico('out', 14)}</button></div>`;
 }
@@ -974,7 +975,8 @@ function pHyp(id) {
   return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="project-${h.project}">${ico('back', 14)} ${esc(prj(h.project)?.name || $t('Project'))}</button><div class="chips" style="margin-top:10px;align-items:center"><b>${hcode(id)}</b>${hypChip(h)}${h.priority ? scb(h) : ''}</div></div><div class="act">${ed ? `<select class="in" data-f="hst" data-id="${id}" aria-label="${$t('Status')}">${Object.entries(HST).map(([k2, l]) => `<option value="${k2}" ${k2 === h.status ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn" data-a="editHyp" data-id="${id}">${$t('Edit')}</button><button class="btn ghost" data-a="delHyp" data-id="${id}" title="${$t('Delete')}">${ico('trash')}</button>` : `<span class="hint">${ico('lock', 13)} ${$t('{name} or an Admin can edit', { name: esc(pn(h.owner)) })}</span>`}</div></div>
   <div class="bigstmt" style="margin-bottom:24px">${stmtHtml(h)}</div>
   <div class="chips" style="margin-bottom:6px"><span class="chip big">${$t('Responsible:')} <b>${esc(pn(h.owner))}</b></span><span class="chip big">${esc(h.metric || $t('No metric set'))}: <b>${esc(h.current || '—')}</b> / ${esc(h.target || '—')}</span><span class="chip big">${h.from || h.to ? `${fds(h.from)} – ${fds(h.to)}` : $t('No timeframe set')}</span></div>
-  <div class="hyp-grid">
+  <div style="margin:14px 0 16px"><span class="seg">${[['overview', $t('Overview')], ['priority', `${$t('Prioritization')}${h.priority ? ` · ${hscore(h)}` : ''}`], ['goal', $t('Moves the goal')]].map(([v, l]) => `<button class="${S.htab === v ? 'on' : ''}" data-a="htab" data-v="${v}">${l}</button>`).join('')}</span></div>
+  ${S.htab === 'priority' ? `<div class="hyp-tab">
    <div class="card prio"><h2>${ico('chart')} ${$t('Prioritization')} ${qchip(h, 'qchip')}<span style="margin-left:auto;display:flex;align-items:center;gap:10px"><span class="hint" id="rank">${h.priority ? $t('#{r} of {n} in the project', { r, n }) : $t('not scored yet')}</span><span id="bigscore">${scb(h, true)}</span></span></h2>
     ${ed ? '' : `<div class="lock">${ico('lock', 14)} ${$t('The estimates are changed by the responsible person ({name}) or an Admin', { name: esc(pn(h.owner)) })}</div>`}
     ${h.forecast ? `<div class="hint" style="margin-top:4px">${$t('Forecast fixed when testing started ({date}): priority {score}', { date: fds(h.forecast.at), score: h.forecast.score })}</div>` : ''}
@@ -992,19 +994,20 @@ function pHyp(id) {
      <p class="hint">${$t('Based on ICE (Sean Ellis), RICE (Intercom), the Confidence Meter (Itamar Gilad) and Cost of Delay.')}</p></div></details>
     <div class="box"><h3>${$t('Comparison in the project')}</h3><div class="cmpbars" id="cmp">${cmpBars(h)}</div></div>
    </div>
-   <div class="col">
+  </div>` : S.htab === 'goal' ? `<div class="hyp-tab">
     <div class="card"><h2>${ico('target')} ${$t('Moves the goal')}</h2>
      <div class="kv" style="margin-top:0"><span>${$t('Project KR')}</span>${projKrs.length ? `<select class="in" data-f="hkr" data-id="${h.id}" ${ed ? '' : 'disabled'}><option value="">${$t('— choose a KR —')}</option>${projKrs.map(({ x, g }) => `<option value="${x.id}" ${x.id === h.kr ? 'selected' : ''}>${esc(x.title)} · ${esc(g.title)} · ${periodLabel(g.period)}</option>`).join('')}</select>` : `<span class="hint">${$t('The project has no goals yet')}</span>`}
       <span>${$t('Expected contribution')}</span><span class="inl"><input class="in" style="width:110px" type="number" step="any" value="${h.expectedImpact ?? ''}" data-f="himp" data-id="${h.id}" ${ed ? '' : 'disabled'} aria-label="${$t('Expected contribution')}"> <span class="hint">${esc(k?.unit || $t('units'))} ${$t('over the hypothesis period')}</span></span></div>
      ${k ? `<div class="dk" data-a="goal" data-id="${hit.g.id}" style="cursor:pointer"><span class="x">${cd(k.confidence)} <b>${esc(k.title)}</b> <span class="hint">${fnum(k.current, k.unit)} / ${fnum(k.target, k.unit)}</span></span>${pbar(k, '90px')}</div>` : ''}
      <div class="path" style="margin-top:8px">${chain.slice(1).map((x) => `<button data-a="goal" data-id="${x.g.id}"><span class="arr">↳</span> <b>${esc(x.k.title)}</b> <span class="hint">· ${esc(x.g.title)}</span></button>`).join('')}</div>
      ${k ? (reachesTeam(h.kr) ? `<div class="route">${ico('check', 13)} ${$t('Reaches the team’s main goal')}</div>` : `<div class="al warn2">${$t('The KR is not aligned with team goals')}</div>`) : `<div class="al warn2">${$t('Choose the KR this hypothesis moves')}</div>`}</div>
+  </div>` : `<div class="hyp-over">
     <div class="card"><h2>${$t('Criteria')}</h2><div class="kv" style="margin:0"><span>${$t('Signal')}</span><span>${esc(h.metric || '—')}: <b>${esc(h.current || '—')}</b> / ${esc(h.target || '—')}</span><span>${$t('Success')}</span><span>${esc(h.successCriteria || '—')}</span><span>${$t('Stop')}</span><span style="color:var(--red)">${esc(h.killCriteria || '—')}</span></div><p class="hint" style="margin-bottom:0">${$t('The signal is the hypothesis’s fast (leading) metric. The KR is the result it has to move.')}</p></div>
-   </div></div>
+    <div class="card"><h2>Learnings</h2><div class="inl" style="margin-bottom:10px"><input class="in" id="learnTxt" style="flex:1" placeholder="${$t('What did we learn?')}"><button class="btn sm pri" data-a="addLearn" data-id="${id}">${$t('Add')}</button></div>${(h.learnings || []).map((l) => `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="hint">${fds(l.at)} · ${esc(pn(l.by))}</div>${esc(l.text)}</div>`).join('') || `<div class="empty">${$t('Learnings will appear here')}</div>`}<h3 style="margin:16px 0 6px">${$t('Verdict')}</h3><div class="hint">${verdict}</div></div>
+  ${docsCardFor('hypothesis', id, '')}
+  </div>
   <div class="grid g2" style="margin-top:16px"><div class="card"><h2>${$t('Hypothesis tasks')} · ${ts.length}<button class="lnk" data-a="newTask" data-proj="${h.project}" data-hyp="${id}">${$t('+ Task')}</button></h2>${ts.map(trow).join('') || `<div class="empty">${$t('Link tasks from Review or from a task card')}</div>`}</div>
-  <div class="card"><h2>${$t('Hypothesis knowledge')} · ${ks.length}<button class="lnk" data-a="newNote" data-proj="${h.project}" data-hyp="${id}">${$t('+ Note')}</button><button class="lnk" style="margin-left:0" data-a="newKn" data-proj="${h.project}" data-hyp="${id}">${$t('+ Knowledge')}</button></h2>${ks.map(knCard).join('') || `<div class="empty">${$t('No knowledge linked to this hypothesis yet')}</div>`}</div></div>
-  ${docsCardFor('hypothesis', id)}
-  <div class="card" style="margin-top:16px"><h2>Learnings</h2><div class="inl" style="margin-bottom:10px"><input class="in" id="learnTxt" style="flex:1" placeholder="${$t('What did we learn?')}"><button class="btn sm pri" data-a="addLearn" data-id="${id}">${$t('Add')}</button></div>${(h.learnings || []).map((l) => `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="hint">${fds(l.at)} · ${esc(pn(l.by))}</div>${esc(l.text)}</div>`).join('') || `<div class="empty">${$t('Learnings will appear here')}</div>`}<h3 style="margin:16px 0 6px">${$t('Verdict')}</h3><div class="hint">${verdict}</div></div>`;
+  <div class="card"><h2>${$t('Hypothesis knowledge')} · ${ks.length}<button class="lnk" data-a="newNote" data-proj="${h.project}" data-hyp="${id}">${$t('+ Note')}</button><button class="lnk" style="margin-left:0" data-a="newKn" data-proj="${h.project}" data-hyp="${id}">${$t('+ Knowledge')}</button></h2>${ks.map(knCard).join('') || `<div class="empty">${$t('No knowledge linked to this hypothesis yet')}</div>`}</div></div>`}`;
 }
 // Live update of the prioritization block while a slider moves; the value is saved when it is released.
 function onPriorityInput(el) {
@@ -1063,6 +1066,16 @@ function pProfile() {
   ${isAdmin() && !personal() ? `<div class="card"><h2>${$t('Team')}</h2><div class="grid" style="gap:12px"><label class="fl">${$t('Team name')}<input class="in" id="tmName" value="${esc(S.d.team.name)}" ${role() === 'owner' ? '' : 'disabled'}></label><label class="fl">${$t('Urgent if the deadline is within (days)')}<input class="in" type="number" min="0" max="14" id="tmUrg" value="${urgentDays()}"></label><div><button class="btn pri" data-a="saveTeam">${$t('Save')}</button></div></div></div>` : ''}
   <div class="card"><h2>${$t('Claude, Codex and other AI apps')}</h2><p class="hint" style="margin-top:0">${$t('Connect TeamOS as an MCP server: the app signs in with your account and sees and changes only what you can.')}</p><pre class="hint" style="font-size:12.5px;white-space:pre-wrap;margin:0 0 12px">${esc(location.origin)}/mcp</pre><a class="btn" href="/oauth/connections">${$t('Connected apps')}</a></div>
   <div class="card"><h2>${$t('Where the data lives')}</h2><p class="hint" style="margin-top:0">${$t('Tasks, projects and hypotheses are JSON; knowledge is Markdown. Each user has their own folder with a subfolder for each team; shared items live in the team folder. The entry point everywhere is <code>index.md</code>.')}</p><pre class="hint" style="font-size:12.5px;white-space:pre-wrap;margin:0">data/users/${esc(S.me.id)}/index.md\ndata/users/${esc(S.me.id)}/teams/${esc(S.tid)}/  (${$t('inbox, private tasks and knowledge')})\ndata/teams/${esc(S.tid)}/index.md  (${$t('projects, hypotheses, shared tasks and knowledge')})</pre></div></div>`;
+}
+
+/* ---------- updates ---------- */
+function pUpdates() {
+  if (S.updates == null) {
+    S.updates = '';
+    api('GET', '/api/updates').then((r) => { S.updates = r.markdown; render(); }).catch((e) => { S.updates = null; toast(e.message); });
+  }
+  return `<div class="hd"><div><h1>${$t('Updates')}</h1><div class="sub">${$t('What is new in TeamOS. Source: the Updates section of README.md.')}</div></div><button class="btn ghost sm" data-a="go" data-h="roadmap">${ico('route', 14)} Roadmap</button></div>
+  <div class="card"><div class="doc mdv" lang="en">${md(S.updates) || `<p class="hint">${$t('No updates yet')}</p>`}</div></div>`;
 }
 
 /* ---------- roadmap ---------- */
@@ -1193,13 +1206,13 @@ const REC_LANGS = [['uk-UA', 'Українська'], ['en-US', 'English'], ['ru
 const VREC = { rec: null, sr: null, chunks: [], blob: null, url: null, mime: '', start: 0, dur: 0, timer: null, final: '', lang: (() => { try { return localStorage.getItem('teamos.recLang'); } catch { return null; } })() };
 const recLang = () => VREC.lang || (LANG === 'uk' ? 'uk-UA' : 'en-US');
 const MAX_AUDIO = 20 * 1048576;
-function voicePanel(m) {
+function voicePanel(m, startHint) {
   const live = Boolean(VREC.rec);
   const ctl = live
     ? `<button class="btn rec on" data-a="recStop">${ico('x', 15)} ${$t('Stop')}</button><span class="rec-dot"></span><b id="recTime">${mmss((Date.now() - VREC.start) / 1000)}</b><span class="hint">${$t('Recording…')}</span>`
     : VREC.blob
       ? `<audio controls src="${VREC.url}"></audio><span class="hint">${mmss(VREC.dur)} · ${fsize(VREC.blob.size)}</span><button class="btn sm" data-a="recReset">${$t('Record again')}</button>`
-      : `<button class="btn pri rec" data-a="recStart">${ico('mic', 16)} ${$t('Start recording')}</button><span class="hint">${$t('Say your conclusions and takeaways — the recording and its transcript are kept as the source.')}</span>`;
+      : `<button class="btn pri rec" data-a="recStart">${ico('mic', 16)} ${$t('Start recording')}</button><span class="hint">${startHint || $t('Say your conclusions and takeaways — the recording and its transcript are kept as the source.')}</span>`;
   const langSel = SR ? `<label class="hint inl" style="gap:6px">${$t('Speech language')}<select class="in sm" data-f="recLang" ${live ? 'disabled' : ''}>${REC_LANGS.map(([v, l]) => `<option value="${v}" ${v === recLang() ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : '';
   const note = S.transcribe
     ? $t('The live transcript comes from the browser. After saving, the server transcribes the recording again for better accuracy — unless you edit the text by hand.')
@@ -1229,6 +1242,7 @@ async function recStart() {
     VREC.blob = new Blob(VREC.chunks, { type: VREC.mime }); VREC.url = URL.createObjectURL(VREC.blob);
     VREC.dur = (Date.now() - VREC.start) / 1000; VREC.rec = null; clearInterval(VREC.timer);
     if (S.modal?.k === 'add') { const ta = document.getElementById('addTxt'); if (ta) S.modal.text = ta.value; S.modal.title = val('addTitle'); modal(); }
+    else if (S.modal?.k === 'doc.newAgr') { const ta = document.getElementById('addTxt'); if (ta) S.modal.text = ta.value; modal(); }
   };
   rec.start(1000);
   VREC.timer = setInterval(() => { const el = document.getElementById('recTime'); if (el) el.textContent = mmss((Date.now() - VREC.start) / 1000); }, 500);
@@ -1245,7 +1259,7 @@ async function recStart() {
     sr.onerror = () => {};
     try { sr.start(); VREC.sr = sr; } catch { /* recognition unavailable — audio still records */ }
   }
-  S.modal.title = val('addTitle');
+  if (S.modal.k === 'add') S.modal.title = val('addTitle');
   modal();
 }
 function recStop() {
@@ -1440,7 +1454,7 @@ function pProcess(id) {
     ${p.canApprove ? `<select class="in" style="width:auto" data-f="pcVis" data-id="${p.id}">${Object.entries(PVIS).map(([k, l]) => `<option value="${k}" ${p.visibility === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}</div>` : '';
   return `<div class="dc"><div class="crumb"><button class="lnk" data-a="go" data-h="processes">${ico('back', 13)} ${$t('Processes')}</button> / ${PLEVEL[p.level]}</div>
   <div class="hd"><div><div class="chips" style="margin-bottom:8px">${pcLevelChip(p)}${p.status === 'draft' ? `<span class="chip amber">${$t('Draft')}</span>` : p.status === 'retired' ? `<span class="chip">${$t('Retired')}</span>` : `<span class="chip green">${$t('Active · v{n}', { n: p.version })}</span>`}</div>
-   <h1>${esc(p.title)}</h1>${p.summary ? `<div class="sub">${esc(p.summary)}</div>` : ''}<div class="hint" style="margin-top:6px">${$t('Approves changes:')} <b style="color:var(--ink)">${approverLabel(p)}</b>${['hypothesis', 'project'].includes(p.level) ? ` · ${$t('as a fallback — the team Owner/Admin')}` : ''}</div></div>
+   <h1>${esc(p.title)}</h1>${p.summary ? `<div class="sub">${esc(p.summary)}</div>` : ''}${usedIn(p).length ? `<div class="chips" style="margin-top:8px"><span class="hint">${$t('Used in:')}</span>${usedIn(p).join('')}</div>` : ''}<div class="hint" style="margin-top:6px">${$t('Approves changes:')} <b style="color:var(--ink)">${approverLabel(p)}</b>${['hypothesis', 'project'].includes(p.level) ? ` · ${$t('as a fallback — the team Owner/Admin')}` : ''}</div></div>
    <div class="act">${can ? `<button class="btn pri" data-a="proposeProc" data-id="${p.id}">${ico('edit')} ${$t('Propose a change')}</button>` : ''}${p.canApprove ? `<button class="btn ghost" data-a="renameProc" data-id="${p.id}" title="${$t('Rename')}">${ico('edit')}</button>${p.status === 'active' ? `<button class="btn ghost" data-a="retireProc" data-id="${p.id}" data-v="retired">${$t('Retire')}</button>` : ''}` : ''}</div></div>
   ${banner}${orgVis}
   <div class="split">
@@ -1531,7 +1545,10 @@ function pAgreements() {
   ${list.map(agrRow).join('') || `<div class="card empty">${S.agf === 'me' ? $t('Nothing is waiting for you') : $t('No agreements yet. Shares between partners, roles, team rules, work with a contractor — anything that needs everyone’s consent.')}</div>`}
   <div class="note" style="margin-top:14px">${ico('lock')}<span>${$t('Only the parties see an agreement. The Owner/Admin role doesn’t change that.')}</span></div></div>`;
 }
-const clausesHtml = (v, changed = new Set()) => v.clauses.map((x) => `<div class="cl ${changed.has(x.id) ? 'chg' : ''}"><h3>${esc(x.title || '—')}</h3><div>${esc(x.text)}</div>${srcLine(x.source)}</div>`).join('');
+// Each clause can be changed on its own, like a section of a process.
+const canChangeAgr = (a) => a.canPropose && agParties(a).includes(uid()) && !(a.status === 'needs_review' && !a.pending?.review);
+const clauseActs = (a, x) => (a && canChangeAgr(a) ? `<span class="clacts"><button class="lnk" data-a="agrEdit" data-id="${a.id}" data-cid="${x.id}">${$t('Propose a change')}</button><button class="lnk" data-a="agrRemove" data-id="${a.id}" data-cid="${x.id}">${$t('Remove')}</button></span>` : '');
+const clausesHtml = (v, a) => v.clauses.map((x) => `<div class="cl"><h3>${esc(x.title || '—')}${clauseActs(a, x)}</h3><div>${esc(x.text)}</div>${srcLine(x.source)}</div>`).join('') + (a && canChangeAgr(a) ? `<button class="btn sm" style="margin-top:12px" data-a="agrEdit" data-id="${a.id}" data-new="1">${ico('plus', 13)} ${$t('Add a clause')}</button>` : '');
 function changedClauses(a) {
   if (!a.pending || !a.current) return new Set();
   const old = new Map(a.current.clauses.map((x) => [x.id, x]));
@@ -1542,9 +1559,9 @@ function diffView(a) {
   const now = new Set(a.pending.clauses.map((x) => x.id));
   const rows = a.pending.clauses.map((x) => {
     const o = old.get(x.id);
-    if (!o) return `<div class="cl chg"><h3>${esc(x.title || '—')} <span class="kind add">${$t('New clause')}</span></h3><div>${esc(x.text)}</div>${srcLine(x.source)}</div>`;
-    if (o.text === x.text && o.title === x.title) return `<div class="cl"><h3>${esc(x.title || '—')} <span class="hint">${$t('unchanged')}</span></h3><div class="hint">${esc(x.text)}</div></div>`;
-    return `<div class="cl"><h3>${esc(x.title || '—')} <span class="kind rep">${$t('Changed')}</span></h3><div class="diff"><div class="dwas"><small>${$t('v{n} · in force now', { n: a.current.n })}</small>${esc(o.text)}</div><div class="dnow"><small>${$t('v{n} · waiting for consent', { n: a.pending.n })}</small>${esc(x.text)}</div></div>${srcLine(x.source)}</div>`;
+    if (!o) return `<div class="cl chg"><h3>${esc(x.title || '—')} <span class="kind add">${$t('New clause')}</span>${clauseActs(a, x)}</h3><div>${esc(x.text)}</div>${srcLine(x.source)}</div>`;
+    if (o.text === x.text && o.title === x.title) return `<div class="cl"><h3>${esc(x.title || '—')} <span class="hint">${$t('unchanged')}</span>${clauseActs(a, x)}</h3><div class="hint">${esc(x.text)}</div></div>`;
+    return `<div class="cl"><h3>${esc(x.title || '—')} <span class="kind rep">${$t('Changed')}</span>${clauseActs(a, x)}</h3><div class="diff"><div class="dwas"><small>${$t('v{n} · in force now', { n: a.current.n })}</small>${esc(o.text)}</div><div class="dnow"><small>${$t('v{n} · waiting for consent', { n: a.pending.n })}</small>${esc(x.text)}</div></div>${srcLine(x.source)}</div>`;
   }).join('');
   const removed = a.current.clauses.filter((x) => !now.has(x.id)).map((x) => `<div class="cl"><h3>${esc(x.title || '—')} <span class="kind rem">${$t('Removed')}</span></h3><div class="hint" style="text-decoration:line-through">${esc(x.text)}</div></div>`).join('');
   const before = [...a.current.parties].sort().join(), after = [...a.pending.parties].sort().join();
@@ -1599,7 +1616,7 @@ function pAgreement(id) {
   }
   const tabs = [['text', a.pending && a.current ? $t('In force v{n}', { n: a.current.n }) : a.current ? $t('Text') : $t('Text v{n}', { n: a.pending?.n || 1 })], ...(a.pending && a.current ? [['diff', `v${a.current.n} → v${a.pending.n}`]] : []), ['history', $t('Version history')], ['advocate', `${ico('shield', 14)} ${$t('Advocate')}`]];
   const body = tab === 'diff' && a.pending && a.current ? diffView(a) : tab === 'history' ? agrHistory(a) : tab === 'advocate' ? agrAdvocate(a)
-    : `${clausesHtml(a.current || a.pending)}${a.current ? `<div class="hint" style="margin-top:12px">${$t('In force since {date} with the consent of every party.', { date: fds(a.current.at) })}</div>` : ''}`;
+    : `${clausesHtml(a.pending && !a.current ? a.pending : a.current || a.pending, a)}${a.current ? `<div class="hint" style="margin-top:12px">${$t('In force since {date} with the consent of every party.', { date: fds(a.current.at) })}</div>` : ''}`;
   const party = agParties(a).includes(me) && a.canPropose;
   return `<div class="dc"><div class="crumb"><button class="lnk" data-a="go" data-h="agreements">${ico('back', 13)} ${$t('Agreements')}</button> / ${ATYPE[a.type]}</div>
   <div class="hd"><div><div class="chips" style="margin-bottom:8px"><span class="chip">${ATYPE[a.type]}</span>${astChip(a)}${a.current ? `<span class="hint">${$t('v{n} in force', { n: a.current.n })}</span>` : ''}</div><h1>${esc(a.title)}</h1>
@@ -1610,15 +1627,26 @@ function pAgreement(id) {
    <div class="card"><div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-a="dtab" data-id="${a.id}" data-v="${k}">${l}</button>`).join('')}</div>${body}</div>
    <div class="col">
     <div class="card"><h2>${ico('users')} ${$t('Parties and consent')}</h2>${agParties(a).map((w) => partyRow(a, w)).join('')}
-     ${a.pending ? `<div class="hint" style="margin-top:10px">${$t('Any change to the text resets the consents given so far: people agree to an exact text. The author of a change accepts it automatically.')}</div>` : ''}</div>
+     ${a.pending ? `<div class="hint" style="margin-top:10px">${$t('Any change to the text resets the consents given so far: people agree to an exact text. The author accepts it too, as a separate step.')}</div>` : ''}</div>
     ${a.pending?.source?.quote ? `<div class="card"><h2>${ico('quote')} ${$t('Where this change comes from')}</h2>${srcLine(a.pending.source)}<div class="hint" style="margin-top:6px">${$t('from the inbox, confirmed by {name}, {date}', { name: esc(pn(a.pending.by)), date: fds(a.pending.at) })}</div></div>` : ''}
    </div></div></div>`;
 }
 
-// Processes on the project and hypothesis pages.
-function docsCardFor(level, id) {
-  const list = PCS().filter((p) => p.status !== 'retired' && (level === 'project' ? p.project === id : p.hypothesis === id));
-  return `<div class="card dc" style="margin-top:16px"><h2>${ico('proc')} ${$t('Processes')} · ${list.length}<button class="lnk" data-a="newProc" data-level="${level}" data-ref="${id}">${$t('+ Process')}</button></h2>${list.map((p) => `<button class="trow" data-a="go" data-h="process-${p.id}"><span class="tt"><b>${esc(p.title)}</b><span class="mt">${p.level === 'hypothesis' && level === 'project' ? `<span class="chip">${hcode(p.hypothesis)}</span>` : ''}${p.status === 'draft' ? `<span class="chip amber">${$t('Draft')}</span>` : `<span class="chip">v${p.version}</span>`}${p.pending ? `<span class="chip ${p.needsMe ? 'red' : 'amber'}">${$p(p.pending, 'change')}</span>` : ''}${covBar(p.coverage, 9)}</span></span></button>`).join('') || `<div class="empty">${$t('How do you do the work here? Describe it in one sentence — the rest grows from meetings.')}</div>`}</div>`;
+// Processes on the project and hypothesis pages: their own, and existing ones linked as "used here".
+const linkTarget = (level, id) => (level === 'project' ? prj(id) : hyp(id));
+const canLinkHere = (level, id) => { const t = linkTarget(level, id); const p = level === 'project' ? t : prj(t?.project); return isAdmin() || (p && (p.owner === uid() || (p.members || []).includes(uid()))) || t?.owner === uid(); };
+const usedIn = (p) => [...S.d.projects.filter((x) => (x.processLinks || []).includes(p.id)).map((x) => tag(x.id)), ...S.d.hypotheses.filter((x) => (x.processLinks || []).includes(p.id)).map((x) => `${tag(x.project)}<span class="chip">${hcode(x.id)}</span>`)];
+const pcItem = (p, extra = '', after = '') => `<div class="pcitem"><button class="trow" data-a="go" data-h="process-${p.id}"><span class="tt"><b>${esc(p.title)}</b><span class="mt">${extra}${p.status === 'draft' ? `<span class="chip amber">${$t('Draft')}</span>` : p.status === 'retired' ? `<span class="chip">${$t('Retired')}</span>` : `<span class="chip">v${p.version}</span>`}${p.pending ? `<span class="chip ${p.needsMe ? 'red' : 'amber'}">${$p(p.pending, 'change')}</span>` : ''}${covBar(p.coverage, 9)}</span></span></button>${after}</div>`;
+function docsCardFor(level, id, style = 'margin-top:16px') {
+  const own = PCS().filter((p) => p.status !== 'retired' && (level === 'project' ? p.project === id : p.hypothesis === id));
+  const linkIds = linkTarget(level, id)?.processLinks || [];
+  const linked = linkIds.map(pcById).filter((p) => p && !own.includes(p));
+  const can = canLinkHere(level, id);
+  const ownHtml = own.map((p) => pcItem(p, p.level === 'hypothesis' && level === 'project' ? `<span class="chip">${hcode(p.hypothesis)}</span>` : '')).join('');
+  const linkedHtml = linked.map((p) => pcItem(p, `<span class="chip">${ico('link', 11)} ${PLEVEL[p.level]}</span>`, can ? `<button class="btn ghost sm" data-a="unlinkProc" data-level="${level}" data-id="${id}" data-p="${p.id}" title="${$t('Unlink')}" aria-label="${$t('Unlink')}">${ico('x', 13)}</button>` : '')).join('');
+  return `<div class="card dc" style="${style}"><h2>${ico('proc')} ${$t('Processes')} · ${own.length + linked.length}<span class="h2acts">${can ? `<button class="lnk" data-a="linkProc" data-level="${level}" data-id="${id}">${$t('Link existing')}</button>` : ''}<button class="lnk" data-a="newProc" data-level="${level}" data-ref="${id}">${$t('+ Process')}</button></span></h2>
+  ${ownHtml}${linked.length ? `${own.length ? `<div class="grp">${$t('Linked processes')}</div>` : ''}${linkedHtml}` : ''}
+  ${!own.length && !linked.length ? `<div class="empty">${$t('How do you do the work here? Describe it in one sentence — the rest grows from meetings.')}${can && PCS().length ? `<br><button class="btn sm" style="margin-top:10px" data-a="linkProc" data-level="${level}" data-id="${id}">${ico('link', 13)} ${$t('Link an existing process')}</button>` : ''}</div>` : ''}</div>`;
 }
 // The "waiting for me" block of the dashboard.
 function docsWaiting() {
@@ -1660,6 +1688,14 @@ function docModal(m, close, cancel) {
      <label class="fl">${$t('In short: what this process is')}<textarea class="in" rows="3" id="npSum" placeholder="${$t('One or two sentences. Details — steps, roles, exceptions — can be added later or come from meetings.')}">${esc(m.summary || '')}</textarea></label>`,
     `<span class="hint" style="margin-right:auto">${active ? $t('You own this level — the process becomes active right away.') : $t('The process stays a draft until it is approved by: {who}.', { who: m.level === 'team' ? $t('Team Owner / Admin') : m.level === 'org' ? $t('Organization Owner / Admin') : owner ? esc(pn(owner)) : '—' })}</span>${cancel}<button class="btn pri" data-a="createProc">${$t('Create')}</button>`);
   }
+  if (m.k === 'doc.link') {
+    const t = linkTarget(m.level, m.id), have = new Set(t?.processLinks || []);
+    const list = PCS().filter((p) => p.status !== 'retired' && !have.has(p.id) && !(m.level === 'project' ? p.level === 'project' && p.project === m.id : p.hypothesis === m.id));
+    const order = { org: 0, team: 1, project: 2, hypothesis: 3 };
+    return wrap(m.level === 'project' ? $t('Link a process to the project') : $t('Link a process to the hypothesis'), `<p class="hint" style="margin-top:0">${$t('The process stays where it is, with the same owner who approves changes. Here it is shown as the way this work is done.')}</p>
+     ${list.length ? `<div class="cklist" style="max-height:340px;overflow:auto">${list.sort((a, b) => order[a.level] - order[b.level] || a.title.localeCompare(b.title)).map((p) => `<label><input type="checkbox" class="lnkP" value="${p.id}"> <span><b>${esc(p.title)}</b> <span class="chips" style="display:inline-flex">${pcLevelChip(p)}</span></span></label>`).join('')}</div>` : `<div class="empty">${$t('No other processes to link yet.')}</div>`}`,
+      `${cancel}<button class="btn pri" data-a="linkGo" ${list.length ? '' : 'disabled'}>${$t('Link')}</button>`);
+  }
   if (m.k === 'doc.collect') {
     const kn = uncollected();
     const lvOpts = [['team:', PLEVEL.team], ...S.d.projects.filter((p) => p.status !== 'archived').map((p) => [`project:${p.id}`, `${PLEVEL.project} · ${p.name}`]), ...S.d.hypotheses.map((h) => [`hypothesis:${h.id}`, `${PLEVEL.hypothesis} · ${hcode(h.id)} ${(h.then || '').slice(0, 40)}`])];
@@ -1687,13 +1723,23 @@ function docModal(m, close, cancel) {
       `${cancel}<button class="btn pri" data-a="rejectGo">${$t('Reject')}</button>`);
   }
   if (m.k === 'doc.newAgr') {
-    const team = m.type === 'team_rules';
-    return wrap($t('New agreement'), `<div class="grid g2" style="gap:12px"><label class="fl">${$t('Type')}<select class="in" id="naType" data-f="naType">${Object.entries(ATYPE).map(([k, l]) => `<option value="${k}" ${m.type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    const team = m.type === 'team_rules', tab = m.tab || 'hand';
+    const seg = S.ai ? `<div class="seg" style="margin-bottom:14px">${[['hand', `${ico('edit', 13)} ${$t('By hand')}`], ['voice', `${ico('mic', 13)} ${$t('Dictate')}`], ['pdf', `${ico('file', 13)} ${$t('From a PDF')}`]].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-a="naTab" data-v="${k}" ${m.busy ? 'disabled' : ''}>${l}</button>`).join('')}</div>` : '';
+    const busy = m.busy ? `<div class="note" style="margin-top:12px"><span class="spin"></span><span>${tab === 'pdf' ? $t('Reading the agreement… usually 20–60 seconds.') : $t('Turning what you said into clauses…')}</span></div>` : '';
+    if (tab === 'voice') {
+      return wrap($t('New agreement'), `${seg}${voicePanel(m, $t('Say what was agreed: who the parties are, shares, roles, money, terms. AI turns it into clauses you can check.'))}${busy}`,
+        `<span class="hint" style="margin-right:auto">${$t('Nothing is sent until you check the form.')}</span>${cancel}<button class="btn pri" data-a="naFromVoice" ${VREC.rec || !VREC.blob || m.busy ? 'disabled' : ''}>${ico('spark')} ${$t('Fill in the form')}</button>`, true);
+    }
+    if (tab === 'pdf') {
+      return wrap($t('New agreement'), `${seg}<label class="card" style="display:grid;place-items:center;padding:30px;border-style:dashed;cursor:pointer;text-align:center">${ico('file', 26)}<b style="margin-top:8px">${m.pdfName ? esc(m.pdfName) : $t('Choose the PDF of an existing agreement')}</b><span class="hint">${m.pdfName ? fsize(m.pdfSize) : $t('Up to 20 MB. AI keeps its structure and wording, and the advocate shows what it is missing.')}</span><input type="file" hidden data-f="naPdf" accept=".pdf,application/pdf" ${m.busy ? 'disabled' : ''}></label>${busy}`,
+        `<span class="hint" style="margin-right:auto">${$t('Nothing is sent until you check the form.')}</span>${cancel}<button class="btn pri" data-a="naFromPdf" ${!m.pdf || m.busy ? 'disabled' : ''}>${ico('spark')} ${$t('Analyze the agreement')}</button>`, true);
+    }
+    return wrap($t('New agreement'), `${seg}${m.filled ? `<div class="note">${ico('spark')}<span>${m.filled.kind === 'document' ? $t('Filled in from “{name}”. Check the parties and every clause before sending.', { name: esc(m.filled.name) }) : $t('Filled in from your dictation. Check the parties and every clause before sending.')}</span></div>` : ''}<div class="grid g2" style="gap:12px"><label class="fl">${$t('Type')}<select class="in" id="naType" data-f="naType">${Object.entries(ATYPE).map(([k, l]) => `<option value="${k}" ${m.type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
      <label class="fl">${$t('Title')}<input class="in" id="naTitle" value="${esc(m.title || '')}"></label></div>
      <div class="hint" style="margin:10px 0 6px;font-weight:600">${$t('Parties — every one of them has to accept')}</div>
      <div class="pchk">${S.d.members.map((x) => `<label><input type="checkbox" class="naP" value="${x.id}" ${x.id === uid() ? 'checked disabled' : team || (m.parties || []).includes(x.id) ? 'checked' : ''}>${av(x.id, 20)} ${esc(x.name)}</label>`).join('')}</div>
      <label class="fl">${$t('External parties (optional, comma-separated)')}<input class="in" id="naExt" value="${esc(m.ext || '')}" placeholder="${$t('Name — a party records their consent')}"></label>
-     <label class="fl">${$t('Clauses — one per line, as “Title: text”')}<textarea class="in" rows="6" id="naCl" placeholder="${$t('Shares: Anna — 40%, Bohdan — 40%, Viktor — 20%')}">${esc(m.clauses || '')}</textarea></label>`,
+     <label class="fl">${$t('Clauses — one per line, as “Title: text”')}<textarea class="in" rows="${m.filled ? 12 : 6}" id="naCl" placeholder="${$t('Shares: Anna — 40%, Bohdan — 40%, Viktor — 20%')}">${esc(m.clauses || '')}</textarea></label>`,
       `<span class="hint" style="margin-right:auto">${$t('After it is created, the advocate shows what is missing.')}</span>${cancel}<button class="btn pri" data-a="createAgr">${$t('Send for consent')}</button>`, true);
   }
   if (m.k === 'doc.agrEdit') {
@@ -1752,6 +1798,13 @@ const DOC_ACTIONS = {
       return p;
     }, (p) => (p.status === 'active' ? $t('Process created. The advocate shows what can be added.') : $t('Process created as a draft. Approves: {who}', { who: approverLabel(p).replace(/<[^>]+>/g, '') })));
   },
+  linkProc: (el) => { S.modal = { k: 'doc.link', level: el.dataset.level, id: el.dataset.id }; render(); },
+  linkGo: () => {
+    const m = S.modal, ids = [...document.querySelectorAll('.lnkP:checked')].map((x) => x.value);
+    if (!ids.length) return toast($t('Choose a process'));
+    act(async () => { for (const pid of ids) await api('POST', T('/processes/links'), { kind: m.level, id: m.id, process: pid }); S.modal = null; await reload(); }, $t('Linked'));
+  },
+  unlinkProc: (el) => act(async () => { await api('POST', T('/processes/links'), { kind: el.dataset.level, id: el.dataset.id, process: el.dataset.p, on: false }); await reload(); }, $t('Unlinked')),
   collectProc: () => { S.modal = { k: 'doc.collect' }; render(); },
   collectGo: () => {
     const ids = [...document.querySelectorAll('.colK:checked')].map((x) => x.value);
@@ -1791,22 +1844,45 @@ const DOC_ACTIONS = {
   runAdv: (el) => { if (S.advBusy) return; S.advBusy = el.dataset.id; render(); const kind = el.dataset.k; api('POST', T(`/${kind === 'process' ? 'processes' : 'agreements'}/${encodeURIComponent(el.dataset.id)}/advocate`)).then((x) => { (kind === 'process' ? putPc : putAg)(x); toast($t('The advocate has checked the document')); }).catch((e) => toast(e.message)).finally(() => { S.advBusy = null; render(); }); },
   dismissAdv: (el) => { const kind = el.dataset.k; act(async () => { const x = await api('POST', T(`/${kind === 'process' ? 'processes' : 'agreements'}/${encodeURIComponent(el.dataset.id)}/advocate/dismiss`), { key: el.dataset.key }); (kind === 'process' ? putPc : putAg)(x); render(); }, $t('The advocate won’t show this advice for this version')); },
   // agreements
-  newAgr: () => { S.modal = { k: 'doc.newAgr', type: 'partnership' }; render(); },
+  newAgr: () => { S.modal = { k: 'doc.newAgr', type: 'partnership', tab: 'hand' }; render(); },
+  naTab: (el) => {
+    const m = S.modal;
+    if ((m.tab || 'hand') === 'hand') Object.assign(m, { type: docField('naType') || m.type, title: docField('naTitle'), ext: docField('naExt'), clauses: docField('naCl'), parties: [...document.querySelectorAll('.naP:checked')].map((x) => x.value) });
+    if (m.tab === 'voice' && el.dataset.v !== 'voice') { m.text = docField('addTxt'); recReset(); }
+    m.tab = el.dataset.v; modal();
+  },
+  naFromVoice: async () => {
+    const m = S.modal;
+    if (VREC.rec) return toast($t('Stop the recording first'));
+    if (!VREC.blob) return toast($t('Record a voice note first'));
+    if (VREC.blob.size > MAX_AUDIO) return toast($t('The recording is too long (max 20 MB)'));
+    const text = docField('addTxt').trim();
+    if (!text && !S.transcribe) return toast($t('No transcript yet — type the text or record again'));
+    m.text = text;
+    fillAgreement({ audio: { data: await blobBase64(VREC.blob), mime: VREC.mime }, lang: SR ? recLang().slice(0, 2) : undefined, text, edited: text !== (VREC.auto || '').trim() }, $t('Dictation'));
+  },
+  naFromPdf: () => fillAgreement({ pdf: { data: S.modal.pdf, name: S.modal.pdfName } }, S.modal.pdfName),
   createAgr: () => {
     const title = docField('naTitle').trim();
     if (!title) return toast($t('Name the agreement'));
     const clauses = docField('naCl').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const i = l.indexOf(':'); return i > 0 && i < 80 ? { title: l.slice(0, i).trim(), text: l.slice(i + 1).trim() } : { title: '', text: l }; }).filter((x) => x.text);
     if (!clauses.length) return toast($t('Add at least one clause'));
     const parties = [...document.querySelectorAll('.naP:checked')].map((x) => x.value).concat(docField('naExt').split(',').map((x) => x.trim()).filter(Boolean).map((x) => `ext:${x}`));
-    act(async () => { const a = await api('POST', T('/agreements'), { type: docField('naType'), title, parties, clauses }); putAg(a); S.modal = null; S.dtab[a.id] = 'advocate'; go('agreement-' + a.id); }, $t('The agreement was sent to the parties for consent'));
+    const from = S.modal.filled ? { itemTitle: S.modal.filled.kind === 'document' ? S.modal.filled.name : `${$t('Dictation')} · ${fds(TODAY())}` } : null;
+    act(async () => { const a = await api('POST', T('/agreements'), { type: docField('naType'), title, parties, clauses: from ? clauses.map((x) => ({ ...x, source: from })) : clauses }); putAg(a); S.modal = null; S.dtab[a.id] = 'advocate'; go('agreement-' + a.id); }, $t('The agreement was sent to the parties for consent'));
   },
   agrAccept: (el) => act(async () => { const a = await agApi(el.dataset.id, '/respond', { decision: 'accept' }); putAg(a); if (!a.pending) S.dtab[a.id] = 'text'; render(); return a; }, (a) => (a.pending ? $t('You accepted. Waiting for: {names}', { names: a.required.filter((w) => !a.pending.consents.some((x) => x.party === w && x.decision === 'accept')).map(pnx).join(', ') }) : a.terminatedAt ? $t('Everyone accepted — the agreement is terminated') : $t('Everyone accepted — v{n} is in force and rewritten as one complete text', { n: a.current.n }))),
   agrReject: (el) => { S.modal = { k: 'doc.reject', id: el.dataset.id, agr: true }; render(); },
-  agrEdit: (el) => { const a = agById(el.dataset.id); const chg = [...changedClauses(a)]; S.modal = { k: 'doc.agrEdit', id: a.id, cid: el.dataset.new ? 'new' : chg[0] || (a.pending || a.current).clauses[0]?.id, title: el.dataset.title, text: el.dataset.text }; render(); },
+  agrEdit: (el) => { const a = agById(el.dataset.id); const chg = [...changedClauses(a)]; S.modal = { k: 'doc.agrEdit', id: a.id, cid: el.dataset.new ? 'new' : el.dataset.cid || chg[0] || (a.pending || a.current).clauses[0]?.id, title: el.dataset.title, text: el.dataset.text }; render(); },
+  agrRemove: (el) => {
+    const a = agById(el.dataset.id), x = (a.pending || a.current).clauses.find((c) => c.id === el.dataset.cid);
+    if (!x || !confirm($t('Propose to remove the clause “{title}”? It is removed only when every party accepts the new version.', { title: x.title || x.text.slice(0, 40) }))) return;
+    act(async () => { const r = await agApi(a.id, '/versions', { clause: { id: x.id, text: '' } }); putAg(r); S.dtab[a.id] = r.current ? 'diff' : 'text'; render(); }, $t('The change is waiting for consent. Read it once more and press “I agree” when you are ready.'));
+  },
   agrEditGo: () => {
     const m = S.modal, cid = docField('aeCl'), text = docField('aeText').trim();
     if (cid === 'new' && !text) return toast($t('Write the text of the clause'));
-    act(async () => { const a = await agApi(m.id, '/versions', { clause: { id: cid === 'new' ? null : cid, title: docField('aeTitle').trim(), text }, note: docField('aeNote') }); putAg(a); S.modal = null; S.dtab[a.id] = a.current ? 'diff' : 'text'; render(); return a; }, (a) => (a.pending && a.pending.consents.length === 1 ? $t('The change is waiting for consent. You accepted it automatically.') : $t('Saved')));
+    act(async () => { const a = await agApi(m.id, '/versions', { clause: { id: cid === 'new' ? null : cid, title: docField('aeTitle').trim(), text }, note: docField('aeNote') }); putAg(a); S.modal = null; S.dtab[a.id] = a.current ? 'diff' : 'text'; render(); return a; }, (a) => (a.pending ? $t('The change is waiting for consent. Read it once more and press “I agree” when you are ready.') : $t('Saved')));
   },
   agrReview: (el) => { S.modal = { k: 'doc.agrReview', id: el.dataset.id }; render(); },
   agrReviewGo: () => {
@@ -1821,7 +1897,31 @@ const DOC_ACTIONS = {
   extConsent: (el) => { S.modal = { k: 'doc.ext', id: el.dataset.id, w: el.dataset.w }; render(); },
   extGo: () => { const m = S.modal, note = docField('exNote').trim(); if (!note) return toast($t('Describe how the external party confirmed it')); act(async () => { putAg(await agApi(m.id, '/external-consent', { party: m.w, note })); closeDoc(); }, $t('Consent recorded')); },
 };
+// The analyzed agreement fills the form; nothing is created until the person sends it for consent.
+async function fillAgreement(body, name) {
+  const m = S.modal; m.busy = true; modal();
+  try {
+    const r = await api('POST', T('/agreements/extract'), body);
+    if (S.modal !== m) return;
+    if (r.kind !== 'document') recReset();
+    Object.assign(m, {
+      tab: 'hand', type: r.type, title: r.title || m.title, parties: r.parties, ext: r.external.join(', '),
+      clauses: r.clauses.map((x) => `${x.title ? x.title.replace(/:/g, ' —') + ': ' : ''}${x.text.replace(/\s*\n\s*/g, ' ')}`).join('\n'),
+      filled: { kind: r.kind, name },
+    });
+    if (!r.clauses.length) toast($t('No clauses were found — fill them in by hand'));
+  } catch (e) { toast(e.message); }
+  finally { m.busy = false; if (S.modal === m) modal(); }
+}
 const DOC_FIELDS = {
+  naPdf: (el) => {
+    const f = el.files[0]; if (!f) return;
+    if (!(f.type === 'application/pdf' || /\.pdf$/i.test(f.name))) return toast($t('The file is not a PDF.'));
+    if (f.size > 20 * 1048576) return toast($t('The file is too large (max 20 MB)'));
+    const rd = new FileReader();
+    rd.onload = () => { Object.assign(S.modal, { pdf: String(rd.result).split(',')[1] || '', pdfName: f.name, pdfSize: f.size }); modal(); };
+    rd.readAsDataURL(f);
+  },
   pcVis: (el) => act(async () => { putPc(await pcApi(el.dataset.id, '', { visibility: el.value }, 'PATCH')); render(); }, () => $t('Visibility: {vis}', { vis: PVIS[el.value] })),
   pmOpt: (el) => { S.modal.opt = Number(el.value); S.modal.text = undefined; S.modal.note = docField('pmNote'); modal(); },
   naType: (el) => { Object.assign(S.modal, { type: el.value, title: docField('naTitle'), ext: docField('naExt'), clauses: docField('naCl'), parties: [...document.querySelectorAll('.naP:checked')].map((x) => x.value) }); modal(); },
@@ -1861,7 +1961,7 @@ function render() {
   else if (r.startsWith('join-')) c = pJoin();
   else if (r === 'onboarding' || !S.d) c = pOnboarding();
   else {
-    const pg = r === 'assistant' ? pAssistant() : r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r.startsWith('knowledge-') ? pKnowledge(r.slice(10)) : r.startsWith('source-') ? pSource(r.slice(7)) : r === 'processes' ? pProcesses() : r.startsWith('process-') ? pProcess(r.slice(8)) : r === 'agreements' ? pAgreements() : r.startsWith('agreement-') ? pAgreement(r.slice(10)) : r === 'vision' ? pVision() : r === 'goals' ? pGoals() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : pDashboard();
+    const pg = r === 'assistant' ? pAssistant() : r === 'dashboard' ? pDashboard() : r === 'inbox' ? pInbox() : r.startsWith('review-') ? pReview() : r === 'tasks' ? pTasks() : r === 'knowledge' ? pKnowledge() : r.startsWith('knowledge-') ? pKnowledge(r.slice(10)) : r.startsWith('source-') ? pSource(r.slice(7)) : r === 'processes' ? pProcesses() : r.startsWith('process-') ? pProcess(r.slice(8)) : r === 'agreements' ? pAgreements() : r.startsWith('agreement-') ? pAgreement(r.slice(10)) : r === 'vision' ? pVision() : r === 'goals' ? pGoals() : r.startsWith('project-') ? pProject(r.slice(8)) : r.startsWith('hyp-') ? pHyp(r.slice(4)) : r.startsWith('person-') ? pPerson(r.slice(7)) : r === 'members' ? pMembers() : r === 'profile' ? pProfile() : r === 'roadmap' ? pRoadmap() : r === 'updates' ? pUpdates() : pDashboard();
     c = `<div class="app${S.navOpen ? ' nav-open' : ''}"><aside class="side" id="side-nav">${nav()}</aside><div class="scrim" data-a="navClose" aria-hidden="true"></div><main class="main"><header class="top">${top()}</header><div class="page page-${r.split('-')[0] || 'dashboard'}${r === 'assistant' ? ' assistant-page' : ''}">${pg}</div></main>${tabbar()}</div>`;
   }
   document.documentElement.lang = LANG;
@@ -1888,7 +1988,7 @@ async function switchTeam(id) { S.tid = id; S.drawer = null; S.goal = null; S.ck
 const A = {
   navOpen: () => { S.navOpen = true; render(); },
   navClose: () => { S.navOpen = false; S.tmenu = false; render(); },
-  go: (el) => { S.tmenu = false; S.navOpen = false; S.modal = null; if (el.dataset.h.startsWith('project-')) S.ptab = 'overview'; if (el.dataset.h.startsWith('source-')) S.srcView = null; go(el.dataset.h); },
+  go: (el) => { S.tmenu = false; S.navOpen = false; S.modal = null; if (el.dataset.h.startsWith('project-')) S.ptab = 'overview'; if (el.dataset.h.startsWith('hyp-')) S.htab = 'overview'; if (el.dataset.h.startsWith('source-')) S.srcView = null; go(el.dataset.h); },
   lang: (el) => { void setLang(el.dataset.v); },
   tmenu: () => { S.tmenu = !S.tmenu; render(); },
   team: (el) => { S.tmenu = false; act(() => switchTeam(el.dataset.v)); },
@@ -1940,6 +2040,7 @@ const A = {
   grp: (el) => { S.grp = el.dataset.v; render(); },
   itab: (el) => { S.itab = el.dataset.v; render(); },
   ptab: (el) => { S.ptab = el.dataset.v; render(); },
+  htab: (el) => { S.htab = el.dataset.v; render(); },
   knt: (el) => { S.knt = el.dataset.v; S.klog = false; S.ksrc = false; render(); },
   klog: () => { S.klog = !S.klog; S.ksrc = false; render(); },
   ksrc: () => { S.ksrc = !S.ksrc; S.klog = false; render(); },

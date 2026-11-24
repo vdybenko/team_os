@@ -14,7 +14,7 @@ A team's second brain that fills itself from meetings. Specification: [docs/01-v
 - **Organizations** group teams (v1). The first team creates an organization with its name; later teams pick an organization or create a new one. Org Owner/Admin see the org's teams but not their content.
 - **Knowledge** (decisions, agreements, facts, processes, context; private or team-wide; a new decision can replace an old one) and **Team vision**.
 - **Processes** ([specification](docs/02-processes-and-agreements-vision.md)): versioned documents of how the team works, on the hypothesis, project, team or organization level. A process can be one sentence or have sections (purpose, trigger, roles, inputs, steps, result, metric, exceptions, review). Anyone who sees it proposes changes (add / extend / replace / remove); the owner of the level accepts one or several changes as a new version, edits and accepts, or rejects with a reason. A process created by someone else is a draft until the owner approves it. Organization processes have their own visibility (Owner only / Owner and Admin / everyone). Knowledge entries of type “process” can be collected into a process.
-- **Agreements**: documents that every party has explicitly accepted — partnership agreements, roles, team rules, a contractor. Only the parties see them. A new version comes into force only when every party has accepted that exact text; until then the previous version stays in force, with no time-out. Any change resets the consents. A party can accept, reject with a reason or propose their own version. When a party leaves the team, the agreement needs a full review by those who remain. External parties are listed by name; a member party records how they confirmed.
+- **Agreements**: documents that every party has explicitly accepted — partnership agreements, roles, team rules, a contractor. Only the parties see them. A new version comes into force only when every party has accepted that exact text; until then the previous version stays in force, with no time-out. Any change resets the consents, and the author accepts it as a separate step too. Each clause can be changed or removed on its own. A new agreement can be dictated or filled in from the PDF of an existing one. A party can accept, reject with a reason or propose their own version. When a party leaves the team, the agreement needs a full review by those who remain. External parties are listed by name; a member party records how they confirmed.
 - **TeamOS Advocate**: a checklist of what a process or agreement is missing (by agreement type), and — with AI configured — risks, 2–3 alternatives and concrete suggestions. It runs on demand and automatically on each new version. A piece of advice becomes a change only when a person proposes it; advice can be dismissed for the version. The inbox analyzer proposes process changes, new processes, agreement changes and new agreements with a quote: the uploader confirms them in Review (step 1), the process owner or every party decides (step 2).
 - **Assistant**: ask about tasks, knowledge, goals and hypotheses, or ask a question about a document. Answers can cite the original PDF page. Your personal assistant can read documents awaiting review in your own inbox. Team members can use a shared source once you apply it in Review.
 - **Interface in English and Ukrainian**: switch the language in Profile or on the sign-in screen.
@@ -154,6 +154,38 @@ Under the hood: dynamic client registration (RFC 7591), authorization code with 
 - [public/](public/) — the client without a build step (vanilla JS), styles from the prototype.
 - [public/i18n.js](public/i18n.js) — Ukrainian translations of the interface (English is the source language).
 
+## Updates
+
+What's new in TeamOS, newest first.
+
+### 2026-11-24 — Process drafts from a source or the knowledge base
+
+- AI fills in the missing summary, sections and steps of a process from a chosen shared source or from the shared knowledge base.
+- The result arrives as pending changes, each with a quote or a link to its knowledge entry, so the owner of the level still decides. The Changes tab gets **Accept all**.
+- Available on the process page and in the new-process dialog.
+
+### 2026-11-24 — Processes, agreements and TeamOS Advocate
+
+- **Processes**: versioned documents of how the team works, on the hypothesis, project, team or organization level. Anyone who sees a process proposes changes; the owner of the level accepts them as a new version or rejects them with a reason.
+- **Agreements**: documents that every party has explicitly accepted. A new version comes into force only when every party has accepted that exact text; until then the previous version stays in force.
+- **TeamOS Advocate**: a checklist of what a process or agreement is missing and, with AI configured, risks, alternatives and concrete suggestions. It runs on demand and on each new version.
+- The inbox analyzer proposes process and agreement changes with a quote; existing knowledge entries of type “process” can be collected into draft processes.
+- New MCP tools: `list_processes`, `get_process`, `list_agreements`, `get_agreement`, `propose_process_change`, `decide_process_change`, `propose_agreement_change`, `respond_to_agreement`, `review_with_advocate`.
+
+### 2026-11-23 — Goals (OKR), organizations and hypothesis prioritization
+
+- **Goals (OKR)** on every level: annual and quarterly team goals, project goals and member goals. Goals contribute to key results one level higher; hypotheses and tasks move key results.
+- The Goals page: an OKR list, an alignment tree with risks ("no hypotheses", "one bet", not aligned), a weekly check-in and an alignment score.
+- **Hypothesis prioritization**: Impact × Confidence × Speed ÷ Cost, cards / 2×2 matrix / ranking views, a WIP limit of 3 hypotheses in testing, success and stop criteria.
+- **Organizations** group teams; org Owner/Admin see the org's teams but not their content.
+- MCP: `list_goals`, `save_goal` / `remove_goal`, `checkin_key_result`, `create_hypothesis`, `update_hypothesis`, `set_hypothesis_priority`, `add_hypothesis_learning`; the workspace overview includes this quarter's OKRs.
+
+### 2026-11-22 — Second Brain via MCP
+
+- The remote MCP server with OAuth 2.1: connect Claude, Codex or any MCP client to your knowledge base (setup: the “Connecting Claude and Codex (MCP)” section of README.md).
+- Access to all of my workspaces or one team, read / write / manage levels, and the same permissions as the UI.
+- Connected apps can be seen and disconnected from Profile.
+
 ## Roadmap
 
 What's left for a full implementation of the [specification](docs/01-vision-and-ui-spec.md). The order within a stage is a rough priority.
@@ -175,7 +207,7 @@ What's left for a full implementation of the [specification](docs/01-vision-and-
 
 ### v0.3 — Second Brain via MCP
 
-Done: the remote MCP server with OAuth (see [Connecting Claude and Codex (MCP)](#connecting-claude-and-codex-mcp)) — all of my workspaces or one team, read / write / manage access, the same permissions as the UI. Still to do:
+The remote MCP server with OAuth is done (see Updates). Still to do:
 
 - **Meeting prep tool**: open commitments between the attendees and recent decisions on related projects.
 - **Proposals instead of direct writes** as an option per connection: an agent's changes go to the inbox for review (human-in-the-loop).

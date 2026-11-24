@@ -80,3 +80,21 @@ test('a draft from the knowledge base must point to shared entries', async (t) =
   model(t, () => ({ summary: empty, sections: [], steps: [{ text: 'Publish on Tuesday', evidence_quote: '', knowledge_id: shared.id }] }));
   await assert.rejects(Docs.generateProcessDraft(anna, p.id, { from: 'knowledge' }), /nothing to add/);
 });
+
+test('a dictated agreement fills the form with known parties and clauses, and stores nothing', async (t) => {
+  const [anna] = await workspace('agr-extract');
+  await store.saveUser({ id: 'bohdan', name: 'Bohdan', email: 'b@example.test' });
+  let seen;
+  model(t, (req) => {
+    seen = JSON.parse(req.input);
+    return { title: 'Partnership', type: 'partnership', party_member_ids: ['bohdan', 'ghost'], external_parties: ['Andrii', ''], clauses: [{ title: 'Shares', text: 'Anna 50%, Bohdan 50%' }, { title: 'Empty', text: '' }] };
+  });
+  const audio = Buffer.alloc(400, 1).toString('base64');
+  const r = await Docs.extractAgreement(anna, { audio: { data: audio, mime: 'audio/webm' }, text: 'We split it fifty-fifty with Bohdan, Andrii designs', edited: true });
+  assert.equal(seen.kind, 'dictation');
+  assert.equal(seen.material, 'We split it fifty-fifty with Bohdan, Andrii designs');
+  assert.ok(seen.members.some((m) => m.id === 'bohdan'));
+  assert.deepEqual([r.type, r.parties, r.external, r.clauses.length], ['partnership', ['bohdan'], ['Andrii'], 1]);
+  assert.deepEqual(await Docs.listAgreements(anna), []);
+  await assert.rejects(Docs.extractAgreement(anna, { pdf: { data: Buffer.from('not a pdf').toString('base64') } }), /PDF/);
+});
