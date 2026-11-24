@@ -13,6 +13,9 @@ A team's second brain that fills itself from meetings. Specification: [docs/01-v
 - **Hypothesis prioritization**: Impact × Confidence × Speed ÷ Cost (team time and money), 1–10 sliders with anchors, a suggestion for Impact from the expected contribution, cards / 2×2 matrix / ranking views, a WIP limit of 3 hypotheses in testing, success and stop criteria. The estimates are fixed as a forecast when testing starts.
 - **Organizations** group teams (v1). The first team creates an organization with its name; later teams pick an organization or create a new one. Org Owner/Admin see the org's teams but not their content.
 - **Knowledge** (decisions, agreements, facts, processes, context; private or team-wide; a new decision can replace an old one) and **Team vision**.
+- **Processes** ([specification](docs/02-processes-and-agreements-vision.md)): versioned documents of how the team works, on the hypothesis, project, team or organization level. A process can be one sentence or have sections (purpose, trigger, roles, inputs, steps, result, metric, exceptions, review). Anyone who sees it proposes changes (add / extend / replace / remove); the owner of the level accepts one or several changes as a new version, edits and accepts, or rejects with a reason. A process created by someone else is a draft until the owner approves it. Organization processes have their own visibility (Owner only / Owner and Admin / everyone). Knowledge entries of type “process” can be collected into a process.
+- **Agreements**: documents that every party has explicitly accepted — partnership agreements, roles, team rules, a contractor. Only the parties see them. A new version comes into force only when every party has accepted that exact text; until then the previous version stays in force, with no time-out. Any change resets the consents. A party can accept, reject with a reason or propose their own version. When a party leaves the team, the agreement needs a full review by those who remain. External parties are listed by name; a member party records how they confirmed.
+- **TeamOS Advocate**: a checklist of what a process or agreement is missing (by agreement type), and — with AI configured — risks, 2–3 alternatives and concrete suggestions. It runs on demand and automatically on each new version. A piece of advice becomes a change only when a person proposes it; advice can be dismissed for the version. The inbox analyzer proposes process changes, new processes, agreement changes and new agreements with a quote: the uploader confirms them in Review (step 1), the process owner or every party decides (step 2).
 - **Assistant**: ask about tasks, knowledge, goals and hypotheses, or ask a question about a document. Answers can cite the original PDF page. Your personal assistant can read documents awaiting review in your own inbox. Team members can use a shared source once you apply it in Review.
 - **Interface in English and Ukrainian**: switch the language in Profile or on the sign-in screen.
 - **MCP server with OAuth**: connect your knowledge base to Claude, Codex or any MCP client — search and read it, add tasks, knowledge, projects, goals and hypotheses, add to the inbox, create teams and manage members. See [Connecting Claude and Codex (MCP)](#connecting-claude-and-codex-mcp).
@@ -64,11 +67,14 @@ settings/
   auth/signin-links/<sha256>.json
 records/primary/
   orgs/<orgId>/org.json          # organization: name, owners, admins
+  orgs/<orgId>/processes/<id>.json  # processes of the organization level
   teams/<teamId>/
     team.json                    # orgId points to the organization
     vision.md
     projects/<id>.json
     goals/<id>.json              # goals (OKR) on every level; older project.goals move here on first read
+    processes/<id>.json          # processes of the hypothesis / project / team level with versions and changes
+    agreements/<id>.json         # agreements with versions and consents (visible to their parties only)
     hypotheses/<id>.json
     tasks/<id>.json              # shared tasks
     knowledge/<id>.md            # shared knowledge
@@ -126,8 +132,8 @@ codex mcp login teamos
 
 | Access | Tools |
 | --- | --- |
-| Read | `list_workspaces`, `get_workspace_overview` (with this quarter's OKRs), `search`, `list_tasks` (*i owe* / *owed to me*), `get_task`, `list_knowledge`, `list_projects`, `list_goals`, `list_hypotheses`, `list_members`, `list_inbox`, `get_inbox_item` |
-| Write | `add_to_inbox`, `create_task`, `update_task`, `comment_on_task`, `delete_task`, `add_knowledge` (can replace an older decision), `update_knowledge`, `delete_knowledge`, `create_project`, `update_project`, `save_goal` / `remove_goal` (a simple project goal with one key result), `checkin_key_result`, `create_hypothesis`, `update_hypothesis`, `set_hypothesis_priority`, `add_hypothesis_learning`, `update_team_vision` |
+| Read | `list_workspaces`, `get_workspace_overview` (with this quarter's OKRs), `search`, `list_tasks` (*i owe* / *owed to me*), `get_task`, `list_knowledge`, `list_projects`, `list_goals`, `list_hypotheses`, `list_members`, `list_inbox`, `get_inbox_item`, `list_processes`, `get_process`, `list_agreements`, `get_agreement` |
+| Write | `add_to_inbox`, `create_task`, `update_task`, `comment_on_task`, `delete_task`, `add_knowledge` (can replace an older decision), `update_knowledge`, `delete_knowledge`, `create_project`, `update_project`, `save_goal` / `remove_goal` (a simple project goal with one key result), `checkin_key_result`, `create_hypothesis`, `update_hypothesis`, `set_hypothesis_priority`, `add_hypothesis_learning`, `update_team_vision`, `propose_process_change`, `decide_process_change` (for whoever approves the process), `propose_agreement_change`, `respond_to_agreement` (your own consent as a party), `review_with_advocate` |
 | Manage | `create_team`, `invite_member` (returns a join link), `revoke_invite`, `change_member_role`, `remove_member` |
 
 Each team's vision is also available as an MCP resource (`teamos://teams/<id>/vision`). Text added with `add_to_inbox` is analyzed like any other inbox item and waits for your confirmation in Review.
@@ -138,6 +144,7 @@ Under the hood: dynamic client registration (RFC 7591), authorization code with 
 
 - [server/index.js](server/index.js) — HTTP API routes.
 - [server/domain.js](server/domain.js) — access rules and operations on tasks, knowledge, projects, goals, hypotheses, teams and the inbox, shared by the HTTP API and MCP.
+- [server/processes.js](server/processes.js) — processes, agreements and TeamOS Advocate: levels and approvers, versions, consents, checklists.
 - [server/oauth.js](server/oauth.js) — OAuth 2.1 authorization server for MCP clients: consent page, tokens, connected apps.
 - [server/mcp.js](server/mcp.js) — the MCP server (Streamable HTTP) and its tools.
 - [server/store.js](server/store.js) — file storage and `index.md` generation.
@@ -211,6 +218,28 @@ Run `npm test` before release. The S3 startup integration test uses a simulated 
 From a clean checkout of the exact remote `main` commit, run `scripts/release.sh`. It runs the tests and invokes the production deploy over SSH. The production server also runs the tests before activating each new build.
 
 For releases that change storage permissions or data layout, verify access for the production service before switching releases. If an isolated HTTPS staging environment has matching permissions, the release script can also check authenticated profile and workspace loading there. Seed staging with a legacy team and project goal, then provide `TEAMOS_STAGING_URL`, `TEAMOS_STAGING_COOKIE`, `TEAMOS_STAGING_TEAM`, and `TEAMOS_STAGING_GOAL`. Use a staging account and reset the fixture before each migration check.
+
+### Preparing existing workspaces for the processes & agreements release
+
+The release adds new folders (`teams/<id>/processes/`, `teams/<id>/agreements/`, `orgs/<id>/processes/`); existing records keep their format and nothing has to move. On S3, the service needs read, write and delete access under `records/primary/orgs/` as well as under `records/primary/teams/` (until now only `org.json` was written there). Check the IAM policy before switching releases.
+
+The migration collects knowledge entries of type “process” into **draft** process documents: one per team, project and hypothesis they are placed in (up to 40 steps each). Each step links to its knowledge entry and quote, and the entries themselves stay unchanged. A draft takes effect only when whoever owns its level approves it. Knowledge entries of type “agreement” are counted but not converted: an agreement needs every party’s explicit consent. Members can also collect entries later from the Processes page.
+
+As for the OKR release, verify a backup, pause application writes and run the new release’s code with the intended storage configuration:
+
+```bash
+node --env-file-if-exists=.env server/migrate-processes.js
+```
+
+```bash
+node --env-file-if-exists=.env server/migrate-processes.js --apply
+```
+
+```bash
+node --env-file-if-exists=.env server/migrate-processes.js
+```
+
+The dry run reports `processDraftsToCreate`, `processKnowledgeToCollect` and `agreementKnowledgeLeftAsIs`. The final dry run should show `processDraftsToCreate: 0`. Drafts get stable ids, so the migration can be repeated after a failure. Entries added to a placement after it was migrated are reported as `processKnowledgeAddedSinceMigration` and can be collected from the UI. With AI configured, the advocate checks a document automatically on each new version; set `TEAMOS_ADVOCATE_AUTO=0` to only run it on demand.
 
 ### Preparing existing workspaces for the OKR release
 

@@ -26,7 +26,7 @@ test('PDF knowledge uses the supporting lines on the original physical page', as
     scope: 'team', project_id: null, hypothesis_id: null, conflicts_with_id: null, conflict_note: null, vision_conflict: null, confidence: 'high', first_line: 2, last_line: 4 };
   model(t, (request) => {
     assert.ok(request.input.includes('[p. 4]\n1 | Budget\n2 | Fiction 60%'));
-    return { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [],
+    return { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [], process_changes: [], new_processes: [], agreement_changes: [], new_agreements: [],
       knowledge: [{ page: 4, entries: [entry, { ...entry, last_line: 8 }] }, { page: 2, entries: [entry] }] };
   });
   const result = await analyze({ pdf: true, text, title: 'Library', type: 'doc', uploader: { id: 'reader' }, context: {} });
@@ -257,7 +257,7 @@ test('knowledge proposals carry placement, earlier-agreement conflicts and visio
       project_id: null, hypothesis_id: 'h_ads', conflicts_with_id: 'k_old', conflict_note: 'Earlier the app was to stay ad-free.',
       vision_conflict: 'The vision says the team never sells user data.', confidence: 'high',
       first_line: 1, last_line: 1 };
-    return { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [],
+    return { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [], process_changes: [], new_processes: [], agreement_changes: [], new_agreements: [],
       knowledge: [entry, { ...entry, text: 'Unrelated note.', hypothesis_id: 'invented', conflicts_with_id: 'invented', conflict_note: 'x', vision_conflict: '' }] };
   });
   await runAnalysis(c, 'meet');
@@ -296,7 +296,7 @@ test('long transcript review recovers evidence and retains both saved commitment
     const context = JSON.parse(input.split('<team_context>\n')[1].split('\n</team_context>')[0]);
     assert.deepEqual(new Set(context.applied_tasks.map(({ id }) => id)), new Set(savedIds));
     const source = input.split('<source>\n')[1];
-    const result = { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [], knowledge: [] };
+    const result = { summary: [], participants: [], commitments: [], status_updates: [], new_projects: [], new_hypotheses: [], process_changes: [], new_processes: [], agreement_changes: [], new_agreements: [], knowledge: [] };
     if (source.includes('Draft mode')) {
       result.knowledge.push({ type: 'process', text: 'Draft mode does not send automatically.', why: null, scope: 'team',
         project_id: null, hypothesis_id: null, conflicts_with_id: null, conflict_note: null, vision_conflict: null,
