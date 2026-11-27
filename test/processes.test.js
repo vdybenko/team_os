@@ -204,3 +204,22 @@ test('an existing process is linked to a project and a hypothesis by people who 
   assert.deepEqual((await Docs.linkProcess(bohdan, { kind: 'project', id: 'release', process: weekly.id, on: false })).processLinks, []);
   assert.equal((await Docs.getProcess(anna, weekly.id)).level, 'team');
 });
+
+test('removing a member can hand their open commitments over to the Admin who removes them', async () => {
+  const { anna, bohdan, viktor } = await workspace('handover');
+  const forBohdan = await D.createTask(bohdan, { title: 'Design the logo', owner: 'viktor' });
+  const forClient = await D.createTask(viktor, { title: 'Send the mockups', owner: 'viktor', requester: 'ext:Client' });
+  await D.createTask(viktor, { title: 'My own to-do', owner: 'viktor' });
+  const done = await D.createTask(bohdan, { title: 'Old', owner: 'viktor', status: 'done' });
+  await assert.rejects(D.memberCommitments(bohdan, 'viktor'), /remove members/);
+  assert.deepEqual(await D.memberCommitments(anna, 'viktor'), { open: 2 });
+  assert.deepEqual(await D.removeMember(anna, 'viktor', { handOver: true }), { handedOver: 2 });
+  const a = await D.ctxFor({ id: 'anna' }, 'handover', 'en');
+  const mine = await D.visibleTasks(a);
+  assert.deepEqual(mine.filter((t) => t.owner === 'anna').map((t) => t.title).sort(), ['Design the logo', 'Send the mockups']);
+  const client = mine.find((t) => t.id === forClient.id);
+  assert.ok(D.canEditTask(a, client), 'the new owner controls a task set by an external contact');
+  assert.equal(client.history.at(-1).source, 'Viktor left the team');
+  assert.equal((await store.findTask('handover', forBohdan.id)).owner, 'anna');
+  assert.equal((await store.findTask('handover', done.id)).owner, 'viktor');
+});

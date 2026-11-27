@@ -581,13 +581,37 @@ export async function changeRole(c, uid, role) {
   m.role = role; await store.saveTeam(c.team);
   return m;
 }
-export async function removeMember(c, uid) {
+// Open commitments a member owes someone else (their own to-dos don't count).
+// Read from the member's own view, so it includes tasks the Admin can't see.
+async function openCommitments(c, uid) {
+  return (await store.listTasksFor(c.tid, uid)).filter((t) => t.owner === uid && t.requester !== uid && !['done', 'cancelled'].includes(t.status));
+}
+export async function memberCommitments(c, uid) {
+  if (!c.admin && uid !== c.uid) fail(403, 'Owner and Admin remove members');
+  if (!c.team.members.some((x) => x.userId === uid)) fail(404, 'Member not found');
+  return { open: (await openCommitments(c, uid)).length };
+}
+// handOver: the member who removes someone becomes the owner of that person's open commitments.
+export async function removeMember(c, uid, { handOver = false } = {}) {
   const self = uid === c.uid;
   if (!c.admin && !self) fail(403, 'Owner and Admin remove members');
   const m = c.team.members.find((x) => x.userId === uid) || fail(404, 'Member not found');
   if (m.role === 'owner') fail(400, 'The Owner can’t leave — transfer ownership first');
+  let handedOver = 0;
+  if (handOver && !self) {
+    const from = await nameOf(uid), to = await nameOf(c.uid);
+    for (const t of await openCommitments(c, uid)) {
+      const prev = structuredClone(t);
+      hist(t, c.uid, msg('owner: {from} → {to}', { from, to }), msg('{name} left the team', { name: from }));
+      t.owner = c.uid;
+      // With an external requester the creator controls the task — keep it controllable.
+      if (controller(t) === uid) t.creator = c.uid;
+      await store.saveTask(c.tid, t, prev); handedOver++;
+    }
+  }
   c.team.members = c.team.members.filter((x) => x !== m); await store.saveTeam(c.team);
   await Docs.markPartyLeft(c.team, uid);
+  return { handedOver };
 }
 
 /* ================= inbox ================= */

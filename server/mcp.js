@@ -58,7 +58,7 @@ async function teamCtx(s, args) {
   return c;
 }
 const refreshGoals = async (c) => { c.goalList = await store.goals.list(c.tid); };
-const who = (c, id) => (!id ? null : D.isExternal(id) ? { external: id.slice(4) } : { id, name: c.names.get(id) || id });
+const who = (c, id) => (!id ? null : D.isExternal(id) ? { external: id.slice(4) } : c.names.has(id) ? { id, name: c.names.get(id) } : { id, name: 'Deleted user', deleted: true });
 const ACTIVE = ['open', 'progress', 'waiting'];
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && !v.length)));
 
@@ -617,9 +617,9 @@ const TOOLS = [
   },
   {
     name: 'remove_member', title: 'Remove a member', scope: 'manage', annotations: DEL,
-    description: 'Removes a member from a team (Owner/Admin), or leaves the team when user_id is your own id. The Owner cannot be removed.',
-    inputSchema: obj({ team_id: S.team, user_id: S.str('Member id') }, ['user_id']),
-    async run(s, a) { const c = await teamCtx(s, a); await D.removeMember(c, a.user_id); return { removed: a.user_id, name: c.names.get(a.user_id) }; },
+    description: 'Removes a member from a team (Owner/Admin), or leaves the team when user_id is your own id. The Owner cannot be removed. With hand_over_commitments, you become the owner of their open commitments; ask the user first.',
+    inputSchema: obj({ team_id: S.team, user_id: S.str('Member id'), hand_over_commitments: S.bool('Make you the owner of their open tasks owed to others (default false)') }, ['user_id']),
+    async run(s, a) { const c = await teamCtx(s, a); const name = c.names.get(a.user_id); const { handedOver } = await D.removeMember(c, a.user_id, { handOver: Boolean(a.hand_over_commitments) }); return { removed: a.user_id, name, handed_over: handedOver }; },
   },
 ];
 const TOOL_BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));

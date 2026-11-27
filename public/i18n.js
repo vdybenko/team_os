@@ -10,6 +10,7 @@ window.TEAMOS_I18N = {
     page: { en: ['page', 'pages'], uk: ['сторінка', 'сторінки', 'сторінок'] },
     change: { en: ['change', 'changes'], uk: ['зміна', 'зміни', 'змін'] },
     agreement: { en: ['agreement', 'agreements'], uk: ['угода', 'угоди', 'угод'] },
+    commitment: { en: ['open commitment', 'open commitments'], uk: ['відкритий комітмент', 'відкриті комітменти', 'відкритих комітментів'] },
   },
   uk: {
     // shell & navigation
@@ -75,7 +76,7 @@ window.TEAMOS_I18N = {
     'Proposal': 'Пропозиція',
 
     // common components
-    'Former member': 'Колишній учасник',
+    'Deleted user': 'Видалений користувач',
     'ext.': 'зовн.',
     'Added manually': 'Додано вручну',
     'No deadline': 'Без дедлайну',
@@ -565,6 +566,12 @@ window.TEAMOS_I18N = {
     'Remove {name} from the team?': 'Видалити {name} з команди?',
     'You left the team': 'Ти вийшов з команди',
     'Member removed': 'Учасника видалено',
+    'Member removed · {count} handed over to you': 'Учасника видалено · {count} передано тобі',
+    'Checking open commitments…': 'Перевіряю відкриті комітменти…',
+    '{name} has {count}. Hand them over to you?': '{name} має {count}. Передати їх тобі?',
+    'Yes, make me the owner': 'Так, я стану виконавцем',
+    'Otherwise they stay with someone who is no longer on the team.': 'Інакше вони залишаться за людиною, якої вже немає в команді.',
+    '{name} has no open commitments.': '{name} не має відкритих комітментів.',
     'Ownership transferred. You are now an Admin.': 'Ownership передано. Ти — Admin.',
     'Profile saved': 'Профіль збережено',
     'Settings saved': 'Налаштування збережено',

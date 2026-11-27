@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import * as store from './store.js';
 import { canEditTask, fail, getTaskFor, isMember, nameOf, today } from './domain.js';
-import { render } from './i18n.js';
+import { render, tr } from './i18n.js';
 
 const sharedHistoryMessages = new Set([
   'Created manually', 'Created via {app}', 'Created from “{title}”, confirmed by {name}',
@@ -51,7 +51,8 @@ export async function getSharedTask(token, lang = 'en') {
 
   const names = new Map();
   const displayName = (person) => {
-    if (!names.has(person)) names.set(person, nameOf(person));
+    // Someone who left the team is shown as a deleted user, not by name.
+    if (!names.has(person)) names.set(person, person && !person.startsWith('ext:') && !isMember(team, person) ? tr(lang, 'Deleted user') : nameOf(person));
     return names.get(person);
   };
   const visibleHistory = (task.history || []).filter((entry) => entry.msg ? sharedHistoryMessages.has(entry.msg.key) : sharedLegacyHistory.test(entry.text));

@@ -85,12 +85,14 @@ const isAdmin = () => ['owner', 'admin'].includes(role());
 const personal = () => S.d?.team.kind === 'personal';
 const M = () => Object.fromEntries((S.d?.members || []).map((m) => [m.id, m]));
 const isExt = (w) => typeof w === 'string' && w.startsWith('ext:');
-const pn = (w) => (!w ? '—' : isExt(w) ? w.slice(4) : M()[w]?.name || $t('Former member'));
+const pn = (w) => (!w ? '—' : isExt(w) ? w.slice(4) : M()[w]?.name || $t('Deleted user'));
 const pnx = (w) => (isExt(w) ? `${w.slice(4)} (${$t('ext.')})` : pn(w));
 const av = (w, s = 24) => {
   if (!w) return '';
   if (isExt(w)) return `<span class="av ext" style="--s:${s}px" title="${esc(pnx(w))}">${esc((w.slice(4)[0] || '?').toUpperCase())}</span>`;
-  const m = M()[w]; const name = m?.name || '?';
+  const m = M()[w];
+  if (!m) return `<span class="av" style="--c:var(--mut);--s:${s}px" title="${$t('Deleted user')}">?</span>`;
+  const name = m.name || '?';
   if (m?.picture) return `<img class="avimg" src="${esc(m.picture)}" width="${s}" height="${s}" alt="" title="${esc(name)}" referrerpolicy="no-referrer">`;
   return `<span class="av" style="--c:${colorFor(w)};--s:${s}px" title="${esc(name)}">${esc(name[0].toUpperCase())}</span>`;
 };
@@ -947,7 +949,7 @@ function pProject(id) {
   <div class="card"><h2>${$t('Task progress')}</h2><div style="font:800 36px Archivo,system-ui,sans-serif;font-stretch:112%">${dn}<span class="hint" style="font-size:18px"> / ${ts.length}</span></div><div class="prog"><i style="width:${ts.length ? (dn / ts.length) * 100 : 0}%"></i></div><div class="chips" style="margin-top:10px">${['open', 'progress', 'waiting'].map((s) => `<span class="chip">${STL[s]}: ${ts.filter((t) => t.status === s).length}</span>`).join('')}</div></div></div>
   ${projOverview(p)}`;
   else if (S.ptab === 'hyps') b = projHypsView(p, hs);
-  else if (S.ptab === 'tasks') b = `<div class="card">${ts.map(trow).join('') || `<div class="empty">${$t('No tasks you can see')}</div>`}</div>`;
+  else if (S.ptab === 'tasks') b = `<div class="card"><h2>${$t('Tasks')} · ${ts.length}<button class="lnk" data-a="newTask" data-proj="${id}">${$t('+ Task')}</button></h2>${ts.map(trow).join('') || `<div class="empty">${$t('No tasks you can see')}</div>`}</div>`;
   else b = ks.map(knCard).join('') || `<div class="empty">${$t('No knowledge yet')}</div>`;
   return `<div class="hd"><div><div class="hint">${personal() ? $t('My space') : 'Team Space'} · ${$t('project')}</div><h1 style="display:flex;gap:10px;align-items:center"><span class="dot" style="--c:${p.color};width:14px;height:14px"></span>${esc(p.name)} ${prjChip(p)}</h1></div><div class="act"><button class="btn" data-a="newNote" data-proj="${id}">${ico('plus')} ${$t('Add note')}</button>${ed ? `<select class="in" data-f="pst" data-id="${id}" aria-label="${$t('Project status')}">${Object.entries(PST).map(([k, l]) => `<option value="${k}" ${k === p.status ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}<span class="seg">${[['overview', $t('Overview')], ['hyps', $t('Hypotheses') + ' · ' + hs.length], ['tasks', $t('Tasks') + ' · ' + ts.length], ['kn', $t('Knowledge') + ' · ' + ks.length]].map(([k, l]) => `<button class="${S.ptab === k ? 'on' : ''}" data-a="ptab" data-v="${k}">${l}</button>`).join('')}</span></div></div>${b}`;
 }
@@ -972,7 +974,7 @@ function pHyp(id) {
   const verdict = h.verdict ? esc(h.verdict) : h.status === 'testing' ? (h.to ? $t('Still testing — verdict after {date}', { date: fds(h.to) }) : $t('Still testing')) : h.status === 'draft' ? $t('The hypothesis hasn’t started yet') : HST[h.status];
   const hit = krHit(h.kr), k = hit?.k, chain = k ? chainFromKr(h.kr) : [], ai = aiImpact(h), [r, n] = rankIn(h);
   const projKrs = GL().filter((g) => g.level === 'project' && g.project === h.project && g.status !== 'cancelled').flatMap((g) => (g.keyResults || []).map((x) => ({ x, g })));
-  return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="project-${h.project}">${ico('back', 14)} ${esc(prj(h.project)?.name || $t('Project'))}</button><div class="chips" style="margin-top:10px;align-items:center"><b>${hcode(id)}</b>${hypChip(h)}${h.priority ? scb(h) : ''}</div></div><div class="act">${ed ? `<select class="in" data-f="hst" data-id="${id}" aria-label="${$t('Status')}">${Object.entries(HST).map(([k2, l]) => `<option value="${k2}" ${k2 === h.status ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn" data-a="editHyp" data-id="${id}">${$t('Edit')}</button><button class="btn ghost" data-a="delHyp" data-id="${id}" title="${$t('Delete')}">${ico('trash')}</button>` : `<span class="hint">${ico('lock', 13)} ${$t('{name} or an Admin can edit', { name: esc(pn(h.owner)) })}</span>`}</div></div>
+  return `<div class="hd"><div><button class="btn ghost sm" data-a="go" data-h="project-${h.project}">${ico('back', 14)} ${esc(prj(h.project)?.name || $t('Project'))}</button><div class="chips" style="margin-top:10px;align-items:center"><b>${hcode(id)}</b>${hypChip(h)}${h.priority ? scb(h) : ''}</div></div><div class="act"><button class="btn" data-a="newTask" data-proj="${h.project}" data-hyp="${id}">${ico('plus')} ${$t('New task')}</button>${ed ? `<select class="in" data-f="hst" data-id="${id}" aria-label="${$t('Status')}">${Object.entries(HST).map(([k2, l]) => `<option value="${k2}" ${k2 === h.status ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn" data-a="editHyp" data-id="${id}">${$t('Edit')}</button><button class="btn ghost" data-a="delHyp" data-id="${id}" title="${$t('Delete')}">${ico('trash')}</button>` : `<span class="hint">${ico('lock', 13)} ${$t('{name} or an Admin can edit', { name: esc(pn(h.owner)) })}</span>`}</div></div>
   <div class="bigstmt" style="margin-bottom:24px">${stmtHtml(h)}</div>
   <div class="chips" style="margin-bottom:6px"><span class="chip big">${$t('Responsible:')} <b>${esc(pn(h.owner))}</b></span><span class="chip big">${esc(h.metric || $t('No metric set'))}: <b>${esc(h.current || '—')}</b> / ${esc(h.target || '—')}</span><span class="chip big">${h.from || h.to ? `${fds(h.from)} – ${fds(h.to)}` : $t('No timeframe set')}</span></div>
   <div style="margin:14px 0 16px"><span class="seg">${[['overview', $t('Overview')], ['priority', `${$t('Prioritization')}${h.priority ? ` · ${hscore(h)}` : ''}`], ['goal', $t('Moves the goal')]].map(([v, l]) => `<button class="${S.htab === v ? 'on' : ''}" data-a="htab" data-v="${v}">${l}</button>`).join('')}</span></div>
@@ -1330,6 +1332,12 @@ function modal() {
     h = `<div class="md" id="task-share-dialog" role="dialog" aria-modal="true" aria-labelledby="task-share-heading" tabindex="-1"><div class="mdh"><h2 id="task-share-heading">${$t('Share task')}</h2>${close}</div>${taskShareContent(m)}</div>`;
   } else if (m.k === 'invite') {
     h = `<div class="md"><div class="mdh"><h2>${$t('Invite to {team}', { team: esc(teamName(S.d.team)) })}</h2>${close}</div><label class="fl">${$t('Role')}<select class="in" id="invR"><option value="member">${$t('Member — sees their own tasks and team knowledge')}</option><option value="admin">${$t('Admin — sees everything, manages members')}</option></select></label><label class="fl" style="margin-top:12px">${$t('Email (optional — then the link works only for that address)')}<input class="in" id="invE" placeholder="name@company.com"></label><p class="hint">${$t('TeamOS doesn’t send emails in v0.1 — copy the link and send it yourself.')}</p>${m.link ? `<div class="lnkbox">${ico('link')}<code>${esc(m.link)}</code><button class="btn sm" data-a="copyText" data-v="${esc(m.link)}">${$t('Copy')}</button></div>` : ''}<div class="mdf"><button class="btn" data-a="closeM">${$t('Done')}</button><button class="btn pri" data-a="invGo">${$t('Create link')}</button></div></div>`;
+  } else if (m.k === 'removeMember') {
+    const name = esc(pn(m.id));
+    const body = m.open === null ? `<p class="hint">${$t('Checking open commitments…')}</p>`
+      : m.open ? `<div class="card" style="margin:0"><b>${$t('{name} has {count}. Hand them over to you?', { name, count: $p(m.open, 'commitment') })}</b><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="rmHo" checked> ${$t('Yes, make me the owner')}</label><p class="hint" style="margin:8px 0 0">${$t('Otherwise they stay with someone who is no longer on the team.')}</p></div>`
+      : `<p class="hint">${$t('{name} has no open commitments.', { name })}</p>`;
+    h = `<div class="md"><div class="mdh"><h2>${$t('Remove {name} from the team?', { name })}</h2>${close}</div>${body}<div class="mdf">${cancel}<button class="btn pri" data-a="rmGo" ${m.open === null ? 'disabled' : ''}>${$t('Remove')}</button></div></div>`;
   } else if (m.k === 'transfer') {
     h = `<div class="md"><div class="mdh"><h2>${$t('Transfer ownership')}</h2>${close}</div><p class="hint" style="font-size:14.5px">${$t('The new Owner gets full control, and you become an Admin.')}</p><label class="fl">${$t('To')}<select class="in" id="trTo">${S.d.members.filter((x) => x.id !== uid()).map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label><label class="fl" style="margin-top:12px">${$t('Type the team name “{team}” to confirm', { team: esc(S.d.team.name) })}<input class="in" id="trC" data-f="trC" autocomplete="off"></label><div class="mdf">${cancel}<button class="btn pri" id="trBtn" data-a="trGo" disabled>${$t('Transfer')}</button></div></div>`;
   } else if (m.k === 'team') {
@@ -2169,7 +2177,18 @@ const A = {
   invite: () => { S.modal = { k: 'invite' }; modal(); },
   invGo: () => act(async () => { const inv = await api('POST', T('/invites'), { role: val('invR'), email: val('invE') }); S.d = await api('GET', T('/state')); S.modal.link = `${location.origin}/join/${inv.token}`; render(); }, () => $t('Link created')),
   revokeInv: (el) => act(async () => { await api('DELETE', T(`/invites/${encodeURIComponent(el.dataset.v)}`)); await reload(); }, () => $t('Invite revoked')),
-  removeMember: (el) => { const self = el.dataset.id === uid(); if (!confirm(self ? $t('Leave the team?') : $t('Remove {name} from the team?', { name: pn(el.dataset.id) }))) return; act(async () => { await api('DELETE', T(`/members/${el.dataset.id}`)); if (self) { await reloadMe(); await switchTeam(S.teams[0].id); go('dashboard'); } else await reload(); }, () => (self ? $t('You left the team') : $t('Member removed'))); },
+  removeMember: (el) => {
+    const id = el.dataset.id;
+    if (id === uid()) { if (!confirm($t('Leave the team?'))) return; act(async () => { await api('DELETE', T(`/members/${id}`)); await reloadMe(); await switchTeam(S.teams[0].id); go('dashboard'); }, () => $t('You left the team')); return; }
+    const m = { k: 'removeMember', id, open: null }; S.modal = m; modal();
+    // The server counts from the member's own view, so it includes tasks this Admin can't see.
+    api('GET', T(`/members/${id}/commitments`)).then((r) => { m.open = r.open; }, () => { m.open = 0; }).finally(() => { if (S.modal === m) modal(); });
+  },
+  rmGo: () => {
+    const m = S.modal, handOver = Boolean(document.getElementById('rmHo')?.checked);
+    act(async () => { const r = await api('DELETE', T(`/members/${m.id}${handOver ? '?handOver=1' : ''}`)); S.modal = null; modal(); await reload(); return r; },
+      (r) => (r?.handedOver ? $t('Member removed · {count} handed over to you', { count: $p(r.handedOver, 'task') }) : $t('Member removed')));
+  },
   transfer: () => { S.modal = { k: 'transfer' }; modal(); },
   trGo: () => act(async () => { await api('POST', T('/transfer'), { userId: val('trTo'), confirm: val('trC').trim() }); S.modal = null; await reloadMe(); await reload(); }, () => $t('Ownership transferred. You are now an Admin.')),
 

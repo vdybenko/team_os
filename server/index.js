@@ -179,7 +179,8 @@ app.post('/api/invites/:token/accept', requireUser, route(async (req) => {
 }));
 
 app.patch('/api/teams/:tid/members/:uid', requireUser, route(async (req) => { await D.changeRole(await ctx(req), req.params.uid, req.body.role); }));
-app.delete('/api/teams/:tid/members/:uid', requireUser, route(async (req) => { await D.removeMember(await ctx(req), req.params.uid); }));
+app.get('/api/teams/:tid/members/:uid/commitments', requireUser, route(async (req) => D.memberCommitments(await ctx(req), req.params.uid)));
+app.delete('/api/teams/:tid/members/:uid', requireUser, route(async (req) => D.removeMember(await ctx(req), req.params.uid, { handOver: req.query.handOver === '1' })));
 app.post('/api/teams/:tid/transfer', requireUser, route(async (req) => {
   const c = await ctx(req); if (c.role !== 'owner') fail(403, 'Only the Owner can transfer ownership');
   if (str(req.body.confirm) !== c.team.name) fail(400, 'The team name doesn’t match');

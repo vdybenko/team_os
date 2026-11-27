@@ -120,6 +120,8 @@ const UK = {
   'Only the requester can delete it': 'Видалити може лише постановник',
   'Empty comment': 'Порожній коментар',
   'Created manually': 'Створено вручну',
+  'Deleted user': 'Видалений користувач',
+  '{name} left the team': '{name} вийшов(-ла) з команди',
   '{from} → {to}': '{from} → {to}',
   'owner: {from} → {to}': 'виконавець: {from} → {to}',
   'deadline → {due}': 'дедлайн → {due}',
